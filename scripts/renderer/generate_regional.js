@@ -4,6 +4,7 @@ import { generateRandomSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, getR
     createControlNet, createADetailer, toggleQueueColor, startQueue, REPLACE_AI_MARK } from './generate.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { filterPrompts } from './tools/promptFilter.js';
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function getCustomJSON(loop=-1){
@@ -112,27 +113,21 @@ function getPrompts(character_left, character_right, views, ai='', apiInterface 
 
     const {BOPL, BOCL, EOCL, EOPL, BOPR, BOCR, EOCR, EOPR} = getCustomJSON(loop);
 
-    let positivePromptLeft = `${BOPL}${common}${views}${aiPrompt}${BOCL}${character_left}${EOCL}${positive}${EOPL}`.replaceAll(/\n+/g, ''); 
-    let positivePromptRight = `${BOPR}${common}${views}${aiPrompt}${BOCR}${character_right}${EOCR}${positiveR}${EOPR}`.replaceAll(/\n+/g, ''); 
+    const tmpPositivePromptLeft = `${BOPL}${common}${views}${aiPrompt}${BOCL}${character_left}${EOCL}${positive}${EOPL}`.replaceAll(/\n+/g, ''); 
+    const tmpPositivePromptRight = `${BOPR}${common}${views}${aiPrompt}${BOCR}${character_right}${EOCR}${positiveR}${EOPR}`.replaceAll(/\n+/g, ''); 
+    const tmpPositivePromptLeftColored = `[color=${commonColor}]${BOPL}${common}[/color][color=${viewColor}]${views}[/color][color=${aiColor}]${aiPrompt}[/color][color=${characterColor}]${BOCL}${character_left}${EOCL}[/color][color=${positiveColor}]${positive}${EOPL}[/color]`.replaceAll(/\n+/g, ''); 
+    const tmpPositivePromptRightColored = `[color=${commonColor}]${BOPR}${common}[/color][color=${viewColor}]${views}[/color][color=${aiColor}]${aiPrompt}[/color][color=${characterColor}]${BOCR}${character_right}${EOCR}[/color][color=${positiveRColor}]${positiveR}${EOPR}[/color]`.replaceAll(/\n+/g, ''); 
 
-    let positivePromptLeftColored = `[color=${commonColor}]${BOPL}${common}[/color][color=${viewColor}]${views}[/color][color=${aiColor}]${aiPrompt}[/color][color=${characterColor}]${BOCL}${character_left}${EOCL}[/color][color=${positiveColor}]${positive}${EOPL}[/color]`.replaceAll(/\n+/g, ''); 
-    let positivePromptRightColored = `[color=${commonColor}]${BOPR}${common}[/color][color=${viewColor}]${views}[/color][color=${aiColor}]${aiPrompt}[/color][color=${characterColor}]${BOCR}${character_right}${EOCR}[/color][color=${positiveRColor}]${positiveR}${EOPR}[/color]`.replaceAll(/\n+/g, ''); 
+    const {
+        positivePrompt: positivePromptLeft,
+        positivePromptColored: positivePromptLeftColored
+    } = filterPrompts(tmpPositivePromptLeft, tmpPositivePromptLeftColored, exclude);
 
-    const excludeKeywords = exclude.split(',')
-        .map(keyword => keyword.trim())
-        .filter(keyword => keyword.length > 0);
+    const {
+        positivePrompt: positivePromptRight,
+        positivePromptColored: positivePromptRightColored
+    } = filterPrompts(tmpPositivePromptRight, tmpPositivePromptRightColored, exclude);
 
-    for (const keyword of excludeKeywords) {
-        const escapedKeyword = keyword.replaceAll(/[-[\]{}()*+?.,\\^$|#\s]/g, String.raw`\$&`);
-        const pattern = new RegExp(
-            `(^|,\\s*|\\n\\s*)${escapedKeyword}(\\s*,\\s*|\\s*$|\\s*\\n)`,
-            'gi'
-        );
-        positivePromptLeft = positivePromptLeft.replace(pattern, '$1');
-        positivePromptLeftColored = positivePromptLeftColored.replace(pattern, '$1');
-        positivePromptRight = positivePromptRight.replace(pattern, '$1');
-        positivePromptRightColored = positivePromptRightColored.replace(pattern, '$1');
-    }
 
     const loraPromot = getLoRAs(apiInterface);
     return {

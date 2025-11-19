@@ -6,6 +6,7 @@ import { setADetailerModelList } from './slots/myADetailerSlot.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
 import { convertToMultipleOfNFloor, checkNumberInRange } from './tools/numbers.js';
 import { setQueueAutoStart } from './callbacks.js';
+import { filterPrompts } from './tools/promptFilter.js';
 
 export const REPLACE_AI_MARK = '_|REPLACE_AI_PROMPT|_';
 
@@ -313,24 +314,10 @@ function getPrompts(characters, views, ai='', apiInterface = 'None', loop=-1) {
         aiPrompt += ', ';
 
     const {BOP, BOC, EOC, EOP} = getCustomJSON(loop);
+    const tmpPositivePrompt = `${BOP}${common}${views}${aiPrompt}${BOC}${characters}${EOC}${positive}${EOP}`.replaceAll(/\n+/g, ''); 
+    const tmpPositivePromptColored = `[color=${commonColor}]${BOP}${common}[/color][color=${viewColor}]${views}[/color][color=${aiColor}]${aiPrompt}[/color][color=${characterColor}]${BOC}${characters}${EOC}[/color][color=${positiveColor}]${positive}${EOP}[/color]`.replaceAll(/\n+/g, ''); 
 
-    let positivePrompt = `${BOP}${common}${views}${aiPrompt}${BOC}${characters}${EOC}${positive}${EOP}`.replaceAll(/\n+/g, ''); 
-    let positivePromptColored = `[color=${commonColor}]${BOP}${common}[/color][color=${viewColor}]${views}[/color][color=${aiColor}]${aiPrompt}[/color][color=${characterColor}]${BOC}${characters}${EOC}[/color][color=${positiveColor}]${positive}${EOP}[/color]`.replaceAll(/\n+/g, ''); 
-
-    const excludeKeywords = exclude.split(',')
-        .map(keyword => keyword.trim())
-        .filter(keyword => keyword.length > 0);
-
-        for (const keyword of excludeKeywords) {
-            const escapedKeyword = keyword.replaceAll(/[-[\]{}()*+?.,\\^$|#\s]/g, String.raw`\$&`);
-            const pattern = new RegExp(
-                `(^|,\\s*|\\n\\s*)${escapedKeyword}(\\s*,\\s*|\\s*$|\\s*\\n)`,
-                'gi'
-            );
-            positivePrompt = positivePrompt.replace(pattern, '$1');
-            positivePromptColored = positivePromptColored.replace(pattern, '$1');
-        }
-
+    const {positivePrompt, positivePromptColored} = filterPrompts(tmpPositivePrompt, tmpPositivePromptColored, exclude);
     const loraPromot = getLoRAs(apiInterface);
     return {pos:positivePrompt, posc:positivePromptColored, lora:loraPromot}
 }

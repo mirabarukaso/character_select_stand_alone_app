@@ -1,3 +1,7 @@
+2025.11.19 v1.16.7
+Bugs fix
+
+
 2025.11.10 v1.16.6        
 Add `extra_model_paths.yaml` from ComfyUI root now supports `upscale_models`[#58]           
 

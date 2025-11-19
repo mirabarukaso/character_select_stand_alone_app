@@ -168,7 +168,7 @@ function splitByTopLevelPipe(str) {
 
 export function processRandomString(input) {
     // Check if input contains braces
-    if (!input.includes('{')) {
+    if (!String(input).includes('{')) {
         return input;
     }
 
