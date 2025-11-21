@@ -2,6 +2,7 @@ import { createControlNetButtons } from './components/imageInfoControlNet.js';
 import { createImageTagger } from './components/imageInfoTagger.js';
 import { handlePastedJsonOrCsvFile, handlePastedPlainTextItem } from './components/imageInfoDataFiles.js';
 import { extractImageMetadata, parseGenerationParameters } from './components/imageInfoMetadata.js';
+import { fileToBase64 } from './generate.js';
 
 let cachedImage = '';
 
@@ -286,7 +287,7 @@ export function setupImageUploadOverlay() {
         reader.readAsDataURL(file);
     }
 
-    function createActionButtons() {
+    function createTagTransferButtons() {
         const SETTINGS = globalThis.globalSettings;
         const FILES = globalThis.cachedFiles;
         const LANG = FILES.language[SETTINGS.language];
@@ -343,9 +344,59 @@ export function setupImageUploadOverlay() {
                 sendButton.textContent = LANG.image_info_send_tags;
             }, 2000);
         });
+
+        let workflowButton;
+        if(globalThis.currentImageMetadata.nodes) {
+            workflowButton = document.createElement('button');
+            workflowButton.className = 'copy-all-metadata';
+            workflowButton.textContent = LANG.image_info_show_metadata_buttons;
+
+            workflowButton.addEventListener('click', async () => {
+                const parsedMetadata = JSON.stringify(globalThis.currentImageMetadata.nodes, null, 2);
+                const imageBase64 = await fileToBase64(cachedImage);
+                globalThis.overlay.custom.createCustomOverlay(
+                        imageBase64 || 'none', 
+                        `${parsedMetadata || ''}`
+                    );            
+            });
+        } else {
+            workflowButton = document.createElement('div');
+        }
         
+        buttonContainer.appendChild(workflowButton);
         buttonContainer.appendChild(sendButton);
         buttonContainer.appendChild(copyButton);        
+        
+        return buttonContainer;
+    }
+
+    function createWorkflowButtons() {
+        const SETTINGS = globalThis.globalSettings;
+        const FILES = globalThis.cachedFiles;
+        const LANG = FILES.language[SETTINGS.language];
+
+        const buttonContainer = document.createElement('div');
+        buttonContainer.className = 'metadata-buttons';
+
+        const dummyButton1 = document.createElement('div');
+        const dummyButton2 = document.createElement('div');
+        
+        const workflowButton = document.createElement('button');
+        workflowButton.className = 'copy-all-metadata';
+        workflowButton.textContent = LANG.image_info_show_metadata_buttons;
+
+        workflowButton.addEventListener('click', async () => {            
+            const parsedMetadata = JSON.stringify(globalThis.currentImageMetadata.nodes, null, 2);
+            const imageBase64 = await fileToBase64(cachedImage);
+            globalThis.overlay.custom.createCustomOverlay(
+                    imageBase64 || 'none', 
+                    `${parsedMetadata || ''}`
+                );            
+        });        
+
+        buttonContainer.appendChild(dummyButton1);
+        buttonContainer.appendChild(dummyButton2);
+        buttonContainer.appendChild(workflowButton);
         
         return buttonContainer;
     }
@@ -402,27 +453,24 @@ export function setupImageUploadOverlay() {
         globalThis.generate.step.setValue(extractedData.steps);
         globalThis.generate.width.setValue(extractedData.width);
         globalThis.generate.height.setValue(extractedData.height);    
-    }
+    }    
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     function displayFormattedMetadata(metadata, fallbackMetadata=null) {
         const apiInterface = globalThis.generate.api_interface.getValue();
         const parsedMetadata = parseGenerationParameters(metadata);
+        parsedMetadata.nodes = metadata.generationParameters || null;
         globalThis.currentImageMetadata = parsedMetadata;
         metadataContainer.innerHTML = '';
-
+        
         const hasMetadata = parsedMetadata.positivePrompt || 
                            parsedMetadata.negativePrompt || 
-                           parsedMetadata.otherParams;
+                           parsedMetadata.otherParams;        
         
         createImageTagger(metadataContainer, cachedImage);
 
         if(apiInterface !== 'None') {
             metadataContainer.appendChild(createControlNetButtons(apiInterface, cachedImage, previewImg));        
-        }
-
-        if (hasMetadata) {
-            const buttonContainer = createActionButtons();
-            metadataContainer.appendChild(buttonContainer);
         }
 
         const metadataDisplay = document.createElement('div');
@@ -439,22 +487,30 @@ export function setupImageUploadOverlay() {
             metadataText += `Type: ${fallbackMetadata.fileType}\n`;
         }
         
-        if (parsedMetadata.positivePrompt) {
-            metadataText += `\nPositive prompt: ${parsedMetadata.positivePrompt}\n`;
-        } else if (!parsedMetadata.error) {
-            metadataText += '\nNo prompt metadata found\n';         
-        }
-        
-        if (parsedMetadata.negativePrompt) {
-            metadataText += `Negative prompt: ${parsedMetadata.negativePrompt}\n`;
-        }
-        
-        if (parsedMetadata.otherParams) {
-            metadataText += `\n${parsedMetadata.otherParams}`;
-        }
-        
-        if (parsedMetadata.error) {
-            metadataText += `\nError: ${parsedMetadata.error}\n`;
+        if (hasMetadata) {
+            const buttonContainer = createTagTransferButtons();
+            metadataContainer.appendChild(buttonContainer);
+
+            if (parsedMetadata.positivePrompt) {
+                metadataText += `\nPositive prompt: ${parsedMetadata.positivePrompt}\n`;
+            } else if (!parsedMetadata.error) {
+                metadataText += '\nNo prompt metadata found\n';         
+            }
+            
+            if (parsedMetadata.negativePrompt) {
+                metadataText += `Negative prompt: ${parsedMetadata.negativePrompt}\n`;
+            }
+            
+            if (parsedMetadata.otherParams) {
+                metadataText += `\n${parsedMetadata.otherParams}`;
+            }
+            
+            if (parsedMetadata.error) {
+                metadataText += `\nError: ${parsedMetadata.error}\n`;
+            }
+        } else if(metadata.generationParameters) {
+            const buttonContainer = createWorkflowButtons();
+            metadataContainer.appendChild(buttonContainer);                        
         }
         
         metadataDisplay.textContent = metadataText;

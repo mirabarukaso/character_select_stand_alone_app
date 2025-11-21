@@ -695,12 +695,19 @@
 }
 
 .metadata-buttons, .controlnet-buttons {
-    display: grid;
-    grid-template-columns: 4fr 1fr; 
+    display: grid;    
     justify-items: end;
     gap: 10px;
     margin-bottom: 12px;
     padding: 8px;
+}
+
+.metadata-buttons {
+    grid-template-columns: 4fr 1fr 1fr; 
+} 
+
+.controlnet-buttons {
+    grid-template-columns: 4fr 1fr; 
 }
 
 .copy-all-metadata, .controlnet-postprocess, .image-tagger-process,

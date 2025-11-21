@@ -1,5 +1,9 @@
-2025.11.19 v1.16.7
-Bugs fix
+2025.11.22 v1.16.8       
+Add `Show Metadata` display image metadata in a more readable format        
+
+
+2025.11.19 v1.16.7       
+Bugs fix         
 
 
 2025.11.10 v1.16.6        

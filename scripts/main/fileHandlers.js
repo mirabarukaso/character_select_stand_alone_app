@@ -106,7 +106,7 @@ function loadFile(relativePath, prefix='', filePath='') {
 function processMetadata(buffer, offset, length, chunkType) {
   try {
     const chunkData = buffer.slice(offset, offset + length);
-    const AI_KEYWORDS = new Set(['parameters', 'prompt', 'Comment', 'Description', 'AI-metadata']);
+    const AI_KEYWORDS = new Set(['parameters', 'prompt', 'Comment', 'Description', 'AI-metadata', 'workflow']);
     
     // support function to parse metadata
     const parseMetadata = (keyword, textData) => {
@@ -233,6 +233,29 @@ function decodeUnicodeData(buffer, startOffset) {
   }
 }
 
+function mergeMetadata(existing, incoming) {
+  if (!existing) return incoming;
+  if (!incoming) return existing;
+
+  if (Array.isArray(existing) && Array.isArray(incoming)) return existing.concat(incoming);
+  if (Array.isArray(existing)) return existing.concat(incoming);
+  if (Array.isArray(incoming)) return [existing].concat(incoming);
+
+  // both are objects -> shallow merge with recursive merge for nested plain objects
+  const result = { ...existing };
+  for (const key of Object.keys(incoming)) {
+    const a = result[key];
+    const b = incoming[key];
+    if (a && typeof a === 'object' && !Array.isArray(a) &&
+        b && typeof b === 'object' && !Array.isArray(b)) {
+      result[key] = mergeMetadata(a, b);
+    } else {
+      result[key] = b;
+    }
+  }
+  return result;
+}
+
 function extractPngMetadata(buffer) {
   try {
     let offset = 8;
@@ -251,9 +274,9 @@ function extractPngMetadata(buffer) {
       offset += 4;
       
       if (type === 'tEXt' || type === 'iTXt' || type === 'zTXt') {
-        metadataFound = processMetadata(buffer, offset, length, type);
-        if (metadataFound) {
-          break;
+        const newMeta = processMetadata(buffer, offset, length, type);
+        if (newMeta) {
+          metadataFound = mergeMetadata(metadataFound, newMeta);
         }
       }
       
@@ -327,7 +350,8 @@ function extractJpegMetadata(buffer) {
 
         if (textData.includes('parameters') || textData.includes('prompt') ||
             textData.includes('Comment') || textData.includes('Description') ||
-            textData.includes('Software') || textData.includes('AI-metadata')) {
+            textData.includes('Software') || textData.includes('AI-metadata') ||
+            textData.includes('workflow')) {
           try {
             metadataFound = JSON.parse(textData);
           } catch {

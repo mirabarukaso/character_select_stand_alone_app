@@ -177,8 +177,9 @@
         "image_info_add_controlnet_failed": "Failed...",
         "image_info_send_tags": "Send tags",
         "image_info_send_tags_sent": "Sent",
-        "image_info_copy_metadata": "Copy metadata",
+        "image_info_copy_metadata": "Copy Metadata",
         "image_info_copy_metadata_copied": "Copied",
+        "image_info_show_metadata_buttons": "Show Metadata",
 
         "image_tagger_run": "Run Tagger",
         "image_tagger_run_no_model": "No Model",
@@ -407,6 +408,7 @@
         "image_info_send_tags_sent": "已发送",
         "image_info_copy_metadata": "复制元数据",
         "image_info_copy_metadata_copied": "已复制",
+        "image_info_show_metadata_buttons": "显示元数据",
 
         "image_tagger_run": "反推标签",
         "image_tagger_run_no_model": "没有模型",
