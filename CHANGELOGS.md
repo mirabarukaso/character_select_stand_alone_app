@@ -1,5 +1,6 @@
 2025.11.28 v1.16.9       
 Bugfix ComfyUI incorrectly selected the EPS method when performing Hires-fix with Vpred model     
+Bugfix Hires-fix models list is not reset properly when switching API interface     
 
 
 2025.11.22 v1.16.8       
