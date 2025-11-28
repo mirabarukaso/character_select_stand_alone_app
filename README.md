@@ -16,7 +16,7 @@ Now supports 5328 (includes multiple costumes) Characters in list.
 | Image Color Transfer | Yes | No | No |
 | Regional Condition | Yes | No | No |
 | ControlNet/IPA | Yes | Yes | Yes |
-| ADetailer | No | Yes | Yes |
+| ADetailer | Yes | Yes | Yes |
 | API authentication| No | Yes | Yes |
 
 *Try Online Character Select Simple Advanced App* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
