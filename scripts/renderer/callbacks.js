@@ -65,12 +65,18 @@ export async function callback_api_interface(index, selectedValue){
     globalThis.jsonlist.reload();
     globalThis.aDetailer.clear();
 
-    if(globalThis.generate.api_interface.getValue() === 'ComfyUI') {
+    if(SETTINGS.api_interface === 'ComfyUI') {
         globalThis.hifix.colorTransfer.setValue(LANG.api_hf_colortransfer, ['None', 'Mean', 'Lab']);
         globalThis.hifix.colorTransfer.updateDefaults(SETTINGS.api_hf_colortransfer);
     } else {
         globalThis.hifix.colorTransfer.setValue(LANG.api_hf_colortransfer, ['None']);
         globalThis.hifix.colorTransfer.updateDefaults('None');        
+    }
+
+    if (globalThis.inBrowser) {
+        globalThis.cachedFiles.upscalerList = await sendWebSocketMessage({ type: 'API', method: 'getUpscalerList', params: [SETTINGS.api_interface] });
+    } else {
+        globalThis.cachedFiles.upscalerList = await globalThis.api.getUpscalerList(SETTINGS.api_interface);
     }
 
     globalThis.hifix.model.setValue(LANG.api_hf_upscaler_selected, globalThis.cachedFiles.upscalerList);
