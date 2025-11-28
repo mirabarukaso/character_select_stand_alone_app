@@ -4,7 +4,7 @@
 > For browser based SAAC information, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)     
 
 This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/WebUI(A1111) API support.    
-Now supports 5328 (includes multiple costumes) Characters in list.   
+Now supports 5327 (includes multiple costumes) Characters in list.   
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%>   
 
