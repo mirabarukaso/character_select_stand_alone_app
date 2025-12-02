@@ -14,7 +14,7 @@ Now supports 5327 (includes multiple costumes) Characters in list.
 | BREAK | No | Yes | Yes |
 | Refiner | Yes | Yes | Yes |
 | Image Color Transfer | Yes | No | No |
-| Regional Condition | Yes | No | No |
+| Regional Condition | Yes | Yes | Yes |
 | ControlNet/IPA | Yes | Yes | Yes |
 | ADetailer | Yes | Yes | Yes |
 | API authentication| No | Yes | Yes |
@@ -204,12 +204,22 @@ In case you didn't like wildcards file or json/csv wildcard, try the following i
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/wildcards.png" width=35%>   
 
-## Regional Condition (ComfyUI only)
-Get tired of [complex workflow](https://github.com/mirabarukaso/ComfyUI_Mira/issues/12#issuecomment-2727190727)?      
+## Regional Condition 
 Try SAA Regional Condition with only 3 steps:     
 1. Click the `Regional Condition` Checkbox     
 2. Choose listed character or your OC      
 3. Start `common prompt` with `duo, masterpiece, best quality, amazing quality`(Don't forget quality words like me), have fun!     
+
+*For ComfyUI*      
+Get tired of [complex workflow](https://github.com/mirabarukaso/ComfyUI_Mira/issues/12#issuecomment-2727190727)?      
+
+*For A1111/Forge Neo*      
+`Regional Confition` requires [sd-webui-regional-prompter](https://github.com/hako-mikan/sd-webui-regional-prompter)          
+
+> [!NOTE]
+> `Image Left/Right Ratio` is the only working parameter for A1111         
+> The generated results may differ significantly from those using ComfyUI      
+
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/regionalCondition.png" width=35%>   
 
@@ -298,14 +308,20 @@ Local
 
 ------
 # Image API Interface
-ComfyUI    
+*For ComfyUI*      
+> [!IMPORTANT]
+> A bug has just been found in the ComfyUI front end that prevents the image workflow from being recognised correctly.      
+> Check [Comfy-Org/ComfyUI_frontend#6988](https://github.com/Comfy-Org/ComfyUI_frontend/issues/6988#issuecomment-3584471848)     
+> If you encounter issues with workflows failing to load correctly, try using `2025-05-03-022732_1775747588.json` instead.        
+> Last version without that bug: pip install -U comfyui-frontend-package==1.32.0        
+
 1. Enable `DEV mode` in ComfyUI Settings, and load `examples\2025-05-03-022732_1775747588.png` into your ComfyUI, make sure you have install [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) **v0.4.9.2** or above from ComfyUI Custom Node Manager.         
     1.1. You might need install `opencv-python` by ComfyUI->Manager->Install PIP packages-> opencv-python     
 2. Select `Image API Interface` to `ComfyUI`   
 3. Make sure `Image Interface IP Address:Port` same as your ComfyUI page   
 4. Have fun
 
-WebUI(A111/Forge)    
+*For WebUI(A111/Forge neo)*     
 1. Enable `API mode` by add ` --api` in `COMMANDLINE_ARGS` (webui-user.bat)   
 2. Start WebUI       
 3. Select `Image API Interface` to `WebUI`   

@@ -1,7 +1,8 @@
 import { decodeThumb } from './customThumbGallery.js';
 import { generateRandomSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, getRandomIndex, formatCharacterInfo, formatOriginalCharacterInfo,
     getViewTags, createHiFix, createRefiner, extractHostPort, checkVpred, extractAPISecure,
-    createControlNet, createADetailer, toggleQueueColor, startQueue, REPLACE_AI_MARK } from './generate.js';
+    createControlNet, createADetailer, toggleQueueColor, startQueue, REPLACE_AI_MARK,
+    updateADetailerModelList } from './generate.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { filterPrompts } from './tools/promptFilter.js';
@@ -340,7 +341,7 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
     }
 }
 
-function createRegional() {
+function createRegional(apiInterface) {
     const overlap_ratio = globalThis.regional.overlap_ratio.getValue();
     const image_ratio = globalThis.regional.image_ratio.getValue();
 
@@ -348,8 +349,11 @@ function createRegional() {
     const c = 2 - a;
     const b = overlap_ratio / 100;
 
-    const ratio =`${a},${(b===0)?0.01:b},${c}`;
-
+    let ratio =`${a},${(b===0)?0.01:b},${c}`;
+    if(apiInterface === 'WebUI') {
+        ratio =`${a},${c}`;
+    }
+            
     const str_left = globalThis.regional.str_left.getFloat();
     const str_right = globalThis.regional.str_right.getFloat();
 
@@ -369,11 +373,6 @@ export async function generateRegionalImage(loops, runSame){
     const LANG = FILES.language[SETTINGS.language];
 
     const apiInterface = globalThis.generate.api_interface.getValue();
-    if(apiInterface !== 'ComfyUI') {
-        const errorMessage = LANG.regional_error_not_comfyui;
-        globalThis.mainGallery.hideLoading(errorMessage, errorMessage);
-        return;
-    }
     const apiAddress = extractHostPort(globalThis.generate.api_address.getValue());
     const apiAuth = extractAPISecure(apiInterface);
     const browserUUID = (globalThis.inBrowser)?globalThis.clientUUID:'none';
@@ -411,7 +410,7 @@ export async function generateRegionalImage(loops, runSame){
 
         const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor);
         const refiner = createRefiner();
-        const regional = createRegional();
+        const regional = createRegional(apiInterface);
 
         const landscape = globalThis.generate.landscape.getValue();
         const width = landscape?globalThis.generate.height.getValue():globalThis.generate.width.getValue();
@@ -517,11 +516,24 @@ export async function generateRegionalImage(loops, runSame){
     }
 }
 
-export async function seartGenerateRegional(apiInterface, generateData){    
-    const result = await runComfyUI(apiInterface, generateData);
-    const ret = result.ret;
-    const retCopy = result.retCopy;
-    const breakNow = result.breakNow
+export async function seartGenerateRegional(apiInterface, generateData){
+    let ret = 'success';
+    let retCopy = '';
+    let breakNow = false;
+
+    if(apiInterface === 'None') {
+        console.warn('apiInterface', apiInterface);
+    } else if(apiInterface === 'ComfyUI') {
+        const result = await runComfyUI(apiInterface, generateData);
+        ret = result.ret;
+        retCopy = result.retCopy;
+        breakNow = result.breakNow
+    } else if(apiInterface === 'WebUI') {
+        const result = await runWebUI(apiInterface, generateData);
+        ret = result.ret;
+        retCopy = result.retCopy;
+        breakNow = result.breakNow
+    }
 
     return {ret, retCopy, breakNow}
 }
@@ -555,7 +567,7 @@ async function runComfyUI(apiInterface, generateData){
             result = await globalThis.api.runComfyUI_Regional(generateData);
         }
 
-        if(result.startsWith('Error')){                    
+        if(result.startsWith('Error')){
             ret = LANG.gr_error_creating_image.replace('{0}',result).replace('{1}', apiInterface);
             retCopy = result;
             breakNow = true;
@@ -580,7 +592,7 @@ async function runComfyUI(apiInterface, generateData){
                             retCopy = image;
                             breakNow = true;
                         }
-                    } else {                    
+                    } else {
                         sendToGallery(image, generateData);
                     }
                 } catch (error){
@@ -606,5 +618,66 @@ async function runComfyUI(apiInterface, generateData){
         breakNow = true;
     }
 
+    return {ret, retCopy, breakNow }
+}
+
+// eslint-disable-next-line sonarjs/cognitive-complexity
+async function runWebUI(apiInterface, generateData) {
+    const SETTINGS = globalThis.globalSettings;
+    const FILES = globalThis.cachedFiles;
+    const LANG = FILES.language[SETTINGS.language];
+
+    globalThis.generate.nowAPI = apiInterface;
+    const keepGallery = globalThis.generate.keepGallery.getValue();
+    let ret = 'success';
+    let retCopy = '';
+    let breakNow = false;
+
+    try {
+        let result;
+        if (globalThis.inBrowser) {
+            result = await sendWebSocketMessage({ type: 'API', method: 'runWebUI_Regional', params: [generateData] });
+        } else {
+            result = await globalThis.api.runWebUI_Regional(generateData);
+        }        
+        
+        if(globalThis.generate.cancelClicked) {
+            breakNow = true;
+        } else {
+            const typeResult = typeof result;
+            if(typeResult === 'string'){
+                if(result.startsWith('Error')){
+                    if(result.endsWith('Cancelled')) {
+                        console.log('Generate regional cancelled from queue manager');
+                    } else {
+                        ret = LANG.gr_error_creating_image.replace('{0}',result).replace('{1}', apiInterface)
+                        retCopy = result;
+                        breakNow = true;
+                    }
+                } else {
+                    if(!keepGallery)
+                        globalThis.mainGallery.clearGallery();
+                    globalThis.mainGallery.appendImageData(result, `${generateData.seed}`, `${generateData.positive_left}\nBREAK\n${generateData.positive_right}`, keepGallery, globalThis.globalSettings.scroll_to_last);
+                }
+            }
+        }
+    } catch (error) {
+        ret = LANG.gr_error_creating_image.replace('{0}',error.message).replace('{1}', apiInterface)
+        retCopy = error.message;
+        breakNow = true;
+    }
+
+    if(ret.includes('cannot run new generation,')) {
+        // not stop polling due to WebUI is busy
+    } else if (globalThis.inBrowser) {
+        sendWebSocketMessage({ type: 'API', method: 'stopPollingWebUI'});
+    } else {
+        globalThis.api.stopPollingWebUI();
+    }
+
+    if (globalThis.cachedFiles.controlnetProcessorListWebUI === 'none') {   // aDetailer might not installed 
+        await updateADetailerModelList();
+    }
+    
     return {ret, retCopy, breakNow }
 }

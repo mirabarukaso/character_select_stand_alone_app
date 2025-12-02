@@ -192,16 +192,11 @@ export function callback_regional_condition(trigger, dummy = false) {
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
-    const apiInterface = globalThis.generate.api_interface.getValue();
+
+    const apiInterface = globalThis.generate.api_interface.getValue();    
     if(apiInterface !== 'ComfyUI' && trigger) {
-        const errorMessage = LANG.regional_error_not_comfyui;
-        globalThis.overlay.custom.createErrorOverlay(errorMessage, errorMessage);
-        if (dummy) {
-            globalThis.generate.regionalCondition_dummy.setValue(false);
-        } else {
-            globalThis.generate.regionalCondition.setValue(false);
-        }
-        return;
+        const errorMessage = LANG.regional_a1111;
+        globalThis.overlay.custom.createErrorOverlay(errorMessage, 'https://github.com/hako-mikan/sd-webui-regional-prompter');
     }
 
     if (dummy) {
@@ -241,6 +236,7 @@ export function callback_controlnet(trigger)  {
     const apiInterface = globalThis.generate.api_interface.getValue();
 
     globalThis.globalSettings.api_controlnet_enable = trigger; 
+    
     if(trigger && apiInterface === 'ComfyUI') 
         globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_comfyui , 'Links:\nhttps://github.com/Fannovel16/comfyui_controlnet_aux\nhttps://github.com/sipherxyz/comfyui-art-venture'); 
     if(trigger && apiInterface === 'WebUI') 

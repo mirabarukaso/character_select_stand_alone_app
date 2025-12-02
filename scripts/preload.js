@@ -115,6 +115,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // generate_backend WebUI
   runWebUI: async (generateData) => ipcRenderer.invoke('generate-backend-webui-run', generateData),
+  runWebUI_Regional: async (generateData) => ipcRenderer.invoke('generate-backend-webui-run-regional', generateData),
   runWebUI_ControlNet: async (generateData) => ipcRenderer.invoke('generate-backend-webui-run-controlnet', generateData),
   cancelWebUI: async () => ipcRenderer.invoke('generate-backend-webui-cancel'),
   startPollingWebUI: async () => ipcRenderer.invoke('generate-backend-webui-start-polling'),

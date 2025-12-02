@@ -1131,30 +1131,39 @@ async function runWebUI(apiInterface, generateData) {
     }
 
     if (globalThis.cachedFiles.controlnetProcessorListWebUI === 'none') {   // aDetailer might not installed 
-        if (globalThis.inBrowser) {
-            globalThis.cachedFiles.controlnetProcessorListWebUI = await sendWebSocketMessage({ type: 'API', method: 'getControlNetProcessorListWebUI'});
-            globalThis.cachedFiles.aDetailerList = await sendWebSocketMessage({ type: 'API', method: 'getADetailerModelListWebUI'});
-            globalThis.cachedFiles.upscalerListWebUI = await sendWebSocketMessage({ type: 'API', method: 'getUpscalersModelListWebUI'});            
-        } else {
-            globalThis.cachedFiles.controlnetProcessorListWebUI = await globalThis.api.getControlNetProcessorListWebUI();
-            globalThis.cachedFiles.aDetailerList = await globalThis.api.getADetailerModelListWebUI();
-            globalThis.cachedFiles.upscalerListWebUI = await globalThis.api.getUpscalersModelListWebUI();            
-        } 
-
-        console.log("WebUI: Processor, Upscaler and aDetailer List updated!");
-        console.log(globalThis.cachedFiles.controlnetProcessorListWebUI);
-        console.log(globalThis.cachedFiles.aDetailerList);
-        console.log(globalThis.cachedFiles.upscalerListWebUI);
-
-        setADetailerModelList(globalThis.cachedFiles.aDetailerList);
-        
-        const currentModelSelect = globalThis.hifix.model.getValue();        
-        globalThis.cachedFiles.upscalerList = [...globalThis.cachedFiles.upscalerListWebUI];
-        globalThis.hifix.model.setValue(LANG.api_hf_upscaler_selected, globalThis.cachedFiles.upscalerList);
-        if(globalThis.hifix.model.isValueExist(currentModelSelect)){
-            globalThis.hifix.model.updateDefaults(currentModelSelect);
-        }
+        await updateADetailerModelList();
     }
     
     return {ret, retCopy, breakNow }
 }
+
+export async function updateADetailerModelList() {    
+    const SETTINGS = globalThis.globalSettings;
+    const FILES = globalThis.cachedFiles;
+    const LANG = FILES.language[SETTINGS.language];
+
+    if (globalThis.inBrowser) {
+        globalThis.cachedFiles.controlnetProcessorListWebUI = await sendWebSocketMessage({ type: 'API', method: 'getControlNetProcessorListWebUI'});
+        globalThis.cachedFiles.aDetailerList = await sendWebSocketMessage({ type: 'API', method: 'getADetailerModelListWebUI'});
+        globalThis.cachedFiles.upscalerListWebUI = await sendWebSocketMessage({ type: 'API', method: 'getUpscalersModelListWebUI'});            
+    } else {
+        globalThis.cachedFiles.controlnetProcessorListWebUI = await globalThis.api.getControlNetProcessorListWebUI();
+        globalThis.cachedFiles.aDetailerList = await globalThis.api.getADetailerModelListWebUI();
+        globalThis.cachedFiles.upscalerListWebUI = await globalThis.api.getUpscalersModelListWebUI();            
+    } 
+
+    console.log("WebUI: Processor, Upscaler and aDetailer List updated!");
+    console.log(globalThis.cachedFiles.controlnetProcessorListWebUI);
+    console.log(globalThis.cachedFiles.aDetailerList);
+    console.log(globalThis.cachedFiles.upscalerListWebUI);
+
+    setADetailerModelList(globalThis.cachedFiles.aDetailerList);
+    
+    const currentModelSelect = globalThis.hifix.model.getValue();        
+    globalThis.cachedFiles.upscalerList = [...globalThis.cachedFiles.upscalerListWebUI];
+    globalThis.hifix.model.setValue(LANG.api_hf_upscaler_selected, globalThis.cachedFiles.upscalerList);
+    if(globalThis.hifix.model.isValueExist(currentModelSelect)){
+        globalThis.hifix.model.updateDefaults(currentModelSelect);
+    }
+}
+
