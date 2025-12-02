@@ -13,12 +13,12 @@
     "package_mac": "electron-packager ./ saa --platform=darwin --out=release --overwrite"
   },
   "devDependencies": {
-    "electron": "^38.7.1"
+    "electron": "^38.7.2"
   },
   "dependencies": {
     "async-mutex": "^0.5.0",
     "bcrypt": "^6.0.0",
-    "express": "^5.1.0",
+    "express": "^5.2.0",
     "express-rate-limit": "^8.2.1",
     "helmet": "^8.1.0",
     "https": "^1.0.0",

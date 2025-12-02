@@ -377,7 +377,7 @@ A Browser based SAA?
 1. YES    
 2. Check `Advanced security settings (API authentication)` for more information.    
 
-Error HTTP 400 ...... Cannot xecute because node StepAndCfg does not exist ......       
+Error HTTP 400 ...... Cannot execute because node StepAndCfg does not exist ......       
 1. Install `ComfyUI_Mira`     
 2. Restart your ComfyUI
 
