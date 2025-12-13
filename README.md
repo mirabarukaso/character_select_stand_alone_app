@@ -313,7 +313,7 @@ Local
 > A bug has just been found in the ComfyUI front end that prevents the image workflow from being recognised correctly.      
 > Check [Comfy-Org/ComfyUI_frontend#6988](https://github.com/Comfy-Org/ComfyUI_frontend/issues/6988#issuecomment-3584471848)     
 > If you encounter issues with workflows failing to load correctly, try using `2025-05-03-022732_1775747588.json` instead.        
-> Last version without that bug: pip install -U comfyui-frontend-package==1.32.0        
+> Fixed in 1.35.5 and above: pip install -U comfyui-frontend-package==1.35.5        
 
 1. Enable `DEV mode` in ComfyUI Settings, and load `examples\2025-05-03-022732_1775747588.png` into your ComfyUI, make sure you have install [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) **v0.4.9.2** or above from ComfyUI Custom Node Manager.         
     1.1. You might need install `opencv-python` by ComfyUI->Manager->Install PIP packages-> opencv-python     
