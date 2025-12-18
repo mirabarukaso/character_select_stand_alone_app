@@ -1,20 +1,47 @@
 import { app, ipcMain, dialog } from 'electron';
 import path from 'node:path';
 import https from 'node:https';
+import http from 'node:http';
 import * as fs from 'node:fs';
 
 const CAT = '[FileDownloader]';
 const appPath = app.isPackaged ? path.join(path.dirname(app.getPath('exe')), 'resources', 'app') : app.getAppPath();
 
-
-function downloadFile(url, filePath, redirectCount = 0) {
+function downloadFile(url, filePath, redirectCount = 0, cookies = '') {
     return new Promise((resolve, reject) => {
-        const maxRedirects = 5; // set max redirections
+        const maxRedirects = 5;
         console.log(`${CAT}: Downloading... ${url}`);
 
-        const request = https.get(url, (response) => {
-            // redirections (301, 302, 307, 308)
+        const urlObj = new URL(url);
+        const protocol = urlObj.protocol === 'https:' ? https : http;
+
+        const headers = {
+            // Chrome Windows User-Agent
+            'User-Agent': 'Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/94.0.4606.61 Safari/537.36'
+        };
+
+        // pass Cookie
+        if (cookies) {
+            headers['Cookie'] = cookies;
+        }
+
+        const request = protocol.get(url, { headers }, (response) => {
+            // collecting Cookie
+            const setCookieHeaders = response.headers['set-cookie'];
+            let newCookies = cookies;
+            if (setCookieHeaders) {
+                const cookieStrings = Array.isArray(setCookieHeaders) ? setCookieHeaders : [setCookieHeaders];
+                newCookies = cookieStrings
+                    .map(cookie => cookie.split(';')[0])
+                    .concat(cookies ? [cookies] : [])
+                    .join('; ');
+            }
+            console.log(`${CAT}: Received cookies: ${newCookies}`);
+            console.log(`${CAT}: Response Status Code: ${response.statusCode}`);
+
+            // handle redirects
             if ([301, 302, 307, 308].includes(response.statusCode)) {
+                console.log(`${CAT}: Received redirect response for ${url} with status code ${response.statusCode}`);
                 if (redirectCount >= maxRedirects) {
                     console.error(`${CAT}: Too many redirects for ${url}`);
                     reject(new Error('Too many redirects'));
@@ -29,8 +56,8 @@ function downloadFile(url, filePath, redirectCount = 0) {
                 }
 
                 console.log(`${CAT}: Redirecting to ${redirectUrl}`);
-                response.resume(); 
-                downloadFile(redirectUrl, filePath, redirectCount + 1)
+                response.resume();
+                downloadFile(redirectUrl, filePath, redirectCount + 1, newCookies)
                     .then(resolve)
                     .catch(reject);
                 return;
@@ -53,7 +80,7 @@ function downloadFile(url, filePath, redirectCount = 0) {
         });
 
         request.on('error', (err) => {
-            console.error(`${CAT}: Error downloading file: ${err.message}`);
+            console.error(`${CAT}: Error downloading file: ${url}\n\tname: ${err.name}\n\tmessage: ${err.message}\n\terror: ${err.errors}`);
             fs.unlink(filePath, () => {});
             reject(new Error(String(err)));
         });

@@ -24,7 +24,7 @@ const defaultSettings = {
     "webui_auth_enable" : "OFF",
 
     "model_filter": false,
-    "model_filter_keyword": "waiNSFW,waiSHUFFLENOOB",
+    "model_filter_keyword": "waiIllustrious,waiNSFW,waiSHUFFLENOOB",
     "search_modelinsubfolder": true,
     
     "character1": "Random",
