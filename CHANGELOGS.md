@@ -1,3 +1,7 @@
+2025.12.19 v2.0.0       
+Update thumb image and character list to `waiIllustriousSDXL_v160`      
+
+
 2025.12.02 v1.17.0       
 Add `Regional Condition` support for A1111/Forge       
   Requires [sd-webui-regional-prompter](https://github.com/hako-mikan/sd-webui-regional-prompter)         
