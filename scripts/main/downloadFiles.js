@@ -100,7 +100,7 @@ async function setupDownloadFiles() {
         { 'name': 'wai_characters', 'file_path': path.join(saveDir, 'wai_characters.csv'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/wai_characters.csv' },
         { 'name': 'wai_tag_assist', 'file_path': path.join(saveDir, 'wai_tag_assist.json'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/wai_tag_assist.json' },
         // outside
-        { 'name': 'wai_character_thumbs', 'file_path': path.join(saveDir, 'wai_character_thumbs.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs.json' },
+        { 'name': 'wai_character_thumbs', 'file_path': path.join(saveDir, 'wai_character_thumbs.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs_v160.json?download=true' },
         { 'name': 'danbooru_tag', 'file_path': path.join(saveDir, 'danbooru_e621_merged.csv'), 'url': 'https://raw.githubusercontent.com/DominikDoom/a1111-sd-webui-tagcomplete/refs/heads/main/tags/danbooru_e621_merged.csv' }
     ];
 

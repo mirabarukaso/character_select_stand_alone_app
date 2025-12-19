@@ -1,10 +1,10 @@
 # Character Select SAA
 > [!TIP]
 > If you find a character that isn't show on the list but can be generated correctly, please don't hesitate to let me know.     
+> The default list `v160 Remove duplicate (5089)` is based on `waiIllustriousSDXL_v160`. If you are interested in the `v120 (5327)` list, navigate to [HF](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app) download `v120` files and replace `data/wai_characters.csv` `data/wai_character_thumbs.json`     
 > For browser based SAAC information, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)     
-
+np
 This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/WebUI(A1111) API support.    
-Now supports 5327 (includes multiple costumes) Characters in list.   
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%>   
 
@@ -313,13 +313,20 @@ Local
 > A bug has just been found in the ComfyUI front end that prevents the image workflow from being recognised correctly.      
 > Check [Comfy-Org/ComfyUI_frontend#6988](https://github.com/Comfy-Org/ComfyUI_frontend/issues/6988#issuecomment-3584471848)     
 > If you encounter issues with workflows failing to load correctly, try using `2025-05-03-022732_1775747588.json` instead.        
-> Fixed in 1.35.5 and above: pip install -U comfyui-frontend-package==1.35.5        
+> Fixed in 1.35.5 and above: pip install -U comfyui-frontend-package>=1.35.5        
 
 1. Enable `DEV mode` in ComfyUI Settings, and load `examples\2025-05-03-022732_1775747588.png` into your ComfyUI, make sure you have install [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) **v0.4.9.2** or above from ComfyUI Custom Node Manager.         
     1.1. You might need install `opencv-python` by ComfyUI->Manager->Install PIP packages-> opencv-python     
 2. Select `Image API Interface` to `ComfyUI`   
 3. Make sure `Image Interface IP Address:Port` same as your ComfyUI page   
-4. Have fun
+4. Have fun    
+
+In case you have preview issue in SAA, try add `--preview-method latent2rgb` into your startup BAT file        
+My setup:      
+```
+py ComfyUI\main.py --fast --use-sage-attention --cuda-malloc --windows-standalone-build --listen 0.0.0.0 --port 58188 --preview-method latent2rgb
+```
+
 
 *For WebUI(A111/Forge neo)*     
 1. Enable `API mode` by add ` --api` in `COMMANDLINE_ARGS` (webui-user.bat)   
