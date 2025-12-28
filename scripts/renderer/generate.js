@@ -685,6 +685,7 @@ export async function generateControlnetImage(imageData, controlNetSelect, contr
     };
     
     // ControlNet Start
+    globalThis.generate.loadingMessage = LANG.generate_controlnet_process;
     let newImage;
     if(apiInterface === 'None') {
         console.warn('apiInterface', apiInterface);

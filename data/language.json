@@ -157,6 +157,7 @@
         "generate_auto_start": "Enable Generate",
         "generate_normal": "{0}",
         "generate_regional": "Regional: {0}",
+        "generate_controlnet_process": "Processing ControlNet...\n",
         
         "lora_info": "LoRA info",
         "lora_trigger_words": "Trigger Words (Top 10): ",
@@ -386,6 +387,7 @@
         "generate_auto_start": "启动生成",
         "generate_normal": "{0}",
         "generate_regional": "分区：{0}",
+        "generate_controlnet_process": "ControlNet处理中……\n",
         
         "lora_info": "LoRA信息：",
         "lora_trigger_words": "触发词（热度前10）：",

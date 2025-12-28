@@ -1,3 +1,7 @@
+2025.12.28 v2.0.1           
+Bugs fix         
+
+
 2025.12.19 v2.0.0       
 Update thumb image and character list to `waiIllustriousSDXL_v160`      
 
