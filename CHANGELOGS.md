@@ -1,3 +1,7 @@
+2025.12.29 v2.0.2           
+Change `Default` to `waiIllustriousSDXL_v160.safetensors`       
+
+
 2025.12.28 v2.0.1           
 Bugs fix         
 

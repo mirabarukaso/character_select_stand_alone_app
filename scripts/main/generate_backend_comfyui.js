@@ -1636,7 +1636,7 @@ const WORKFLOW = {
         "13",
         1
       ],
-      "modelname": "waiNSFWIllustrious_v120.safetensors",
+      "modelname": "waiIllustriousSDXL_v160.safetensors",
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "positive": [
@@ -1860,7 +1860,7 @@ const WORKFLOW = {
   },
   "43": {
     "inputs": {
-      "ckpt_name": "waiNSFWIllustrious_v120.safetensors"
+      "ckpt_name": "waiIllustriousSDXL_v160.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -1883,7 +1883,7 @@ const WORKFLOW = {
   },
   "45": {
     "inputs": {
-      "ckpt_name": "waiNSFWIllustrious_v120.safetensors"
+      "ckpt_name": "waiIllustriousSDXL_v160.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
@@ -2352,7 +2352,7 @@ const WORKFLOW_REGIONAL = {
   },
   "43": {
     "inputs": {
-      "ckpt_name": "waiNSFWIllustrious_v120.safetensors"
+      "ckpt_name": "waiIllustriousSDXL_v160.safetensors"
     },
     "class_type": "CheckpointLoaderSimple",
     "_meta": {
