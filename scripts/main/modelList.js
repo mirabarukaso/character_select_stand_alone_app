@@ -112,8 +112,9 @@ function updateUpscalerList(model_path_comfyui, model_path_webui, search_subfold
 
     if (UPSCALER_COMFYUI.length > 0) {
         // do nothing
+        UPSCALER_COMFYUI = [...UPSCALER_COMFYUI, 'Latent Upscaler (Denoise>=0.5)'];
     } else {
-        UPSCALER_COMFYUI = ['None'];
+        UPSCALER_COMFYUI = ['None', 'Latent Upscaler (Denoise>=0.5)'];
     }
 
     if (UPSCALER_WEBUI.length > 0) {
