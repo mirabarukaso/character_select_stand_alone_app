@@ -86,6 +86,13 @@ function updateADetailerList(model_path_comfyui, model_path_webui, search_subfol
 }
 
 function updateUpscalerList(model_path_comfyui, model_path_webui, search_subfolder) {
+    const LATENT_UPSCALERS = [
+        'Latent (nearest-exact)', 
+        'Latent (bilinear)',
+        'Latent (area)',
+        'Latent (bicubic)',
+        'Latent (bislerp)'
+    ];
     const upPathComfyUI = path.join(path.dirname(model_path_comfyui), 'upscale_models');
     const upPathWebUI = path.join(path.dirname(model_path_webui), 'upscale_models');
 
@@ -112,9 +119,9 @@ function updateUpscalerList(model_path_comfyui, model_path_webui, search_subfold
 
     if (UPSCALER_COMFYUI.length > 0) {
         // do nothing
-        UPSCALER_COMFYUI = [...UPSCALER_COMFYUI, 'Latent Upscaler (Denoise>=0.5)'];
+        UPSCALER_COMFYUI = [...UPSCALER_COMFYUI, ...LATENT_UPSCALERS];
     } else {
-        UPSCALER_COMFYUI = ['None', 'Latent Upscaler (Denoise>=0.5)'];
+        UPSCALER_COMFYUI = ['None', ...LATENT_UPSCALERS];
     }
 
     if (UPSCALER_WEBUI.length > 0) {
