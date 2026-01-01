@@ -38,7 +38,7 @@ npm start
 ```
 
 > [!TIP]
-> *One-Click package v2.0.0*    
+> *One-Click package v2.1.0*    
 > The full package [embeded_env_for_SAA](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/embeded_env_for_SAA.zip)      
 
 ## Update
@@ -67,21 +67,38 @@ UdinXProgrammer [#62 Missing character](https://github.com/mirabarukaso/characte
 # Highlights
 ## Mira Image Tiled Upscaler
 > [!NOTE]
+> MiraITU
 > A content-aware image super-resolution ComfyUI custom node based on vision models.       
-> Simply drag and drop ANY image into SAA/SAAC to upscale it.       
+> Simply drag and drop ANY image into SAA/SAAC to upscale it.   
+
+Supports magnification scales from 1.5x to 8x. By adjusting different tile sizes, it can optimize VRAM usage to the maximum, enabling 8GB graphics cards to achieve image upscaling at 1.5x to 3x (or higher) scales, while also unleashing the full potential of high-end graphics cards with 24GB or more VRAM to accomplish 4x to 8x image upscaling.       
 
 Requires [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) 0.5.6.0 or above         
 Requires [MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack)           
 
 And Image Tagger for [Mira](https://github.com/mirabarukaso/ComfyUI_Mira#tagger)         
 
-<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU01.png" width=35%>   
-
-<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU02.png" width=35%>   
+| Settings | Drag and Drop |
+| --- | --- | 
+| <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU01.png" width=256> | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU02.png" width=256>   |
 
 | Before | 6x After |
 | --- | --- | 
 | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2025-12-29-031208_1898628601.png" width=256>   |  <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2026-01-01-223655_3487267443.png" width=256> |
+
+Under normal circumstances, it is sufficient to adjust only the denoising parameter. Common positive and negative prompts are applied to all tiles. The SDXL model uses, by default, the same model currently employed by SAA, without requiring LoRA integration.    
+The difference between the `Image` and `Latent` merging methods lies in the order of operations: whether the VAE encoding/decoding is performed before or after merging. The two methods exhibit slight differences in performance. The Image method is suitable for most scenarios.       
+Note: If the Latent method is used, the final VAE decoding will automatically operate in tiled mode (which is slower).        
+
+| Upscale Ratio 1024x1360(1536) | Tile Size | VAE 8G | VAE 24G~ |
+| --- | --- | --- | --- | 
+| x1.5 | 768 | Full | Full |
+| x2 | 1280 | Full/Tiled | Full |
+| x3 | 1536 | Tiled | Full |
+| x4 | 2048 | Tiled | Full |
+| x6 | 2048/2560 | Tiled | Full |
+| x8 | 2560/3072 | Tiled | Full/Tiled |
+Note: Due to limitations of the SDXL model, exceeding 8x magnification will result in overly fragmented visual slices. For higher magnification requirements, it is recommended to use a dedicated ComfyUI workflow instead.         
 
 ## Image Tagger
 Supports [WD@SmilingWolf](https://huggingface.co/SmilingWolf), [CL@cella110n](https://huggingface.co/cella110n/cl_tagger) and [Camie@Camais03](https://huggingface.co/spaces/Camais03/camie-tagger-v2-app) models in ONNX format.             
