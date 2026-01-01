@@ -98,6 +98,7 @@ Note: If the Latent method is used, the final VAE decoding will automatically op
 | x4 | 2048 | Tiled | Full |
 | x6 | 2048/2560 | Tiled | Full |
 | x8 | 2560/3072 | Tiled | Full/Tiled |
+
 Note: Due to limitations of the SDXL model, exceeding 8x magnification will result in overly fragmented visual slices. For higher magnification requirements, it is recommended to use a dedicated ComfyUI workflow instead.         
 
 ## Image Tagger
