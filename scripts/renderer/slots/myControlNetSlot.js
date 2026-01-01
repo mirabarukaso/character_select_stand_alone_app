@@ -141,7 +141,8 @@ function addEvent(candidateRow, subClassName){
     const imageClass = candidateRow.querySelector(`.${subClassName}`);
     if(imageClass){
         imageClass.addEventListener('click', () => {
-            globalThis.overlay.custom.createCustomOverlay(imageClass.src, LANG.message_controlnet_custom_overlay, 512, 'left', 'left');
+            globalThis.overlay.custom.createCustomOverlay(
+                imageClass.src, LANG.message_controlnet_custom_overlay, 512, 'left', 'left', 'Controlnet');
         });
     }
 }
@@ -332,7 +333,8 @@ class ControlNetSlotManager {
                 if(slotValues[0].startsWith('ip-adapter')) {            
                     const imageB64 = await resizeImageToControlNetResolution(slot.pre_image_base64, preProcessResolution, true, true);
                     slot.pre_image_after_base64 = `data:image/png;base64,${imageB64}`;
-                    globalThis.overlay.custom.createCustomOverlay(slot.pre_image_after_base64, slotValues.toString(), preProcessResolution, 'center', 'center');
+                    globalThis.overlay.custom.createCustomOverlay(
+                        slot.pre_image_after_base64, slotValues.toString(), preProcessResolution, 'center', 'center', 'Controlnet');
 
                     this.updateAfterImage(slotClass);
                 } else {
@@ -360,7 +362,8 @@ class ControlNetSlotManager {
                         }
                         
                         this.updateAfterImage(slotClass);
-                        globalThis.overlay.custom.createCustomOverlay([slot.pre_image_base64, slot.pre_image_after_base64], slotValues.toString(), 512, 'center', 'center');
+                        globalThis.overlay.custom.createCustomOverlay(
+                            [slot.pre_image_base64, slot.pre_image_after_base64], slotValues.toString(), 512, 'center', 'center', 'Controlnet');
                     }
                 }
             } else if (action === 'delete') {
@@ -370,9 +373,13 @@ class ControlNetSlotManager {
                 Since slot already show images, info button are now hide by default
                 */               
                 if(slot.pre_image && slot.pre_image_after) {
-                    globalThis.overlay.custom.createCustomOverlay([slot.pre_image_base64, slot.pre_image_after_base64], this.getValue(slotClass, slot).toString(), 512, 'center', 'center');
+                    globalThis.overlay.custom.createCustomOverlay(
+                        [slot.pre_image_base64, slot.pre_image_after_base64], this.getValue(slotClass, slot).toString(), 
+                        512, 'center', 'center', 'Controlnet');
                 } else if(!slot.pre_image && slot.pre_image_after) {
-                    globalThis.overlay.custom.createCustomOverlay(slot.pre_image_after_base64, this.getValue(slotClass, slot).toString(), 512, 'center', 'center');
+                    globalThis.overlay.custom.createCustomOverlay(
+                        slot.pre_image_after_base64, this.getValue(slotClass, slot).toString(), 
+                        512, 'center', 'center', 'Controlnet');
                 }
                 else if(!slot.pre_image && !slot.pre_image_after) {
                     // Empty Slot by click Add.....

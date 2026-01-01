@@ -177,6 +177,8 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
 
     if(!skipRightClick)
         globalThis.rightClick.updateLanguage();
+
+    globalThis.imageInfo.updateHintText(LANG.image_info_drag_hint_top, LANG.image_info_drag_hint_bottom);
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity

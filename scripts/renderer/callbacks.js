@@ -1,6 +1,7 @@
 import { decodeThumb } from './customThumbGallery.js';
 import { generateImage, startQueue } from './generate.js';
 import { generateRegionalImage } from './generate_regional.js';
+import { generateMiraITU } from './generate_miraITU.js';
 import { doSwap, reloadFiles } from './components/myCollapsed.js';
 import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI, updateLanguage, updateSettings } from './language.js';
 import { setBlur, setNormal } from './components/myDialog.js';
@@ -132,7 +133,7 @@ export function callback_myViewList_Update(){
     globalThis.globalSettings.view_style = v4;
 }
 
-export async function callback_generate_start(loops = 1, runSame = false){    
+export async function callback_generate_start(runType='normal', dataPack=null){    
     globalThis.generate.generate_single.setClickable(false);
     globalThis.generate.generate_batch.setClickable(false);
     globalThis.generate.generate_same.setClickable(false);
@@ -142,11 +143,15 @@ export async function callback_generate_start(loops = 1, runSame = false){
     globalThis.generate.generate_skip.setClickable(true);
     globalThis.generate.generate_cancel.setClickable(true);
 
-    if(globalThis.globalSettings.regional_condition) {
-        await generateRegionalImage(loops, runSame);
-    } else {
-        await generateImage(loops, runSame);
-    }    
+    if (runType === 'normal') {
+        if(globalThis.globalSettings.regional_condition) {
+            await generateRegionalImage(dataPack);
+        } else {
+            await generateImage(dataPack);
+        }    
+    } else if (runType === 'MiraITU') {
+        await generateMiraITU(dataPack);
+    }
 }
 
 export function callback_generate_skip() {

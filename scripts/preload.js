@@ -97,6 +97,7 @@ contextBridge.exposeInMainWorld('api', {
   getUpscalerList: async (args) => ipcRenderer.invoke('get-upscaler-list', args),
   getADetailerList: async (args) => ipcRenderer.invoke('get-adetailer-list', args),
   getImageTaggerModels: async () => ipcRenderer.invoke('get-image-tagger-models'),
+  getONNXList: async (args) => ipcRenderer.invoke('get-onnx-list', args),
   // Tag Auto Complete
   tagReload: async () => ipcRenderer.invoke('tag-reload'),
   tagGet: async (text) => ipcRenderer.invoke('tag-get-suggestions', text),
@@ -108,8 +109,9 @@ contextBridge.exposeInMainWorld('api', {
   runComfyUI: async (generateData) => ipcRenderer.invoke('generate-backend-comfyui-run', generateData),
   runComfyUI_Regional: async (generateData) => ipcRenderer.invoke('generate-backend-comfyui-run-regional', generateData),
   runComfyUI_ControlNet: async (generateData) => ipcRenderer.invoke('generate-backend-comfyui-run-controlnet', generateData),
+  runComfyUI_MiraITU: async (generateData) => ipcRenderer.invoke('generate-backend-comfyui-run-mira-itu', generateData),
   getImageComfyUI: async () => ipcRenderer.invoke('generate-backend-comfyui-get-image'),
-  openWsComfyUI: async (prompt_id) => ipcRenderer.invoke('generate-backend-comfyui-open-ws', prompt_id),
+  openWsComfyUI: async (prompt_id, skipFirst, isIndex) => ipcRenderer.invoke('generate-backend-comfyui-open-ws', prompt_id, skipFirst, isIndex),
   closeWsComfyUI: async () => ipcRenderer.invoke('generate-backend-comfyui-close-ws'),
   cancelComfyUI: async () => ipcRenderer.invoke('generate-backend-comfyui-cancel'),
 

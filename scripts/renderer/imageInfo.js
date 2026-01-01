@@ -2,12 +2,17 @@ import { createControlNetButtons } from './components/imageInfoControlNet.js';
 import { createImageTagger } from './components/imageInfoTagger.js';
 import { handlePastedJsonOrCsvFile, handlePastedPlainTextItem } from './components/imageInfoDataFiles.js';
 import { extractImageMetadata, parseGenerationParameters } from './components/imageInfoMetadata.js';
+import { createMiraITUWindow } from './components/imageInfoMiraITU.js';
 import { fileToBase64 } from './generate.js';
 
 let cachedImage = '';
 
 export function setupImageUploadOverlay() {
     const fullBody = document.querySelector('#full-body');
+    
+    const SETTINGS = globalThis.globalSettings;
+    const FILES = globalThis.cachedFiles;
+    const LANG = FILES.language[SETTINGS.language];
     
     function defaultUploadOverlaySize(){
         const width = globalThis.innerWidth;
@@ -41,6 +46,17 @@ export function setupImageUploadOverlay() {
     uploadOverlay.className = 'im-image-upload-overlay';
     uploadOverlay.style.display = 'none'; 
     fullBody.appendChild(uploadOverlay);
+
+    const hintContainer = document.createElement('div');
+    hintContainer.className = 'drag-hint-container';
+    const topHint = document.createElement('div');
+    topHint.className = 'drag-hint-top';
+    const bottomHint = document.createElement('div');
+    bottomHint.className = 'drag-hint-bottom';
+    hintContainer.appendChild(topHint);
+    hintContainer.appendChild(bottomHint);
+    uploadOverlay.appendChild(hintContainer);
+    updateHintText(LANG.image_info_drag_hint_top, LANG.image_info_drag_hint_bottom);
 
     const closeButton = document.createElement('button');
     closeButton.className = 'cg-close-button';
@@ -174,6 +190,14 @@ export function setupImageUploadOverlay() {
         }
     };
 
+    function updateHintText(top, bottom) {
+        const topHint = document.querySelector('.drag-hint-top');
+        topHint.textContent = top; 
+
+        const bottomHint = document.querySelector('.drag-hint-bottom');
+        bottomHint.textContent = bottom; 
+    }
+
     function showOverlay() {
         uploadOverlay.style.display = 'flex';
         requestAnimationFrame(updateDynamicHeights);
@@ -223,25 +247,55 @@ export function setupImageUploadOverlay() {
 
     uploadOverlay.addEventListener('dragover', (e) => {
         e.preventDefault();
-        e.stopPropagation();        
-        uploadOverlay.classList.add('dragover');
+        e.stopPropagation();
+
+        hintContainer.style.display = 'flex';
+        svgIcon.style.opacity = '0.1';
+
+        const rect = uploadOverlay.getBoundingClientRect();
+        const offsetY = e.clientY - rect.top;
+        const threshold = rect.height / 2;
+
+        if (offsetY < threshold) {
+            topHint.classList.add('active');
+            bottomHint.classList.remove('active');
+        } else {
+            topHint.classList.remove('active');
+            bottomHint.classList.add('active');
+        }
     });
 
     uploadOverlay.addEventListener('dragleave', (e) => {
         e.preventDefault();
         e.stopPropagation();
-        uploadOverlay.classList.remove('dragover');
+
+        hintContainer.style.display = 'none';
+        svgIcon.style.opacity = '1';
+        topHint.classList.remove('active');
+        bottomHint.classList.remove('active');
     });
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     uploadOverlay.addEventListener('drop', async (e) => {
         e.preventDefault();
         e.stopPropagation();
-        uploadOverlay.classList.remove('dragover');
+        
+        hintContainer.style.display = 'none';
+        svgIcon.style.opacity = '1';
+        topHint.classList.remove('active');
+        bottomHint.classList.remove('active');
 
         const files = e.dataTransfer.files;
-        if (files.length > 0) {
-            if(files[0].type.startsWith('image/')) {
-                const file = files[0];
+        if (files.length === 0) return;
+
+        const rect = uploadOverlay.getBoundingClientRect();
+        const offsetY = e.clientY - rect.top;
+        const threshold = rect.height / 2;
+        const isTopHalf = offsetY < threshold;
+        const file = files[0];
+
+        if (isTopHalf) {            
+            if(file.type.startsWith('image/')) {                
                 cachedImage = file;
                 const fallbackMetadata = {
                     fileName: file.name,
@@ -259,16 +313,30 @@ export function setupImageUploadOverlay() {
                     showImagePreview(file);                    
                     displayFormattedMetadata(fallbackMetadata);
                 }
-            } else if (files[0].type === `application/json` 
-                    || files[0].type === `text/csv`) {
-                console.log('Dropped JSON file:', files[0].name);
-                await globalThis.jsonlist.addJsonSlotFromFile(files[0], files[0].type);
+            } else if (file.type === `application/json` 
+                    || file.type === `text/csv`) {
+                console.log('Dropped JSON file:', file.name);
+                await globalThis.jsonlist.addJsonSlotFromFile(file, file.type);
                 globalThis.collapsedTabs.jsonlist.setCollapsed(false);
                 hideOverlay();
             } else {
-                console.warn('Dropped file ', files[0].name, ' is not support. File type: ', files[0].type);
+                console.warn('Dropped file ', files[0].name, ' is not support. File type: ', file.type);
                 hideOverlay();
             }
+        } else {
+            const apiInterface = globalThis.generate.api_interface.getValue();
+            if(file.type.startsWith('image/')) {                
+                cachedImage = file;            
+                if(apiInterface === 'ComfyUI') {
+                    const imageBase64 = await fileToBase64(cachedImage);
+                    await createMiraITUWindow(imageBase64, cachedImage);
+                } else {
+                    globalThis.overlay.custom.createErrorOverlay(LANG.message_mira_itu_only_comfyui, 'https://github.com/mirabarukaso/ComfyUI_MiraSubPack');
+                }                
+            } else {
+                console.warn('Dropped file ', file.name, ' is not support. File type: ', file.type);
+            }
+            hideOverlay();
         }
     });
 
@@ -285,6 +353,61 @@ export function setupImageUploadOverlay() {
             };
         };
         reader.readAsDataURL(file);
+    }
+
+    function createButtonMireITU() {
+        const SETTINGS = globalThis.globalSettings;
+        const FILES = globalThis.cachedFiles;
+        const LANG = FILES.language[SETTINGS.language];
+
+        let miraITUButton;
+        const apiInterface = globalThis.generate.api_interface.getValue();
+        if(apiInterface === 'ComfyUI') {
+            miraITUButton= document.createElement('button');
+            miraITUButton.className = 'mira-itu';
+            miraITUButton.textContent = LANG.image_info_mira_itu_button;
+            
+            miraITUButton.addEventListener('click', async () => {
+                const apiInterface = globalThis.generate.api_interface.getValue();
+                if(apiInterface !== 'ComfyUI') {
+                    globalThis.overlay.custom.createErrorOverlay(LANG.message_mira_itu_only_comfyui, 'https://github.com/mirabarukaso/ComfyUI_MiraSubPack');
+                    return;
+                }
+                const imageBase64 = await fileToBase64(cachedImage);
+                await createMiraITUWindow(imageBase64, cachedImage);
+                hideOverlay();
+            });
+        } else {
+            miraITUButton = document.createElement('div');
+        }
+
+        return miraITUButton;
+    }
+
+    function createButtonMetaData() {
+        const SETTINGS = globalThis.globalSettings;
+        const FILES = globalThis.cachedFiles;
+        const LANG = FILES.language[SETTINGS.language];
+
+        let workflowButton;
+        if(globalThis.currentImageMetadata.nodes) {
+            workflowButton = document.createElement('button');
+            workflowButton.className = 'copy-all-metadata';
+            workflowButton.textContent = LANG.image_info_show_metadata_buttons;
+
+            workflowButton.addEventListener('click', async () => {
+                const parsedMetadata = JSON.stringify(globalThis.currentImageMetadata.nodes, null, 2);
+                const imageBase64 = await fileToBase64(cachedImage);
+                globalThis.overlay.custom.createCustomOverlay(
+                        imageBase64 || 'none', 
+                        `${parsedMetadata || ''}`,
+                        384, 'center', 'left', null, 'Info');
+            });
+        } else {
+            workflowButton = document.createElement('div');
+        }
+
+        return workflowButton;
     }
 
     function createTagTransferButtons() {
@@ -320,7 +443,9 @@ export function setupImageUploadOverlay() {
                 const SETTINGS = globalThis.globalSettings;
                 const FILES = globalThis.cachedFiles;
                 const LANG = FILES.language[SETTINGS.language];
-                globalThis.overlay.custom.createCustomOverlay('none', LANG.saac_macos_clipboard.replace('{0}', fullText));
+                globalThis.overlay.custom.createCustomOverlay(
+                    'none', LANG.saac_macos_clipboard.replace('{0}', fullText),
+                    384, 'center', 'left', null, 'Clipboard');
             }
             copyButton.textContent = LANG.image_info_copy_metadata_copied;
             setTimeout(() => {
@@ -344,26 +469,9 @@ export function setupImageUploadOverlay() {
                 sendButton.textContent = LANG.image_info_send_tags;
             }, 2000);
         });
-
-        let workflowButton;
-        if(globalThis.currentImageMetadata.nodes) {
-            workflowButton = document.createElement('button');
-            workflowButton.className = 'copy-all-metadata';
-            workflowButton.textContent = LANG.image_info_show_metadata_buttons;
-
-            workflowButton.addEventListener('click', async () => {
-                const parsedMetadata = JSON.stringify(globalThis.currentImageMetadata.nodes, null, 2);
-                const imageBase64 = await fileToBase64(cachedImage);
-                globalThis.overlay.custom.createCustomOverlay(
-                        imageBase64 || 'none', 
-                        `${parsedMetadata || ''}`
-                    );            
-            });
-        } else {
-            workflowButton = document.createElement('div');
-        }
         
-        buttonContainer.appendChild(workflowButton);
+        buttonContainer.appendChild(createButtonMireITU());
+        buttonContainer.appendChild(createButtonMetaData());
         buttonContainer.appendChild(sendButton);
         buttonContainer.appendChild(copyButton);        
         
@@ -371,32 +479,16 @@ export function setupImageUploadOverlay() {
     }
 
     function createWorkflowButtons() {
-        const SETTINGS = globalThis.globalSettings;
-        const FILES = globalThis.cachedFiles;
-        const LANG = FILES.language[SETTINGS.language];
-
         const buttonContainer = document.createElement('div');
         buttonContainer.className = 'metadata-buttons';
 
         const dummyButton1 = document.createElement('div');
-        const dummyButton2 = document.createElement('div');
-        
-        const workflowButton = document.createElement('button');
-        workflowButton.className = 'copy-all-metadata';
-        workflowButton.textContent = LANG.image_info_show_metadata_buttons;
-
-        workflowButton.addEventListener('click', async () => {            
-            const parsedMetadata = JSON.stringify(globalThis.currentImageMetadata.nodes, null, 2);
-            const imageBase64 = await fileToBase64(cachedImage);
-            globalThis.overlay.custom.createCustomOverlay(
-                    imageBase64 || 'none', 
-                    `${parsedMetadata || ''}`
-                );            
-        });        
+        const dummyButton2 = document.createElement('div');   
 
         buttonContainer.appendChild(dummyButton1);
         buttonContainer.appendChild(dummyButton2);
-        buttonContainer.appendChild(workflowButton);
+        buttonContainer.appendChild(createButtonMireITU());
+        buttonContainer.appendChild(createButtonMetaData());
         
         return buttonContainer;
     }
@@ -525,7 +617,7 @@ export function setupImageUploadOverlay() {
 
     uploadOverlay.showOverlay = showOverlay;
     uploadOverlay.hideOverlay = hideOverlay;
-    uploadOverlay.clearImageAndMetadata = clearImageAndMetadata;
+    uploadOverlay.updateHintText = updateHintText;
 
     uploadOverlay._cleanup = () => {
         document.removeEventListener('dragenter', showOverlay);
@@ -540,7 +632,7 @@ function findInt(keyWord, otherParamsLines) {
     const line = otherParamsLines.find(line => line.trim().startsWith(keyWord));  
     if (line) {
         const escapedKeyWord = keyWord.replaceAll(/[.*+?^${}()|[\]\\]/g, String.raw`\$&`);
-        const regex = new RegExp(`${escapedKeyWord}\\s*(\\d+)`);
+        const regex = new RegExp(String.raw`${escapedKeyWord}\s*(\d+)`);
         const match = line.match(regex);
         if (match?.[1]) {
             return match[1];

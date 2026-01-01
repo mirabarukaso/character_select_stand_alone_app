@@ -140,7 +140,8 @@ class JsonSlotManager {
                 const selectedStr = Number.parseFloat(jsonStrComponent?.getValue()) || 1;
                 const description = (selectedStr===1)?slot.jsonObj[selectedName]:`(${slot.jsonObj[selectedName]}:${selectedStr})`;                
 
-                globalThis.overlay.custom.createCustomOverlay(null, `\n\n${selectedName}\n${description}`, 64, 'left', 'left');
+                globalThis.overlay.custom.createCustomOverlay(
+                    null, `\n\n${selectedName}\n${description}`, 64, 'left', 'left', 'Info');
             }
         });
 

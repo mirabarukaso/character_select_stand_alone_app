@@ -1,6 +1,8 @@
 import { decodeThumb } from './customThumbGallery.js';
 import { getAiPrompt } from './remoteAI.js';
+import { from_renderer_generate_updatePreview } from './generate_backend.js';
 import { seartGenerateRegional } from './generate_regional.js';
+import { startGenerateMiraITU } from './generate_miraITU.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { setADetailerModelList } from './slots/myADetailerSlot.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
@@ -685,7 +687,7 @@ export async function generateControlnetImage(imageData, controlNetSelect, contr
     };
     
     // ControlNet Start
-    globalThis.generate.loadingMessage = LANG.generate_controlnet_process;
+    globalThis.generate.loadingMessage = `${LANG.generate_controlnet_process}${controlNetSelect}\n`;
     let newImage;
     if(apiInterface === 'None') {
         console.warn('apiInterface', apiInterface);
@@ -748,7 +750,8 @@ export async function generateControlnetImage(imageData, controlNetSelect, contr
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
-export async function generateImage(loops, runSame){       
+export async function generateImage(dataPack){
+    const {loops, runSame} = dataPack;
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
@@ -809,7 +812,8 @@ export async function generateImage(loops, runSame){
             uuid: browserUUID,
             
             queueManager : {
-                isRegional: false,
+                genType:'normal',
+                isRegional:false,
                 apiInterface:apiInterface,
                 finalInfo: '',
                 loop: loop,
@@ -914,37 +918,38 @@ export async function startQueue(){
             globalThis.queueManager.removeAll();
             break;
         }                                
-
         if(globalThis.generate.skipClicked) {
             break;
         }
 
-        const queueManager = generateData.queueManager;
-
-        globalThis.thumbGallery.append(queueManager.thumb);
-
-        const aiPrompt = await getAiPrompt(queueManager.loop, LANG.generate_ai, queueManager.aiInterface, queueManager.aiRole, queueManager.aiOptions);
-        if(queueManager.isRegional) {
-            generateData.positive_left = String(generateData.positive_left).replaceAll(REPLACE_AI_MARK, aiPrompt);
-            generateData.positive_right = String(generateData.positive_right).replaceAll(REPLACE_AI_MARK, aiPrompt);            
-        } else {
-            generateData.positive = String(generateData.positive).replaceAll(REPLACE_AI_MARK, aiPrompt);
-        }
-        const finalInfo = String(queueManager.finalInfo).replaceAll(REPLACE_AI_MARK, aiPrompt);
-        globalThis.infoBox.image.appendValue(finalInfo);
-        globalThis.generate.loadingMessage = LANG.generate_start.replace('{0}', `${queueManager.id}`).replace('{1}', `[${queueManager.loop + 1}/${queueManager.loops}]`);
-        
-        // Just keep apiInterface in case of cancel
-        //const apiInterface = queueManager.apiInterface;
-        //generateData.queueManager = {apiInterface:apiInterface};
-
-        // start generate
+        // start generate        
+        const queueManager = generateData.queueManager;        
         let result = '';
-        if(queueManager.isRegional) {
-            result = await seartGenerateRegional(queueManager.apiInterface, generateData);
-        } else {
-            result = await seartGenerate(queueManager.apiInterface, generateData);
-        }
+        if(queueManager.genType === 'normal') {
+            globalThis.thumbGallery.append(queueManager.thumb);
+
+            const aiPrompt = await getAiPrompt(queueManager.loop, LANG.generate_ai, queueManager.aiInterface, queueManager.aiRole, queueManager.aiOptions);            
+            const finalInfo = String(queueManager.finalInfo).replaceAll(REPLACE_AI_MARK, aiPrompt);
+            globalThis.infoBox.image.appendValue(finalInfo);            
+            globalThis.generate.loadingMessage = LANG.generate_start.replace('{0}', `${queueManager.id}`).replace('{1}', `[${queueManager.loop + 1}/${queueManager.loops}]`);
+
+            if(queueManager.isRegional) {
+                generateData.positive_left = String(generateData.positive_left).replaceAll(REPLACE_AI_MARK, aiPrompt);
+                generateData.positive_right = String(generateData.positive_right).replaceAll(REPLACE_AI_MARK, aiPrompt);            
+                result = await seartGenerateRegional(queueManager.apiInterface, generateData);
+            } else {
+                generateData.positive = String(generateData.positive).replaceAll(REPLACE_AI_MARK, aiPrompt);
+                result = await seartGenerate(queueManager.apiInterface, generateData);
+            }
+        } else if(queueManager.genType === 'miraITU') {
+            from_renderer_generate_updatePreview(`data:image/png;base64,${generateData.preview}`);
+            const ogResolution = `${generateData.taggerOptions.imageWidth}x${generateData.taggerOptions.imageHeight}`;
+            const tgtResolution = `${generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio}x${generateData.taggerOptions.imageHeight*generateData.taggerOptions.upscaleRatio}`;
+            globalThis.generate.loadingMessage = `MiraITU: ${generateData.seed}\n${ogResolution} -> ${tgtResolution}\n`;
+            result = await startGenerateMiraITU(queueManager.apiInterface, generateData);
+        }        
+
+        // result
         ret = result.ret;
         retCopy = result.retCopy;
         
@@ -977,9 +982,7 @@ async function seartGenerate(apiInterface, generateData){
     let retCopy = '';
     let breakNow = false;
 
-    if(apiInterface === 'None') {
-        console.warn('apiInterface', apiInterface);
-    } else if(apiInterface === 'ComfyUI') {
+    if(apiInterface === 'ComfyUI') {
         const result = await runComfyUI(apiInterface, generateData);
         ret = result.ret;
         retCopy = result.retCopy;
@@ -989,6 +992,8 @@ async function seartGenerate(apiInterface, generateData){
         ret = result.ret;
         retCopy = result.retCopy;
         breakNow = result.breakNow
+    } else if(apiInterface === 'None') {
+        console.warn('apiInterface', apiInterface);
     }
 
     return {ret, retCopy, breakNow}
@@ -1033,9 +1038,9 @@ async function runComfyUI(apiInterface, generateData){
                 try {
                     let image;
                     if (globalThis.inBrowser) {
-                        image = await sendWebSocketMessage({ type: 'API', method: 'openWsComfyUI', params: [parsedResult.prompt_id] });
+                        image = await sendWebSocketMessage({ type: 'API', method: 'openWsComfyUI', params: [parsedResult.prompt_id, true, '29'] });
                     } else {
-                        image = await globalThis.api.openWsComfyUI(parsedResult.prompt_id);
+                        image = await globalThis.api.openWsComfyUI(parsedResult.prompt_id, true, '29');
                     }
 
                     if (globalThis.generate.cancelClicked) {

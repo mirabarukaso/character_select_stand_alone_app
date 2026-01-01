@@ -644,7 +644,9 @@ export function setupGallery(containerId) {
                     const SETTINGS = globalThis.globalSettings;
                     const FILES = globalThis.cachedFiles;
                     const LANG = FILES.language[SETTINGS.language];
-                    globalThis.overlay.custom.createCustomOverlay('none', LANG.saac_macos_clipboard.replace('{0}', seedToCopy));                    
+                    globalThis.overlay.custom.createCustomOverlay(
+                        'none', LANG.saac_macos_clipboard.replace('{0}', seedToCopy), 
+                        384, 'center', 'left', null, 'Clipboard');
                 } finally {                                        
                     setTimeout(() => {
                         seedButton.textContent = 'Seed';
@@ -686,7 +688,9 @@ export function setupGallery(containerId) {
                     const SETTINGS = globalThis.globalSettings;
                     const FILES = globalThis.cachedFiles;
                     const LANG = FILES.language[SETTINGS.language];
-                    globalThis.overlay.custom.createCustomOverlay('none', LANG.saac_macos_clipboard.replace('{0}', tagToCopy));
+                    globalThis.overlay.custom.createCustomOverlay(
+                        'none', LANG.saac_macos_clipboard.replace('{0}', tagToCopy),
+                        384, 'center', 'left', null, 'Clipboard');
                 } finally {
                     setTimeout(() => {
                         tagButton.textContent = 'Tags';

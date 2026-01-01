@@ -1,3 +1,11 @@
+2026.01.01 v2.1.0           
+Add `Mira Image Tiled Upscaler`         
+  Requires [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) 0.5.6.0 or above         
+  Requires [MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack)           
+Improved window display method        
+Bugs fix
+
+
 2025.12.29 v2.0.2           
 Change `Default` to `waiIllustriousSDXL_v160.safetensors`       
 Bug fix

@@ -367,7 +367,8 @@ function createRegional(apiInterface) {
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
-export async function generateRegionalImage(loops, runSame){   
+export async function generateRegionalImage(dataPack){
+    const {loops, runSame} = dataPack;
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
@@ -432,7 +433,8 @@ export async function generateRegionalImage(loops, runSame){
             uuid: browserUUID,
             
             queueManager: {
-                isRegional: true,
+                genType:'normal',
+                isRegional:true,
                 apiInterface:apiInterface,
                 finalInfo: '',
                 loop: loop,
@@ -521,9 +523,7 @@ export async function seartGenerateRegional(apiInterface, generateData){
     let retCopy = '';
     let breakNow = false;
 
-    if(apiInterface === 'None') {
-        console.warn('apiInterface', apiInterface);
-    } else if(apiInterface === 'ComfyUI') {
+    if(apiInterface === 'ComfyUI') {
         const result = await runComfyUI(apiInterface, generateData);
         ret = result.ret;
         retCopy = result.retCopy;
@@ -533,6 +533,8 @@ export async function seartGenerateRegional(apiInterface, generateData){
         ret = result.ret;
         retCopy = result.retCopy;
         breakNow = result.breakNow
+    } else if(apiInterface === 'None') {
+        console.warn('apiInterface', apiInterface);
     }
 
     return {ret, retCopy, breakNow}
@@ -577,12 +579,12 @@ async function runComfyUI(apiInterface, generateData){
                 try {
                     let image;
                     if (globalThis.inBrowser) {
-                        image = await sendWebSocketMessage({ type: 'API', method: 'openWsComfyUI', params: [parsedResult.prompt_id] });
+                        image = await sendWebSocketMessage({ type: 'API', method: 'openWsComfyUI', params: [parsedResult.prompt_id, true, '29'] });
                     } else {
-                        image = await globalThis.api.openWsComfyUI(parsedResult.prompt_id);
+                        image = await globalThis.api.openWsComfyUI(parsedResult.prompt_id, true, '29');
                     }
 
-                    if(globalThis.generate.cancelClicked) {
+                    if (globalThis.generate.cancelClicked) {
                         breakNow = true;
                     } else if(image.startsWith('Error')) {
                         if(image.endsWith('Cancelled')) {

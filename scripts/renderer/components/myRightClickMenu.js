@@ -517,7 +517,9 @@ function registerDefaultMenuItems() {
             });
 
             const hashedPassword = await globalThis.api.bcryptHash(password);
-            globalThis.overlay.custom.createCustomOverlay('none', `\n\nRAW:\n${password}\n\nHASH:\n${hashedPassword}`);
+            globalThis.overlay.custom.createCustomOverlay(
+                'none', `\n\nRAW:\n${password}\n\nHASH:\n${hashedPassword}`,
+                384, 'center', 'left', null, 'Info');
         });
     }
 }
@@ -565,7 +567,8 @@ function proceedWithCopy(img) {
                         const SETTINGS = globalThis.globalSettings;
                         const FILES = globalThis.cachedFiles;
                         const LANG = FILES.language[SETTINGS.language];
-                        globalThis.overlay.custom.createCustomOverlay('none', LANG.saac_macos_copy_image);
+                        globalThis.overlay.custom.createCustomOverlay(
+                            'none', LANG.saac_macos_copy_image, 384, 'center', 'left', null, 'Clipboard');
                     }
                 }
             }, 'image/png');
@@ -598,7 +601,9 @@ async function menu_copyImageMetadata(element) {
                 const SETTINGS = globalThis.globalSettings;
                 const FILES = globalThis.cachedFiles;
                 const LANG = FILES.language[SETTINGS.language];
-                globalThis.overlay.custom.createCustomOverlay('none', LANG.saac_macos_clipboard.replace('{0}', result.metadata));
+                globalThis.overlay.custom.createCustomOverlay(
+                    'none', LANG.saac_macos_clipboard.replace('{0}', result.metadata),
+                    384, 'center', 'left', null, 'Clipboard');
             }
             
         } catch (error) {
@@ -654,7 +659,8 @@ async function prompt_testAIgenerate(element){
         }
 
         const aiText = await getAiPrompt(0, text);
-        globalThis.overlay.custom.createCustomOverlay('none', `\n\n\n${aiText}`);
+        globalThis.overlay.custom.createCustomOverlay('none', `\n\n\n${aiText}`,
+                                                    384, 'center', 'left', null, 'aiText');
     } catch (err) {
         console.error('Error on get AI prompt:', err);
     }

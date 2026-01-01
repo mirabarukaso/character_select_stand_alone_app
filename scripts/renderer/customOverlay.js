@@ -1,5 +1,7 @@
 import { parseTaggedContent } from './components/myTextbox.js';
 
+let customOverlayCounter = 0;
+
 export function setupButtonOverlay() {
     globalThis.addEventListener('resize', () => {
         const overlays = ['cg-button-overlay', 'cg-loading-overlay'];
@@ -551,7 +553,7 @@ export function addCustomOverlayDragFunctionality(element, dragHandle, getSyncEl
     };
 }
 
-export function addResizeFunctionality(element, handle) {
+export function addResizeFunctionality(element, handle, storageKey = 'customOverlaySize') {
     let isResizing = false;
     let startX, startY, startWidth, startHeight;
 
@@ -593,7 +595,7 @@ export function addResizeFunctionality(element, handle) {
 
         const finalWidth = Number.parseFloat(getComputedStyle(element).width);
         const finalHeight = Number.parseFloat(getComputedStyle(element).height);
-        localStorage.setItem('customOverlaySize', JSON.stringify({
+        localStorage.setItem(storageKey, JSON.stringify({
             width: finalWidth,
             height: finalHeight
         }));
@@ -652,7 +654,8 @@ function createErrorOverlay(errorMessage, copyMessage) {
                 const SETTINGS = globalThis.globalSettings;
                 const FILES = globalThis.cachedFiles;
                 const LANG = FILES.language[SETTINGS.language];
-                createCustomOverlay('none', LANG.saac_macos_clipboard.replace('{0}', copyMessage));
+                createCustomOverlay('none', LANG.saac_macos_clipboard.replace('{0}', copyMessage),
+                                    384, 'center', 'left', null, 'Clipboard');
             }
             document.getElementById('cg-error-overlay').remove();
         }
@@ -766,7 +769,15 @@ function createLoadingOverlay(loadingMessage, elapsedTimePrefix, elapsedTimeSuff
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
-function createCustomOverlay(image, message, imageWidth=384, imageAlign='center', textAlign='left') {
+function createCustomOverlay(
+    image, 
+    message, 
+    imageWidth=384, 
+    imageAlign='center', 
+    textAlign='left', 
+    className = null,
+    group = 'default'
+) {
     const displayMessage = (typeof message === 'string' && message.trim()) ? message : '\nNo content provided';
     
     let images = [];
@@ -794,16 +805,21 @@ function createCustomOverlay(image, message, imageWidth=384, imageAlign='center'
             }
         );
 
-    const overlay = createInfoOverlay({
-        id: 'cg-custom-overlay',
-        className: 'cg-custom-overlay',
-        content: `
-            <div class="cg-custom-content">
-                <div class="cg-drag-handle"></div>
-                <div class="cg-custom-textbox scroll-container"></div>
-            </div>
-        `
-    });
+    const uniqueId = `cg-custom-overlay-${++customOverlayCounter}`;
+    const sizeStorageKey = `customOverlaySize-${group}`;
+    const positionStorageKey = `customOverlayPosition-${group}`;
+    
+    const overlay = document.createElement('div');
+    overlay.id = uniqueId;
+    overlay.className = 'cg-overlay cg-custom-overlay';
+    overlay.dataset.group = group;
+    overlay.innerHTML = `
+        <div class="cg-custom-content">
+            <div class="cg-drag-handle"></div>
+            <div class="cg-custom-textbox scroll-container"></div>
+        </div>
+    `;
+    document.body.appendChild(overlay);
 
     const textbox = overlay.querySelector('.cg-custom-textbox');
     textbox.style.display = 'block'; 
@@ -908,12 +924,13 @@ function createCustomOverlay(image, message, imageWidth=384, imageAlign='center'
 
     const defaultSize = { width: defaultWidth, height: defaultHeight };
 
+    // Get size from group
     let savedSize;
     try {
-        savedSize = localStorage.getItem('customOverlaySize') ? JSON.parse(localStorage.getItem('customOverlaySize')) : null;
+        savedSize = localStorage.getItem(sizeStorageKey) ? JSON.parse(localStorage.getItem(sizeStorageKey)) : null;
     } catch (err) {
         console.error('Failed to parse customOverlaySize:', err);
-        localStorage.removeItem('customOverlaySize');
+        localStorage.removeItem(sizeStorageKey);
     }
     let initialWidth = defaultSize.width;
     let initialHeight = defaultSize.height;
@@ -926,12 +943,13 @@ function createCustomOverlay(image, message, imageWidth=384, imageAlign='center'
     overlay.style.width = `${initialWidth}px`;
     overlay.style.height = `${initialHeight}px`;
 
+    // Get position from group
     let savedPosition;
     try {
-        savedPosition = localStorage.getItem('customOverlayPosition') ? JSON.parse(localStorage.getItem('customOverlayPosition')) : null;
+        savedPosition = localStorage.getItem(positionStorageKey) ? JSON.parse(localStorage.getItem(positionStorageKey)) : null;
     } catch (err) {
         console.error('Failed to parse customOverlayPosition:', err);
-        localStorage.removeItem('customOverlayPosition');
+        localStorage.removeItem(positionStorageKey);
     }
     if (savedPosition?.top !== undefined && savedPosition.left !== undefined) {
         overlay.style.position = 'fixed';
@@ -969,7 +987,7 @@ function createCustomOverlay(image, message, imageWidth=384, imageAlign='center'
         if (newWidth !== rect.width || newHeight !== rect.height) {
             overlay.style.width = `${newWidth}px`;
             overlay.style.height = `${newHeight}px`;
-            localStorage.setItem('customOverlaySize', JSON.stringify({
+            localStorage.setItem(sizeStorageKey, JSON.stringify({
                 width: newWidth,
                 height: newHeight
             }));
@@ -978,8 +996,9 @@ function createCustomOverlay(image, message, imageWidth=384, imageAlign='center'
 
     requestAnimationFrame(adjustOverlaySize);
 
-    const resizeCleanup = addResizeFunctionality(overlay, resizeHandle);
-    const dragCleanup = addCustomOverlayDragFunctionality(overlay, dragHandle, () => null, 'customOverlayPosition');
+    // passing data
+    const resizeCleanup = addResizeFunctionality(overlay, resizeHandle, sizeStorageKey);
+    const dragCleanup = addCustomOverlayDragFunctionality(overlay, dragHandle, () => null, positionStorageKey);
 
     overlay._cleanup = () => {
         dragCleanup();
@@ -988,7 +1007,38 @@ function createCustomOverlay(image, message, imageWidth=384, imageAlign='center'
             clearInterval(overlay.dataset.timerInterval);
             delete overlay.dataset.timerInterval;
         }
+        overlay.remove();
     };
+
+    if (className) {
+        const customContainer = document.createElement('div');
+        customContainer.className = className;        
+        textbox.appendChild(customContainer);
+
+        return {
+            overlay: overlay,
+            container: customContainer,
+            group: group,
+            close: () => {
+                if (overlay._cleanup) overlay._cleanup();
+                else overlay.remove();
+            },
+            setText: (message) => {
+                textDiv.innerHTML = parseTaggedContent(message).replaceAll('\n', '<br>')
+                .replaceAll(
+                    /\[COPY_URL\](https?:\/\/[^\s]+)\[\/COPY_URL\]/g,
+                    '<a href="$1" target="_blank" style="color: #1e90ff; text-decoration: underline;">$1</a>'
+                )
+                .replaceAll(
+                    /\[COPY_CUSTOM(?:=(#[0-9A-Fa-f]{6}|[a-zA-Z]+))?\](.+?)\[\/COPY_CUSTOM\]/g,
+                    (match, color, text) => {
+                        const colorStyle = color || '#ffffff';
+                        return `<span style="color: ${colorStyle}">${text}</span>`;
+                    }
+                );
+            }
+        };
+    }
 
     return overlay;
 }

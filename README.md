@@ -19,6 +19,7 @@ This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Web
 | ControlNet/IPA | Yes | Yes | Yes |
 | ADetailer | Yes | Yes | Yes |
 | API authentication| No | Yes | Yes |
+| MiraITU | Yes | No | No |
 
 *Try Online Character Select Simple Advanced App* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
 
@@ -64,6 +65,24 @@ UdinXProgrammer [#62 Missing character](https://github.com/mirabarukaso/characte
      
 ------
 # Highlights
+## Mira Image Tiled Upscaler
+> [!NOTE]
+> A content-aware image super-resolution ComfyUI custom node based on vision models.       
+> Simply drag and drop ANY image into SAA/SAAC to upscale it.       
+
+Requires [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) 0.5.6.0 or above         
+Requires [MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack)           
+
+And Image Tagger for [Mira](https://github.com/mirabarukaso/ComfyUI_Mira#tagger)         
+
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU01.png" width=35%>   
+
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU02.png" width=35%>   
+
+| Before | 6x After |
+| --- | --- | 
+| <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2025-12-29-031208_1898628601.png" width=256>   |  <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2026-01-01-223655_3487267443.png" width=256> |
+
 ## Image Tagger
 Supports [WD@SmilingWolf](https://huggingface.co/SmilingWolf), [CL@cella110n](https://huggingface.co/cella110n/cl_tagger) and [Camie@Camais03](https://huggingface.co/spaces/Camais03/camie-tagger-v2-app) models in ONNX format.             
 

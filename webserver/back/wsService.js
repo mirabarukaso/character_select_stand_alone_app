@@ -14,11 +14,11 @@ import { WebSocketServer } from 'ws';
 import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings } from '../../scripts/main/globalSettings.js';
 import { getCachedFilesWithoutThumb, getCharacterThumb } from '../../scripts/main/cachedFiles.js';
 import { getModelList, getModelListAll, getLoRAList, getImageTaggerModels, updateModelAndLoRAList, getControlNetList,
-    getUpscalerList, getADetailerList } from '../../scripts/main/modelList.js';
+    getUpscalerList, getADetailerList, getONNXList } from '../../scripts/main/modelList.js';
 import { updateWildcards, loadWildcard } from '../../scripts/main/wildCards.js';
 import { tagReload, tagGet } from '../../scripts/main/tagAutoComplete_backend.js';
-import { runComfyUI, runComfyUI_Regional, runComfyUI_ControlNet, openWsComfyUI, closeWsComfyUI, cancelComfyUI } from '../../scripts/main/generate_backend_comfyui.js';
-import { runWebUI, runWebUI_Regional, cancelWebUI, startPollingWebUI, stopPollingWebUI, runWebUI_ControlNet, 
+import { runComfyUI, runComfyUI_Regional, runComfyUI_ControlNet, runComfyUI_MiraITU, openWsComfyUI, closeWsComfyUI, cancelComfyUI } from '../../scripts/main/generate_backend_comfyui.js';
+import { runWebUI, runWebUI_Regional, cancelWebUI, startPollingWebUI, stopPollingWebUI, runWebUI_ControlNet,
     getControlNetProcessorList, getADetailerModelList, getUpscalersModelList, resetModelLists } from '../../scripts/main/generate_backend_webui.js';
 import { remoteAI, localAI } from '../../scripts/main/remoteAI_backend.js';
 import { loadFile, readImage, readSafetensors, readBase64Image } from '../../scripts/main/fileHandlers.js';
@@ -397,6 +397,7 @@ const methodHandlers = {
   'getControlNetList': (params)=> getControlNetList(...params),
   'getUpscalerList': (params)=> getUpscalerList(...params),
   'getADetailerList': (params)=> getADetailerList(...params),
+  'getONNXList': (params)=> getONNXList(...params),
   'getImageTaggerModels': ()=> getImageTaggerModels(),
   'updateModelList': (params)=> updateModelAndLoRAList(...params),
 
@@ -447,6 +448,7 @@ const methodHandlers = {
   'runComfyUI': (params)=> runComfyUI(...params),
   'runComfyUI_Regional': (params)=> runComfyUI_Regional(...params),
   'runComfyUI_ControlNet': (params)=> runComfyUI_ControlNet(...params),
+  'runComfyUI_MiraITU': (params)=> runComfyUI_MiraITU(...params),
   'openWsComfyUI': (params)=> openWsComfyUI(...params),
   'closeWsComfyUI': ()=> closeWsComfyUI(),
   'cancelComfyUI': ()=> cancelComfyUI(),

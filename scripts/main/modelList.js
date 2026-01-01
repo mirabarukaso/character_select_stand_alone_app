@@ -16,7 +16,8 @@ let CONTROLNET_WEBUI = ['None'];
 let UPSCALER_COMFYUI = ['None'];
 let UPSCALER_WEBUI = ['None'];
 let ADETAILER_COMFYUI  = ['None'];
-let ADETAILER_WEBUI  = ['None'];
+let ADETAILER_WEBUI = ['None'];
+let ONNX_COMFYUI = ['None'];
 
 let EXTRA_MODELS = {
     exist: false,
@@ -30,7 +31,7 @@ let IMAGE_TAGGER = ['none'];
 
 const appPath = app.isPackaged ? path.join(path.dirname(app.getPath('exe')), 'resources', 'app') : app.getAppPath();
 
-function readDirectory(directory='', basePath = '', search_subfolder = false, maxDepth = Infinity, currentDepth = 0, extName = '.safetensors') {
+function readDirectory(directory='', basePath = '', search_subfolder = false, maxDepth = Infinity, currentDepth = 0, extName = '.safetensors', replaceSlash = false) {
     let files = [];
     try {
         files = fs.readdirSync(directory, { withFileTypes: true });
@@ -45,12 +46,32 @@ function readDirectory(directory='', basePath = '', search_subfolder = false, ma
         const fullPath = path.join(directory, file.name);
 
         if (file.isDirectory() && search_subfolder && currentDepth < maxDepth) {
-            result = result.concat(readDirectory(fullPath, relativePath, search_subfolder, maxDepth, currentDepth + 1, extName));
+            result = result.concat(readDirectory(fullPath, relativePath, search_subfolder, maxDepth, currentDepth + 1, extName, replaceSlash));
         } else if (file.isFile() && file.name.endsWith(extName)) {
-            result.push(relativePath);
+            if (replaceSlash)
+                result.push(relativePath.replaceAll('\\', '/'));
+            else
+                result.push(relativePath);
         }
     }
     return result;
+}
+
+function updateONNXList(model_path_comfyui, search_subfolder) {
+    const upPathComfyUI = path.join(path.dirname(model_path_comfyui), 'onnx');
+
+    if (fs.existsSync(upPathComfyUI)) {
+        const onnxList = readDirectory(upPathComfyUI, '', search_subfolder, Infinity, 0, '.onnx', true);
+        ONNX_COMFYUI = onnxList;
+    } else {
+        ONNX_COMFYUI = [];
+    }
+
+    if (ONNX_COMFYUI.length > 0) {
+        // do nothing
+    } else {
+        ONNX_COMFYUI = ['None'];
+    }
 }
 
 function updateADetailerList(model_path_comfyui, model_path_webui, search_subfolder) {
@@ -411,7 +432,11 @@ function setupModelList(settings) {
 
     ipcMain.handle("get-adetailer-list", async (event, args) => {
         return getADetailerList(args);
-    }); 
+    });
+
+    ipcMain.handle("get-onnx-list", async (event, args) => {
+        return getONNXList(args);
+    });
 
     EXTRA_MODELS.exist = readExtraModelPaths(settings.model_path_comfyui);
 
@@ -445,6 +470,11 @@ function setupModelList(settings) {
         settings.model_path_comfyui,
         settings.model_path_webui,
         settings.search_modelinsubfolder
+    );
+
+    updateONNXList(
+        settings.model_path_comfyui,
+        true
     );
 
     updateImageTaggerList();
@@ -514,6 +544,14 @@ function getADetailerList(apiInterface) {
     }    
 }
 
+function getONNXList(apiInterface) {
+    if (apiInterface === 'ComfyUI') {
+        return ONNX_COMFYUI;
+    } else {
+        return ['None'];
+    }    
+}
+
 function updateModelAndLoRAList(args) {
     // model_path, model_path_2nd, model_filter, enable_filter, search_subfolder
     console.log(CAT, 'Update model/lora list with following args: ', args);
@@ -525,6 +563,7 @@ function updateModelAndLoRAList(args) {
     updateControlNetList(args[0], args[1], args[4]);
     updateUpscalerList(args[0], args[1], args[4]);
     updateADetailerList(args[0], args[1], args[4]);
+    updateONNXList(args[0], true);
     updateImageTaggerList();
 
     // This is the Skeleton Key to unlock the Mutex Lock
@@ -546,6 +585,7 @@ export {
     getControlNetList,
     getUpscalerList,
     getADetailerList,
+    getONNXList,
     getImageTaggerModels,
     updateModelAndLoRAList,
     collectRelativePaths,

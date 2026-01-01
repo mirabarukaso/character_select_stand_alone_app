@@ -2,6 +2,7 @@ import { ipcMain, BrowserWindow, net } from 'electron';
 import { WebSocket } from 'ws';
 import * as wsService from '../../webserver/back/wsService.js';
 import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
+import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, WORKFLOW_MIRA_ITU} from './comfyui_workflow.js';
 
 const CAT = '[ComfyUI]';
 let backendComfyUI = null;
@@ -1236,6 +1237,205 @@ class ComfyUI {
     return workflow;
   }
 
+  // eslint-disable-next-line sonarjs/cognitive-complexity
+  createWorkflowMiraITU(generateData) {
+    const {addr, auth, uuid, model, vpred, seed, exclude, refresh, imageData, taggerOptions} = generateData;
+    this.addr = addr;
+    this.refresh = refresh;
+    this.auth = auth;
+    this.uuid = uuid;
+
+    let workflow = structuredClone(WORKFLOW_MIRA_ITU);       
+    // image input
+    workflow["1"].inputs.base64text = imageData;
+
+    // model upscale
+    workflow["2"].inputs.resize_scale = taggerOptions.upscaleRatio;
+    workflow["3"].inputs.model_name = taggerOptions.upscaleModels;
+
+    // crop to tile
+    workflow["4"].inputs.tile_size = taggerOptions.ituTileSize;
+    workflow["4"].inputs.overlap = taggerOptions.ituOverlap;
+    workflow["4"].inputs.overlap_feather_rate = taggerOptions.ituFeather;
+
+    // tagger model (Default CL Tagger)
+    if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('wd')) {
+      // WD
+      workflow["5"] = {
+        "inputs": {
+          "model_name": taggerOptions.imageTaggerModels,
+          "general_threshold": taggerOptions.imageTaggerGenThreshold,
+          "character_threshold": 0.85,
+          "general_mcut": false,
+          "character_mcut": false,
+          "replace_space": true,
+          "categories": "general",
+          "exclude_tags": exclude,
+          "session_method": "GPU",
+          "image": [
+            "4",
+            0
+          ]
+        },
+        "class_type": "wd_tagger_mira",
+        "_meta": {
+          "title": "WD Tagger"
+        }
+      };
+    } else if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('camie')) {
+      // Camie
+      workflow["5"] ={
+        "inputs": {
+          "model_name": taggerOptions.imageTaggerModels,
+          "general": taggerOptions.imageTaggerGenThreshold,
+          "min_confidence": 0.01,
+          "replace_space": true,
+          "categories": "general",
+          "exclude_tags": exclude,
+          "session_method": "GPU",
+          "image": [
+            "4",
+            0
+          ]
+        },
+        "class_type": "camie_tagger_mira",
+        "_meta": {
+          "title": "Camie Tagger"
+        }
+      };
+    } else {
+      // CL
+      workflow["5"].inputs.model_name = taggerOptions.imageTaggerModels;
+      workflow["5"].inputs.general = taggerOptions.imageTaggerGenThreshold;
+      workflow["5"].inputs.exclude_tags = exclude;
+    }    
+
+    // VPRED
+    workflow["6"].inputs.ckpt_name = model;
+    if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1) {
+        workflow["17"].inputs.sampling = "v_prediction";
+    }
+
+    // Change to tiled VAE if Tiled is set (Slow)
+    if (taggerOptions.upscaleVAEmethod === 'Tiled') {
+      // Endoce
+      workflow["7"] = {
+        "inputs": {
+          "tile_size": 1024,
+          "overlap": 64,
+          "temporal_size": 64,
+          "temporal_overlap": 8,
+          "pixels": [
+            "4",
+            0
+          ],
+          "vae": [
+            "6",
+            2
+          ]
+        },
+        "class_type": "VAEEncodeTiled",
+        "_meta": {
+          "title": "VAE Encode (Tiled)"
+        }
+      };
+
+      // Decode
+      workflow["11"] = {
+        "inputs": {
+          "tile_size": 1024,
+          "overlap": 64,
+          "temporal_size": 64,
+          "temporal_overlap": 8,
+          "samples": [
+            "8",
+            0
+          ],
+          "vae": [
+            "6",
+            2
+          ]
+        },
+        "class_type": "VAEDecodeTiled",
+        "_meta": {
+          "title": "VAE Decode (Tiled)"
+        }
+      };
+    }
+
+    // Tiled Sampler
+    workflow["8"].inputs.seed = seed;
+    workflow["8"].inputs.steps = taggerOptions.steps;
+    workflow["8"].inputs.cfg = taggerOptions.cfg;
+    workflow["8"].inputs.sampler_name = taggerOptions.samplerSelect;
+    workflow["8"].inputs.scheduler = taggerOptions.schedulerSelect;
+    workflow["8"].inputs.denoise = taggerOptions.denoise;
+
+    // common positive
+    workflow["9"].inputs.text = taggerOptions.positiveText;
+
+    // common negative
+    workflow["10"].inputs.text = taggerOptions.negativeText;
+
+    // Change
+    if (taggerOptions.mergeMethod === 'Latent') {
+      // VAE to Latent Merge
+      workflow["11"] = {
+        "inputs": {
+          "feather_rate_override": 0,
+          "tiled_latents": [
+            "8",
+            0
+          ],
+          "mira_itu_pipeline": [
+            "4",
+            1
+          ]
+        },
+        "class_type": "OverlappedLatentMerge_MiraSubPack",
+        "_meta": {
+          "title": "Overlapped Latent Merge"
+        }
+      };
+
+      // Image Merge to VAE Tiled (For large latent)
+      workflow["12"] = {
+        "inputs": {
+          "tile_size": 1024,
+          "overlap": 64,
+          "temporal_size": 64,
+          "temporal_overlap": 8,
+          "samples": [
+            "11",
+            0
+          ],
+          "vae": [
+            "6",
+            2
+          ]
+        },
+        "class_type": "VAEDecodeTiled",
+        "_meta": {
+          "title": "VAE Decode (Tiled)"
+        }
+      };
+    }
+
+    // Image Saver
+    const tgtWidth = generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio;
+    const tgtHeight = generateData.taggerOptions.imageHeight*generateData.taggerOptions.upscaleRatio;
+    workflow["14"].inputs.seed_value = seed;
+    workflow["14"].inputs.steps = taggerOptions.steps;
+    workflow["14"].inputs.cfg = taggerOptions.cfg;
+    workflow["14"].inputs.sampler_name = taggerOptions.samplerSelect;
+    workflow["14"].inputs.scheduler = taggerOptions.schedulerSelect;
+    workflow["14"].inputs.denoise = taggerOptions.denoise;
+    workflow["14"].inputs.width = tgtWidth;
+    workflow["14"].inputs.height = tgtHeight;
+
+    return workflow;
+  }
+
   run(workflow) {
     return new Promise((resolve, reject) => {
       const requestBody = {
@@ -1309,8 +1509,12 @@ async function setupGenerateBackendComfyUI() {
       return await runComfyUI_ControlNet(generateData);
   });
 
-  ipcMain.handle('generate-backend-comfyui-open-ws', async (event, prompt_id) => {
-      return await backendComfyUI.openWS(prompt_id);
+  ipcMain.handle('generate-backend-comfyui-run-mira-itu', async (event, generateData) => {
+      return await runComfyUI_MiraITU(generateData);
+  });
+
+  ipcMain.handle('generate-backend-comfyui-open-ws', async (event, prompt_id, skipFirst, isIndex) => {
+      return await backendComfyUI.openWS(prompt_id, skipFirst, isIndex);
   });
 
   ipcMain.handle('generate-backend-comfyui-close-ws', (event) => {
@@ -1354,6 +1558,22 @@ async function runComfyUI_Regional(generateData) {
   return result;
 }
 
+async function runComfyUI_MiraITU(generateData){
+  const isBusy = await getMutexBackendBusy();
+  if (isBusy) {
+    console.warn(CAT, 'ComfyUI API is busy, cannot run new generation, please try again later.');
+    return 'Error: ComfyUI API is busy, cannot run new generation, please try again later.';
+  }
+  setMutexBackendBusy(true); // Acquire the mutex lock
+  cancelMark = false;
+
+  const workflow = backendComfyUI.createWorkflowMiraITU(generateData)
+  if(backendComfyUI.uuid !== 'none')
+    console.log(CAT, 'Running ComfyUI MiraITU with uuid:', backendComfyUI.uuid);
+  const result = await backendComfyUI.run(workflow);   
+  return result;
+}
+
 async function runComfyUI_ControlNet(generateData){
   const isBusy = await getMutexBackendBusy();
   if (isBusy) {
@@ -1388,7 +1608,7 @@ async function runComfyUI_ControlNet(generateData){
 }
 
 async function openWsComfyUI(prompt_id, skipFirst=true, index='29') {
-  return await backendComfyUI.openWS(prompt_id, skipFirst,index);
+  return await backendComfyUI.openWS(prompt_id, skipFirst, index);
 }
 
 function closeWsComfyUI() {
@@ -1407,1230 +1627,8 @@ export {
   runComfyUI,
   runComfyUI_Regional,
   runComfyUI_ControlNet,
+  runComfyUI_MiraITU,
   openWsComfyUI,
   closeWsComfyUI,
   cancelComfyUI
-};
-
-// Do NOT Modify it here
-// Modify it in ComfyUI with your generate result
-const WORKFLOW = {
-  "2": {
-    "inputs": {
-      "text": [
-        "34",
-        4
-      ],
-      "clip": [
-        "34",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "3": {
-    "inputs": {
-      "text": [
-        "33",
-        0
-      ],
-      "clip": [
-        "34",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "5": {
-    "inputs": {
-      "width": [
-        "17",
-        0
-      ],
-      "height": [
-        "17",
-        1
-      ],
-      "batch_size": 1
-    },
-    "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "Empty Latent Image"
-    }
-  },
-  "6": {
-    "inputs": {
-      "samples": [
-        "37",
-        0
-      ],
-      "vae": [
-        "43",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "13": {
-    "inputs": {
-      "steps": 30,
-      "cfg": 7
-    },
-    "class_type": "StepsAndCfg",
-    "_meta": {
-      "title": "Steps & Cfg"
-    }
-  },
-  "17": {
-    "inputs": {
-      "Width": 1024,
-      "Height": 1360,
-      "Batch": 1,
-      "Landscape": false,
-      "HiResMultiplier": 1.5
-    },
-    "class_type": "CanvasCreatorAdvanced",
-    "_meta": {
-      "title": "Create Canvas Advanced"
-    }
-  },
-  "18": {
-    "inputs": {
-      "tile_size": 512,
-      "overlap": 64,
-      "temporal_size": 64,
-      "temporal_overlap": 8,
-      "samples": [
-        "20",
-        0
-      ],
-      "vae": [
-        "43",
-        2
-      ]
-    },
-    "class_type": "VAEDecodeTiled",
-    "_meta": {
-      "title": "VAE Decode (Tiled)"
-    }
-  },
-  "19": {
-    "inputs": {
-      "tile_size": 512,
-      "overlap": 64,
-      "temporal_size": 64,
-      "temporal_overlap": 8,
-      "pixels": [
-        "25",
-        0
-      ],
-      "vae": [
-        "43",
-        2
-      ]
-    },
-    "class_type": "VAEEncodeTiled",
-    "_meta": {
-      "title": "VAE Encode (Tiled)"
-    }
-  },
-  "20": {
-    "inputs": {
-      "seed": 3025955348,
-      "steps": 20,
-      "cfg": [
-        "13",
-        1
-      ],
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "denoise": 0.4,
-      "model": [
-        "39",
-        2
-      ],
-      "positive": [
-        "41",
-        0
-      ],
-      "negative": [
-        "40",
-        0
-      ],
-      "latent_image": [
-        "19",
-        0
-      ]
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "KSampler"
-    }
-  },
-  "25": {
-    "inputs": {
-      "resize_scale": [
-        "17",
-        5
-      ],
-      "resize_method": "nearest",
-      "upscale_model": [
-        "27",
-        0
-      ],
-      "image": [
-        "6",
-        0
-      ]
-    },
-    "class_type": "UpscaleImageByModelThenResize",
-    "_meta": {
-      "title": "Upscale Image By Model Then Resize"
-    }
-  },
-  "27": {
-    "inputs": {
-      "model_name": "RealESRGAN_x4.pth"
-    },
-    "class_type": "UpscaleModelLoader",
-    "_meta": {
-      "title": "Load Upscale Model"
-    }
-  },
-  "28": {
-    "inputs": {
-      "method": "Mean",
-      "src_image": [
-        "18",
-        0
-      ],
-      "ref_image": [
-        "6",
-        0
-      ]
-    },
-    "class_type": "ImageColorTransferMira",
-    "_meta": {
-      "title": "Color Transfer"
-    }
-  },
-  "29": {
-    "inputs": {
-      "filename": "%time_%seed",
-      "path": "%date",
-      "extension": "png",
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
-      "modelname": "waiIllustriousSDXL_v160.safetensors",
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "positive": [
-        "32",
-        0
-      ],
-      "negative": [
-        "33",
-        0
-      ],
-      "seed_value": 3025955348,
-      "width": [
-        "17",
-        0
-      ],
-      "height": [
-        "17",
-        1
-      ],
-      "lossless_webp": true,
-      "quality_jpeg_or_webp": 100,
-      "optimize_png": false,
-      "counter": 0,
-      "denoise": 1,
-      "clip_skip": -2,
-      "time_format": "%Y-%m-%d-%H%M%S",
-      "save_workflow_as_json": false,
-      "embed_workflow": true,
-      "additional_hashes": "",
-      "images": [
-        "28",
-        0
-      ]
-    },
-    "class_type": "ImageSaverMira",
-    "_meta": {
-      "title": "Image Saver"
-    }
-  },
-  "32": {
-    "inputs": {
-      "text": "solo, masterpiece, best quality, amazing quality"
-    },
-    "class_type": "TextBoxMira",
-    "_meta": {
-      "title": "Text Box"
-    }
-  },
-  "33": {
-    "inputs": {
-      "text": "bad quality,worst quality,worst detail,sketch"
-    },
-    "class_type": "TextBoxMira",
-    "_meta": {
-      "title": "Text Box"
-    }
-  },
-  "34": {
-    "inputs": {
-      "text": [
-        "32",
-        0
-      ],
-      "model": [
-        "35",
-        0
-      ],
-      "clip": [
-        "45",
-        1
-      ]
-    },
-    "class_type": "LoRAfromText",
-    "_meta": {
-      "title": "LoRA Loader from Text"
-    }
-  },
-  "35": {
-    "inputs": {
-      "sampling": "eps",
-      "zsnr": false,
-      "model": [
-        "45",
-        0
-      ]
-    },
-    "class_type": "ModelSamplingDiscrete",
-    "_meta": {
-      "title": "ModelSamplingDiscrete"
-    }
-  },
-  "36": {
-    "inputs": {
-      "add_noise": "enable",
-      "noise_seed": 3025955348,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "start_at_step": 0,
-      "end_at_step": 1000,
-      "return_with_leftover_noise": "disable",
-      "model": [
-        "34",
-        0
-      ],
-      "positive": [
-        "2",
-        0
-      ],
-      "negative": [
-        "3",
-        0
-      ],
-      "latent_image": [
-        "5",
-        0
-      ]
-    },
-    "class_type": "KSamplerAdvanced",
-    "_meta": {
-      "title": "KSampler (Advanced)"
-    }
-  },
-  "37": {
-    "inputs": {
-      "add_noise": "disable",
-      "noise_seed": 3025955348,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "start_at_step": 12,
-      "end_at_step": 10000,
-      "return_with_leftover_noise": "disable",
-      "model": [
-        "39",
-        0
-      ],
-      "positive": [
-        "41",
-        0
-      ],
-      "negative": [
-        "40",
-        0
-      ],
-      "latent_image": [
-        "36",
-        0
-      ]
-    },
-    "class_type": "KSamplerAdvanced",
-    "_meta": {
-      "title": "KSampler (Advanced)"
-    }
-  },
-  "39": {
-    "inputs": {
-      "text": [
-        "32",
-        0
-      ],
-      "model": [
-        "44",
-        0
-      ],
-      "clip": [
-        "43",
-        1
-      ]
-    },
-    "class_type": "LoRAfromText",
-    "_meta": {
-      "title": "LoRA Loader from Text"
-    }
-  },
-  "40": {
-    "inputs": {
-      "text": [
-        "33",
-        0
-      ],
-      "clip": [
-        "39",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "41": {
-    "inputs": {
-      "text": [
-        "39",
-        4
-      ],
-      "clip": [
-        "39",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "43": {
-    "inputs": {
-      "ckpt_name": "waiIllustriousSDXL_v160.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Load Checkpoint"
-    }
-  },
-  "44": {
-    "inputs": {
-      "sampling": "eps",
-      "zsnr": false,
-      "model": [
-        "43",
-        0
-      ]
-    },
-    "class_type": "ModelSamplingDiscrete",
-    "_meta": {
-      "title": "ModelSamplingDiscrete"
-    }
-  },
-  "45": {
-    "inputs": {
-      "ckpt_name": "waiIllustriousSDXL_v160.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Load Checkpoint"
-    }
-  },
-  "46": {
-    "inputs": {
-      "samples": [
-        "36",
-        0
-      ],
-      "upscale_method": "nearest-exact",
-      "scale_by": 1.5
-    },
-    "class_type": "LatentUpscaleBy",
-    "_meta": {
-      "title": "Upscale Latent By"
-    }
-  }
-};
-
-const WORKFLOW_REGIONAL = {
-  "2": {
-    "inputs": {
-      "text": [
-        "34",
-        4
-      ],
-      "clip": [
-        "34",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "3": {
-    "inputs": {
-      "text": [
-        "33",
-        0
-      ],
-      "clip": [
-        "34",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "5": {
-    "inputs": {
-      "width": [
-        "17",
-        0
-      ],
-      "height": [
-        "17",
-        1
-      ],
-      "batch_size": 1
-    },
-    "class_type": "EmptyLatentImage",
-    "_meta": {
-      "title": "Empty Latent Image"
-    }
-  },
-  "6": {
-    "inputs": {
-      "samples": [
-        "37",
-        0
-      ],
-      "vae": [
-        "43",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "13": {
-    "inputs": {
-      "steps": 30,
-      "cfg": 7.000000000000002
-    },
-    "class_type": "StepsAndCfg",
-    "_meta": {
-      "title": "Steps & Cfg"
-    }
-  },
-  "17": {
-    "inputs": {
-      "Width": 1024,
-      "Height": 1360,
-      "Batch": 1,
-      "Landscape": false,
-      "HiResMultiplier": 1.5
-    },
-    "class_type": "CanvasCreatorAdvanced",
-    "_meta": {
-      "title": "Create Canvas Advanced"
-    }
-  },
-  "18": {
-    "inputs": {
-      "tile_size": 512,
-      "overlap": 64,
-      "temporal_size": 64,
-      "temporal_overlap": 8,
-      "samples": [
-        "20",
-        0
-      ],
-      "vae": [
-        "43",
-        2
-      ]
-    },
-    "class_type": "VAEDecodeTiled",
-    "_meta": {
-      "title": "VAE Decode (Tiled)"
-    }
-  },
-  "19": {
-    "inputs": {
-      "tile_size": 512,
-      "overlap": 64,
-      "temporal_size": 64,
-      "temporal_overlap": 8,
-      "pixels": [
-        "25",
-        0
-      ],
-      "vae": [
-        "43",
-        2
-      ]
-    },
-    "class_type": "VAEEncodeTiled",
-    "_meta": {
-      "title": "VAE Encode (Tiled)"
-    }
-  },
-  "20": {
-    "inputs": {
-      "seed": 715010500915488,
-      "steps": 20,
-      "cfg": [
-        "13",
-        1
-      ],
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "denoise": 0.4000000000000001,
-      "model": [
-        "39",
-        2
-      ],
-      "positive": [
-        "57",
-        0
-      ],
-      "negative": [
-        "40",
-        0
-      ],
-      "latent_image": [
-        "19",
-        0
-      ]
-    },
-    "class_type": "KSampler",
-    "_meta": {
-      "title": "KSampler"
-    }
-  },
-  "25": {
-    "inputs": {
-      "resize_scale": [
-        "17",
-        5
-      ],
-      "resize_method": "nearest",
-      "upscale_model": [
-        "27",
-        0
-      ],
-      "image": [
-        "6",
-        0
-      ]
-    },
-    "class_type": "UpscaleImageByModelThenResize",
-    "_meta": {
-      "title": "Upscale Image By Model Then Resize"
-    }
-  },
-  "27": {
-    "inputs": {
-      "model_name": "4x-UltraSharp.pth"
-    },
-    "class_type": "UpscaleModelLoader",
-    "_meta": {
-      "title": "Load Upscale Model"
-    }
-  },
-  "28": {
-    "inputs": {
-      "method": "Mean",
-      "src_image": [
-        "18",
-        0
-      ],
-      "ref_image": [
-        "6",
-        0
-      ]
-    },
-    "class_type": "ImageColorTransferMira",
-    "_meta": {
-      "title": "Color Transfer"
-    }
-  },
-  "29": {
-    "inputs": {
-      "filename": "%time_%seed",
-      "path": "%date",
-      "extension": "png",
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
-      "modelname": "waiNSFWIllustrious_v130.safetensors",
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "positive": [
-        "32",
-        0
-      ],
-      "negative": [
-        "33",
-        0
-      ],
-      "seed_value": 1775747588,
-      "width": [
-        "17",
-        0
-      ],
-      "height": [
-        "17",
-        1
-      ],
-      "lossless_webp": true,
-      "quality_jpeg_or_webp": 100,
-      "optimize_png": false,
-      "counter": 0,
-      "denoise": 1,
-      "clip_skip": -2,
-      "time_format": "%Y-%m-%d-%H%M%S",
-      "save_workflow_as_json": false,
-      "embed_workflow": true,
-      "additional_hashes": "",
-      "images": [
-        "28",
-        0
-      ]
-    },
-    "class_type": "ImageSaverMira",
-    "_meta": {
-      "title": "Image Saver"
-    }
-  },
-  "32": {
-    "inputs": {
-      "text": "2girls"
-    },
-    "class_type": "TextBoxMira",
-    "_meta": {
-      "title": "Text Box"
-    }
-  },
-  "33": {
-    "inputs": {
-      "text": "bad quality, worst quality, worst detail, sketch"
-    },
-    "class_type": "TextBoxMira",
-    "_meta": {
-      "title": "Text Box"
-    }
-  },
-  "34": {
-    "inputs": {
-      "text": [
-        "32",
-        0
-      ],
-      "model": [
-        "35",
-        0
-      ],
-      "clip": [
-        "45",
-        1
-      ]
-    },
-    "class_type": "LoRAfromText",
-    "_meta": {
-      "title": "LoRA Loader from Text"
-    }
-  },
-  "35": {
-    "inputs": {
-      "sampling": "eps",
-      "zsnr": false,
-      "model": [
-        "45",
-        0
-      ]
-    },
-    "class_type": "ModelSamplingDiscrete",
-    "_meta": {
-      "title": "ModelSamplingDiscrete"
-    }
-  },
-  "36": {
-    "inputs": {
-      "add_noise": "enable",
-      "noise_seed": 1094643513798864,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "start_at_step": 0,
-      "end_at_step": 1000,
-      "return_with_leftover_noise": "disable",
-      "model": [
-        "34",
-        0
-      ],
-      "positive": [
-        "53",
-        0
-      ],
-      "negative": [
-        "3",
-        0
-      ],
-      "latent_image": [
-        "5",
-        0
-      ]
-    },
-    "class_type": "KSamplerAdvanced",
-    "_meta": {
-      "title": "KSampler (Advanced)"
-    }
-  },
-  "37": {
-    "inputs": {
-      "add_noise": "disable",
-      "noise_seed": 790295579866824,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
-      "sampler_name": "euler_ancestral",
-      "scheduler": "normal",
-      "start_at_step": 12,
-      "end_at_step": 10000,
-      "return_with_leftover_noise": "disable",
-      "model": [
-        "39",
-        0
-      ],
-      "positive": [
-        "57",
-        0
-      ],
-      "negative": [
-        "40",
-        0
-      ],
-      "latent_image": [
-        "36",
-        0
-      ]
-    },
-    "class_type": "KSamplerAdvanced",
-    "_meta": {
-      "title": "KSampler (Advanced)"
-    }
-  },
-  "39": {
-    "inputs": {
-      "text": [
-        "32",
-        0
-      ],
-      "model": [
-        "44",
-        0
-      ],
-      "clip": [
-        "43",
-        1
-      ]
-    },
-    "class_type": "LoRAfromText",
-    "_meta": {
-      "title": "LoRA Loader from Text"
-    }
-  },
-  "40": {
-    "inputs": {
-      "text": [
-        "33",
-        0
-      ],
-      "clip": [
-        "39",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "41": {
-    "inputs": {
-      "text": [
-        "39",
-        4
-      ],
-      "clip": [
-        "39",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "43": {
-    "inputs": {
-      "ckpt_name": "waiIllustriousSDXL_v160.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Load Checkpoint"
-    }
-  },
-  "44": {
-    "inputs": {
-      "sampling": "eps",
-      "zsnr": false,
-      "model": [
-        "43",
-        0
-      ]
-    },
-    "class_type": "ModelSamplingDiscrete",
-    "_meta": {
-      "title": "ModelSamplingDiscrete"
-    }
-  },
-  "45": {
-    "inputs": {
-      "ckpt_name": "miaomiaoHarem_v16G.safetensors"
-    },
-    "class_type": "CheckpointLoaderSimple",
-    "_meta": {
-      "title": "Load Checkpoint"
-    }
-  },
-  "46": {
-    "inputs": {
-      "text": "2girls"
-    },
-    "class_type": "TextBoxMira",
-    "_meta": {
-      "title": "Text Box"
-    }
-  },
-  "47": {
-    "inputs": {
-      "Width": [
-        "17",
-        0
-      ],
-      "Height": [
-        "17",
-        1
-      ],
-      "Colum_first": true,
-      "Rows": 1,
-      "Colums": 1,
-      "Layout": "1,0.2,1"
-    },
-    "class_type": "CreateTillingPNGMask",
-    "_meta": {
-      "title": "Create Tilling PNG Mask"
-    }
-  },
-  "48": {
-    "inputs": {
-      "Intenisity": 1,
-      "Blur": 0,
-      "Start_At_Index": 0,
-      "Overlap": "Next",
-      "Overlap_Count": 1,
-      "PngRectangles": [
-        "47",
-        2
-      ]
-    },
-    "class_type": "PngRectanglesToMask",
-    "_meta": {
-      "title": "PngRectangles to Mask"
-    }
-  },
-  "49": {
-    "inputs": {
-      "Intenisity": 1,
-      "Blur": 0,
-      "Start_At_Index": 2,
-      "Overlap": "Previous",
-      "Overlap_Count": 1,
-      "PngRectangles": [
-        "47",
-        2
-      ]
-    },
-    "class_type": "PngRectanglesToMask",
-    "_meta": {
-      "title": "PngRectangles to Mask"
-    }
-  },
-  "50": {
-    "inputs": {
-      "strength": 1,
-      "set_cond_area": "default",
-      "conditioning": [
-        "2",
-        0
-      ],
-      "mask": [
-        "48",
-        0
-      ]
-    },
-    "class_type": "ConditioningSetMask",
-    "_meta": {
-      "title": "Conditioning (Set Mask)"
-    }
-  },
-  "51": {
-    "inputs": {
-      "text": [
-        "46",
-        0
-      ],
-      "clip": [
-        "34",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "52": {
-    "inputs": {
-      "strength": 1,
-      "set_cond_area": "default",
-      "conditioning": [
-        "51",
-        0
-      ],
-      "mask": [
-        "49",
-        0
-      ]
-    },
-    "class_type": "ConditioningSetMask",
-    "_meta": {
-      "title": "Conditioning (Set Mask)"
-    }
-  },
-  "53": {
-    "inputs": {
-      "conditioning_1": [
-        "50",
-        0
-      ],
-      "conditioning_2": [
-        "52",
-        0
-      ]
-    },
-    "class_type": "ConditioningCombine",
-    "_meta": {
-      "title": "Conditioning (Combine)"
-    }
-  },
-  "54": {
-    "inputs": {
-      "text": [
-        "46",
-        0
-      ],
-      "clip": [
-        "39",
-        1
-      ]
-    },
-    "class_type": "CLIPTextEncode",
-    "_meta": {
-      "title": "CLIP Text Encode (Prompt)"
-    }
-  },
-  "55": {
-    "inputs": {
-      "strength": 1,
-      "set_cond_area": "default",
-      "conditioning": [
-        "41",
-        0
-      ],
-      "mask": [
-        "48",
-        0
-      ]
-    },
-    "class_type": "ConditioningSetMask",
-    "_meta": {
-      "title": "Conditioning (Set Mask)"
-    }
-  },
-  "56": {
-    "inputs": {
-      "strength": 1,
-      "set_cond_area": "default",
-      "conditioning": [
-        "54",
-        0
-      ],
-      "mask": [
-        "49",
-        0
-      ]
-    },
-    "class_type": "ConditioningSetMask",
-    "_meta": {
-      "title": "Conditioning (Set Mask)"
-    }
-  },
-  "57": {
-    "inputs": {
-      "conditioning_1": [
-        "55",
-        0
-      ],
-      "conditioning_2": [
-        "56",
-        0
-      ]
-    },
-    "class_type": "ConditioningCombine",
-    "_meta": {
-      "title": "Conditioning (Combine)"
-    }
-  },
-  "58": {
-    "inputs": {
-      "samples": [
-        "36",
-        0
-      ],
-      "upscale_method": "nearest-exact",
-      "scale_by": 1.5
-    },
-    "class_type": "LatentUpscaleBy",
-    "_meta": {
-      "title": "Upscale Latent By"
-    }
-  }
-};
-
-const WORKFLOW_CONTROLNET = {
-  "1": {
-    "inputs": {
-      "base64text": ""
-    },
-    "class_type": "GzippedBase64ToImage",
-    "_meta": {
-      "title": "Gzipped Base64 To Image"
-    }
-  },
-  "2": {
-    "inputs": {
-      "preprocessor": "Manga2Anime_LineArt_Preprocessor",
-      "resolution": 512,
-      "image": [
-        "1",
-        0
-      ]
-    },
-    "class_type": "AIO_Preprocessor",
-    "_meta": {
-      "title": "AIO Aux Preprocessor"
-    }
-  },
-  "3": {
-    "inputs": {
-      "images": [
-        "2",
-        0
-      ]
-    },
-    "class_type": "PreviewImage",
-    "_meta": {
-      "title": "Preview Image"
-    }
-  }
 };

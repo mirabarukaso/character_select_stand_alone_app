@@ -132,8 +132,14 @@
         "api_adetailer_mask_merge_invert": "A1111  -  Mask merge mode\nComfyUI  -  sam_detection_hint",
         "api_adetailer_mask_blur": "A1111  -  Inpaint mask blur (0-64)\nComfyUI  -  feather (0-100)",
         "api_adetailer_denoise": "A1111  -  Inpaint denoising strength (0~1)\nComfyUI  -  denoise (0~1)",
+        
         "message_adetailer_comfyui":  "Note: ADetailer for ComfyUI requires [color=CornflowerBlue]Impact Pack[/color] and [color=CornflowerBlue]Impact Subpack[/color]. Click to copy the Plugin download link.\n\n[color=CornflowerBlue]https://github.com/ltdrdata/ComfyUI-Impact-Pack[/color]\n[color=CornflowerBlue]https://github.com/ltdrdata/ComfyUI-Impact-Subpack[/color]", 
         "message_adetailer_webui": "Note: ADetailer for A1111(WebUI) requires [color=CornflowerBlue]ADetailer[/color].\nClick to copy the Plugin download link.\n\n[color=CornflowerBlue]https://github.com/Bing-su/adetailer[/color]",
+
+        "message_mira_itu_only_comfyui": "The Mira Image Tiled Upscaler feature, which relies on vision models, is applicable only to ComfyUI.",
+        "message_mira_itu_do_not_use_latent_upscale": "Latent tiled upscale may lead to abnormal results. Please select a different upscaling model",
+        "message_mira_itu_need_tagger": "Need a Tagger model in ComfyUI model\\onnx folder.",
+        "message_mira_itu_requirements": "\nNote: Mira Image Tiled Upscaler requires [color=CornflowerBlue]Mira 0.5.6.0 and MiraSubPack[/color]\n[color=CornflowerBlue]https://github.com/mirabarukaso/ComfyUI_MiraSubPack[/color]",
         
         "run_button": "Create Image",
         "run_button_paused": "Create Image (Paused)",
@@ -172,6 +178,9 @@
         "json_regional": "Position for Regional Condition",
         "jsonlist_position": "Insert Position: Begin Of Prompts; Begin Of Character; End Of Character; End Of Prompts; Off",
 
+        "image_info_drag_hint_top": "Show Image Info",
+        "image_info_drag_hint_bottom": "Mira Image Tiled Upscaler",
+
         "image_info_add_controlnet": "Add ControlNet",
         "image_info_add_controlnet_processing": "Processing...",
         "image_info_add_controlnet_added": "Added",
@@ -181,6 +190,19 @@
         "image_info_copy_metadata": "Copy Metadata",
         "image_info_copy_metadata_copied": "Copied",
         "image_info_show_metadata_buttons": "Show Metadata",
+
+        "image_info_mira_itu_button": "Tiled-Upscale",
+        "image_info_mira_itu_button_processing": "Queued...",
+        "image_info_mira_itu_taggerContainer": "<p>Tagger Model Select (Recommend: CL & WD)</p> <p>General Threshold</p> <p>Steps</p>",
+        "image_info_mira_itu_miraITUContainer": "<p>Tile Size</p> <p>Overlap Size</p> <p>Feather rate of overlap</p> <p>CFG</p>",
+        "image_info_mira_itu_upscaleContainer": "<p>Upscale Model</p> <p>Upscale Ratio</p> <p>VAE method</p>",
+        "image_info_mira_itu_imageContainer": "<p>Common positive</p> <p>Merge method</p> <p>Denoise</p>",
+        "image_info_mira_itu_samplerData": "<p>Common Negative</p> <p>Sampler</p> <p>Scheduler</p>",
+        "image_info_mira_itu_image_resolution": "Image Resolution:",
+        "image_info_mira_itu_upscale_ratio": "Upscale Ratio:",
+        "image_info_mira_itu_target_resolution": "Target Resolution:",
+        "image_info_mira_itu_auto_max_deviation": "Auto max deviation:",
+        "image_info_mira_itu_auto_tile_target": "Estimate Tile Target:",
 
         "image_tagger_run": "Run Tagger",
         "image_tagger_run_no_model": "No Model",
@@ -365,6 +387,11 @@
         "message_adetailer_comfyui":  "注意：ADetailer ComfyUI需要插件[color=CornflowerBlue]Impact Pack[/color]和[color=CornflowerBlue]Impact Subpack[/color]，点击复制\n\n[color=CornflowerBlue]https://github.com/ltdrdata/ComfyUI-Impact-Pack[/color]\n[color=CornflowerBlue]https://github.com/ltdrdata/ComfyUI-Impact-Subpack[/color]", 
         "message_adetailer_webui": "注意：ADetailer A1111(WebUI) 需要插件 [color=CornflowerBlue]ADetailer[/color]，点击复制\n\n[color=CornflowerBlue]https://github.com/Bing-su/adetailer[/color]",
 
+        "message_mira_itu_only_comfyui": "Mira ITU 仅适用于 ComfyUI",
+        "message_mira_itu_do_not_use_latent_upscale": "Latent分块放大会导致异常结果，请选择其他放大模型",
+        "message_mira_itu_need_tagger": "ComfyUI model\\onnx 目录内未找到Tagger模型",
+        "message_mira_itu_requirements": "\n注意：Mira ITU 需要插件 [color=CornflowerBlue]Mira 0.5.6.0 & MiraSubPack[/color]\n[color=CornflowerBlue]https://github.com/mirabarukaso/ComfyUI_MiraSubPack[/color]",
+
         "run_button": "单图生成",
         "run_button_paused": "单图生成（暂停）",
         "run_random_button": "批量（随机）",
@@ -402,6 +429,9 @@
         "json_regional": "分区逻辑：Both：双侧；Left：左侧；Right：右侧",
         "jsonlist_position": "词条插入逻辑：BOP：最开头；BOC：角色前；EOC：角色后；EOP：最末尾；OFF：关闭",
 
+        "image_info_drag_hint_top": "查看图片信息",
+        "image_info_drag_hint_bottom": "MiraITU 分区放大",
+
         "image_info_add_controlnet": "添加ControlNet",
         "image_info_add_controlnet_processing": "处理中……",
         "image_info_add_controlnet_added": "已添加",
@@ -411,6 +441,19 @@
         "image_info_copy_metadata": "复制元数据",
         "image_info_copy_metadata_copied": "已复制",
         "image_info_show_metadata_buttons": "显示元数据",
+        
+        "image_info_mira_itu_button": "分块放大",
+        "image_info_mira_itu_button_processing": "队列中...",
+        "image_info_mira_itu_taggerContainer": "<p>标签模型设置(推荐CL & WD)</p> <p>标签采纳比</p> <p>采样步数</p>",
+        "image_info_mira_itu_miraITUContainer": "<p>分块尺寸</p> <p>分块重叠尺寸</p> <p>重叠羽化率</p> <p>采样CFG</p>",
+        "image_info_mira_itu_upscaleContainer": "<p>放大模型</p> <p>放大倍率</p> <p>VAE(直出|分块)</p>",
+        "image_info_mira_itu_imageContainer": "<p>通用正面</p> <p>合并方式</p> <p>降噪</p>",
+        "image_info_mira_itu_samplerData": "<p>通用负面</p> <p>采样</p> <p>调度</p>",
+        "image_info_mira_itu_image_resolution": "输入分辨率：",
+        "image_info_mira_itu_upscale_ratio": "放大倍率：",
+        "image_info_mira_itu_target_resolution": "目标分辨率",
+        "image_info_mira_itu_auto_max_deviation": "分块调整尺寸：",
+        "image_info_mira_itu_auto_tile_target": "预测分块尺寸：",
 
         "image_tagger_run": "反推标签",
         "image_tagger_run_no_model": "没有模型",

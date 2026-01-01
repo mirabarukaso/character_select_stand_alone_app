@@ -703,7 +703,7 @@
 }
 
 .metadata-buttons {
-    grid-template-columns: 4fr 1fr 1fr; 
+    grid-template-columns: 4fr 1fr 1fr 1fr; 
 } 
 
 .controlnet-buttons {
@@ -711,7 +711,7 @@
 }
 
 .copy-all-metadata, .controlnet-postprocess, .image-tagger-process,
-.send-metadata {
+.send-metadata, .mira-itu {
     padding: 8px 12px;
     cursor: pointer;
     border-radius: 4px;
@@ -730,17 +730,17 @@
     background-color: #F0D4B8; /* Soft warm peach */
 }
 
-.send-metadata, .controlnet-postprocess {
+.send-metadata, .controlnet-postprocess, .mira-itu {
     background-color: #E8C050; /* Soft gold */
     color: #4A403A; /* Dark gray-brown */
     border: none;
 }
 
-.send-metadata:hover, .controlnet-postprocess:hover {
+.send-metadata:hover, .controlnet-postprocess:hover , .mira-itu:hover {
     background-color: #F0D4B8; /* Soft warm peach */
 }
 
-.controlnet-select {
+.controlnet-select, #mira-itu-textarea {
     overflow-wrap: break-word;
     background-color: rgba(245, 242, 230, 0.8); /* Semi-transparent creamy background */
     color: #4A403A; /* Dark gray-brown */

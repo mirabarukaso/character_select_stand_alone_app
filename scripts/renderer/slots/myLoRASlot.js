@@ -83,9 +83,11 @@ async function showLoRAInfo(modelPath, prefix, loraPath, lora_trigger_words, lor
         {
             if(loraInfo.startsWith('None'))
             {
-                globalThis.overlay.custom.createCustomOverlay('none', `\n\n${lora_no_metadata}`);
+                globalThis.overlay.custom.createCustomOverlay(
+                    'none', `\n\n${lora_no_metadata}`, 384, 'center', 'left', null, 'Lora');
             } else if(loraInfo.startsWith('Error')){
-                globalThis.overlay.custom.createCustomOverlay('none', `\n\n${loraInfo}`);
+                globalThis.overlay.custom.createCustomOverlay(
+                    'none', `\n\n${loraInfo}`, 384, 'center', 'left', null, 'Lora');
             }
         } else {
             const { jsonString, basicInfo, topTags } = await processLoraMetadata(loraInfo);
@@ -96,7 +98,8 @@ async function showLoRAInfo(modelPath, prefix, loraPath, lora_trigger_words, lor
                 loraImage = await globalThis.api.readFile(modelPath, prefix, loraPath.replace('.safetensors', '.png'));
             }
             const message = `\n\n${basicInfo}\n${lora_trigger_words}[color=${greenColor}]${topTags}[/color]\n\n${lora_metadata}\n${jsonString}`;
-            globalThis.overlay.custom.createCustomOverlay(loraImage, message);
+            globalThis.overlay.custom.createCustomOverlay(
+                loraImage, message, 384, 'center', 'left', null, 'Lora');
         }
     } catch (error) {
         console.log('error', error);

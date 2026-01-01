@@ -110,7 +110,8 @@ export function arrayBufferToBase64(buf) {
     const chunkSize = 0x8000; // 32KB chunk
     let binary = '';
     for (let i = 0; i < bytes.length; i += chunkSize) {
-        binary += String.fromCharCode.apply(null, bytes.subarray(i, i + chunkSize));
+        const chunk = bytes.subarray(i, i + chunkSize);
+        binary += String.fromCodePoint(...chunk);
     }
     return btoa(binary);
 }

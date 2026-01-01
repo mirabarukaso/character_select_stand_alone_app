@@ -89,8 +89,8 @@ class QueueManager {
 
                 globalThis.overlay.custom.createCustomOverlay(
                     (generateData.queueManager.thumb?.length>0) ? generateData.queueManager.thumb : [globalThis.cachedFiles.privacyBall], 
-                    `${generateData.queueManager.finalInfo || ''}`
-                );
+                    `${generateData.queueManager.finalInfo || ''}`,
+                    384, 'center', 'left', null, 'Lora');
             }
         });
     }

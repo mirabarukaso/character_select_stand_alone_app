@@ -143,7 +143,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hidden: false,
                 clickable: true              
             }, async () =>{
-                await callback_generate_start(1, false);
+                await callback_generate_start('normal', {loops:1, runSame:false});
             }),
         generate_batch: setupButtons('generate-button-batch', LANG.run_random_button, {
                 defaultColor: 'rgb(185,28,28)',
@@ -154,7 +154,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hidden: false,
                 clickable: true              
             }, async () =>{
-                await callback_generate_start(globalThis.generate.batch.getValue(), false);                    
+                await callback_generate_start('normal', {loops:globalThis.generate.batch.getValue(), runSame:false});
             }),
         generate_same: setupButtons('generate-button-same', LANG.run_same_button, {
                 defaultColor: 'rgb(20,28,46)',
@@ -165,7 +165,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hidden: false,
                 clickable: true              
             }, async () =>{
-                await callback_generate_start(globalThis.generate.batch.getValue(), true);
+                await callback_generate_start('normal', {loops:globalThis.generate.batch.getValue(), runSame:true});
             }),            
         generate_skip: setupButtons('generate-button-skip', LANG.run_skip_button, {
                 defaultColor: 'rgb(82,82,91)',
@@ -409,6 +409,7 @@ async function init(){
         globalThis.cachedFiles.controlnetProcessorListWebUI = await globalThis.api.getControlNetProcessorListWebUI();
         globalThis.cachedFiles.upscalerList = await globalThis.api.getUpscalerList(SETTINGS.api_interface);
         globalThis.cachedFiles.aDetailerList = await globalThis.api.getADetailerList(SETTINGS.api_interface);
+        globalThis.cachedFiles.ONNXList = await globalThis.api.getONNXList(SETTINGS.api_interface);
 
         globalThis.cachedFiles.characterListArray = Object.entries(FILES.characterList);
         globalThis.cachedFiles.ocListArray = Object.entries(FILES.ocList);

@@ -35,3 +35,7 @@ export function from_main_customOverlayProgress(progress, totalProgress){
         // by pass
     }
 }
+
+export function from_renderer_generate_updatePreview(base64) {
+    from_main_updatePreview(base64);
+}

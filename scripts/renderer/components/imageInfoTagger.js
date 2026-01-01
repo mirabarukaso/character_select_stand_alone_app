@@ -3,7 +3,7 @@ import { fileToBase64 } from '../generate.js';
 
 let lastTaggerOptions = null;
 
-function createHtmlOptions(itemList) {
+export function createHtmlOptions(itemList) {
     let options = [];
     if (globalThis.globalSettings.api_interface === 'ComfyUI') {
         for (const item of itemList) {
@@ -124,7 +124,8 @@ export function createImageTagger(metadataContainer, cachedImage) {
                 if(result) {
                     imageTaggerButton.textContent = LANG.image_tagger_run_tagged;
                     console.log(result.join(', '));
-                    globalThis.overlay.custom.createCustomOverlay('none', "\n\n" + result.join(', '));
+                    globalThis.overlay.custom.createCustomOverlay('none', "\n\n" + result.join(', '),
+                                                                384, 'center', 'left', null, 'Info');
                 } else {
                     imageTaggerButton.textContent = LANG.image_tagger_run_no_tag;
                 }   
