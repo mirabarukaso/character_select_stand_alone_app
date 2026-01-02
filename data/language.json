@@ -226,7 +226,7 @@
         "saac_http_connection": "[Warning] Non-Secure Connection\n\nConnected using HTTP/WebSocket. For enhanced security, ensure the SAA server is configured with valid SSL certificates.",
         "saac_disconnected": "[color=red][Error] Disconnected from SAA...[/color]\nThe system will automatically attempt to reconnect when you select character or generate image.",
         "saac_macos_clipboard": "\n[color=red]Clipboard API not working[/color]\nDue to HTTP protocol security restrictions, the clipboard cannot be used in MacOS and iOS environments.\nPlease copy the relevant information manually:\n\n{0}",
-        "saac_macos_copy_image": "\n[color=red]Clipboard API not working[/color]\nDue to HTTP protocol security restrictions, the clipboard cannot be used in MacOS and iOS environments.\n\nFor MacOS, just drag the image to your local folder, or for iOS hold on image then select \"Save to Photo\"",
+        "saac_macos_copy_image": "\n[color=red]Failed to copy image to clipboard. If this is a MiraITU image, it may be because the image is too big to copy. Try copying it again.\nClipboard API not working[/color]\nDue to HTTP protocol security restrictions, the clipboard cannot be used in MacOS and iOS environments.\n\nFor MacOS, just drag the image to your local folder, or for iOS hold on image then select \"Save to Photo\"",
         
         "setup_yes": "Yes",
         "setup_no": "No",
@@ -477,7 +477,7 @@
         "saac_http_connection": "非安全连接\n\n通过HTTP/WebSocket连接。为增强安全性，请确保SAA服务器已配置有效的SSL证书。",
         "saac_disconnected": "[color=red]错误：与SAA失去连接[/color]\n选择角色或生成图片时会自动尝试重连",
         "saac_macos_clipboard": "\n[color=red]剪切板API无效[/color]\n由于HTTP协议安全策略限制，剪切板在MacOS以及iOS环境中无法使用，请手动复制相关信息：\n\n{0}",
-        "saac_macos_copy_image": "\n[color=red]剪切板API无效[/color]\n由于HTTP协议安全策略限制，剪切板在MacOS以及iOS环境中无法使用。\n\nMacOS用户可以直接将图片拖拽到本地目录保存，iOS长按图片选择“保存到照片”。",
+        "saac_macos_copy_image": "\n[color=red]复制图片失败：如果是MiraITU放大后的图片，可能会由于数据过大导致失败，请尝试再次进行复制。\n剪切板API无效[/color]\n由于HTTP协议安全策略限制，剪切板在MacOS以及iOS环境中无法使用。\n\nMacOS用户可以直接将图片拖拽到本地目录保存，iOS长按图片选择“保存到照片”。",
 
         "setup_yes": "是",
         "setup_no": "否",
