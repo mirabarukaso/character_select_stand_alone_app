@@ -440,9 +440,9 @@ function updateMiraITUData() {
     const maxDeviation = Math.floor(lastTaggerOptions.ituTileSize * 0.25 / 8) * 8;
     comboMessage += `${LANG.image_info_mira_itu_auto_max_deviation} ${maxDeviation}\n`;
 
-    const [tileWidth, tileHeight] = TileHelper._findOptimalTileSize(
+    const {tile_width, tile_height, tile_count_w, tile_count_h} = TileHelper._findOptimalTileSize(
         targetW, targetH, lastTaggerOptions.ituTileSize, lastTaggerOptions.ituOverlap, maxDeviation);
-    comboMessage += `${LANG.image_info_mira_itu_auto_tile_target} ${tileWidth}x${tileHeight}\n`;
+    comboMessage += `${LANG.image_info_mira_itu_auto_tile_target} ${tile_width}x${tile_height} -> ${tile_count_w}x${tile_count_h}\n`;
 
     miraITU.headerText.innerHTML = `<span>${comboMessage.replaceAll('\n', '<br>')}</span>`;
 }
