@@ -202,7 +202,7 @@
         "image_info_mira_itu_upscale_ratio": "Upscale Ratio:",
         "image_info_mira_itu_target_resolution": "Target Resolution:",
         "image_info_mira_itu_auto_max_deviation": "Auto max deviation:",
-        "image_info_mira_itu_auto_tile_target": "Estimate Tile Target:",
+        "image_info_mira_itu_auto_tile_target": "Estimate Tiles:",
 
         "image_tagger_run": "Run Tagger",
         "image_tagger_run_no_model": "No Model",
@@ -452,8 +452,8 @@
         "image_info_mira_itu_image_resolution": "输入分辨率：",
         "image_info_mira_itu_upscale_ratio": "放大倍率：",
         "image_info_mira_itu_target_resolution": "目标分辨率",
-        "image_info_mira_itu_auto_max_deviation": "分块调整尺寸：",
-        "image_info_mira_itu_auto_tile_target": "预测分块尺寸：",
+        "image_info_mira_itu_auto_max_deviation": "分块调整：",
+        "image_info_mira_itu_auto_tile_target": "预测分块：",
 
         "image_tagger_run": "反推标签",
         "image_tagger_run_no_model": "没有模型",
