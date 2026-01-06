@@ -303,6 +303,10 @@ function createKSamplerData() {
     negativeText.style.minHeight = '32px';
     negativeText.style.maxHeight = '80px';
     negativeText.value = lastTaggerOptions?.negativeText || 'bad quality,worst quality,worst detail,sketch';
+    negativeText.addEventListener('input', handleNegativeInput);    
+    function handleNegativeInput() {
+        lastTaggerOptions.negativeText = negativeText.value;
+    }
 
     const samplerSelect = document.createElement('select');
     samplerSelect.className = 'controlnet-select';
@@ -331,6 +335,7 @@ function createKSamplerData() {
     return {
         container: ksamplerContainer,
         cleanup: () => {
+            negativeText.removeEventListener('input', handleNegativeInput);
             samplerSelect.removeEventListener('change', handleSampler);
             scheduleSelect.removeEventListener('change', handleSchedule);
         }
