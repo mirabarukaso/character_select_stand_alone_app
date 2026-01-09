@@ -472,7 +472,8 @@ const methodHandlers = {
         model_choice: params[1],
         gen_threshold: params[2], 
         char_threshold: params[3],
-        model_options: params[4]
+        model_options: params[4],
+        wait: params[5]?params[5]:false
     }
     return runImageTagger(packedArgs);
   },

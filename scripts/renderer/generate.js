@@ -929,6 +929,12 @@ export async function startQueue(){
             globalThis.thumbGallery.append(queueManager.thumb);
 
             const aiPrompt = await getAiPrompt(queueManager.loop, LANG.generate_ai, queueManager.aiInterface, queueManager.aiRole, queueManager.aiOptions);            
+            if (globalThis.globalSettings.ai_prompt_preview && globalThis.globalSettings.ai_prompt_role !== 0) {
+                globalThis.overlay.custom.closeCustomOverlaysByGroup('aiText'); // close exist
+                globalThis.overlay.custom.createCustomOverlay('none', `\n\n\n${aiPrompt}`,
+                                                        384, 'center', 'left', null, 'aiText');
+            }
+
             const finalInfo = String(queueManager.finalInfo).replaceAll(REPLACE_AI_MARK, aiPrompt);
             globalThis.infoBox.image.appendValue(finalInfo);            
             globalThis.generate.loadingMessage = LANG.generate_start.replace('{0}', `${queueManager.id}`).replace('{1}', `[${queueManager.loop + 1}/${queueManager.loops}]`);

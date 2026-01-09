@@ -335,6 +335,9 @@ export async function createAI(SETTINGS, FILES, LANG) {
     globalThis.ai ={
         ai_select: setupRadiobox("system-settings-ai-select", LANG.batch_generate_rule, LANG.ai_select, LANG.ai_select_title, SETTINGS.ai_prompt_role, 
             (value) => { globalThis.globalSettings.ai_prompt_role = value; }),
+        ai_prompt_preview: setupCheckbox('system-settings-ai-preview', LANG.ai_prompt_preview, SETTINGS.ai_prompt_preview, true,
+            (value) => { globalThis.globalSettings.ai_prompt_preview = value; }),
+
         interface: mySimpleList('system-settings-ai-interface', LANG.ai_interface, ['None', 'Remote', 'Local'], 
             (index, value) => {globalThis.globalSettings.ai_interface = value;}, 5, false, true),
         remote_timeout: setupSlider('system-settings-ai-timeout', LANG.remote_ai_timeout, 2, 60, 1, SETTINGS.remote_ai_timeout, 
@@ -374,10 +377,16 @@ export async function createAI(SETTINGS, FILES, LANG) {
 async function init(){
     globalThis.initialized = false;
     globalThis.inBrowser = false; // Set to false for Electron environment
-        
+    globalThis.custom_message = {
+        controlnet: false,
+        adetailer: false,
+        a1111_regional: false
+    };    
+
     try {
         // Init Global Settings
         globalThis.globalSettings = await globalThis.api.getGlobalSettings();
+        
 
         // Setup main func
         globalThis.mainGallery = {};

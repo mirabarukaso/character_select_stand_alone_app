@@ -276,7 +276,7 @@ body {
 
 .system-settings-header {
     display: grid;
-    grid-template-columns: 4fr 1fr; 
+    grid-template-columns: 4fr 1fr 1fr; 
     padding-left: 10px;
 }
 

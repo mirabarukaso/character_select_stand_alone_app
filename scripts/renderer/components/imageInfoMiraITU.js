@@ -1,8 +1,10 @@
 import { createHtmlOptions } from './imageInfoTagger.js';
 import { toBlob, getImageSizeFromBlob } from './imageInfoUtils.js'
-import { TileHelper } from './helper.js';
+import { TileHelper, CropImageHelper } from './helper.js';
 import { callback_generate_start } from '../callbacks.js';
 import { SAMPLER_COMFYUI, SCHEDULER_COMFYUI } from '../language.js';
+import { fileToBase64 } from '../generate.js';
+import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
 
 let lastTaggerOptions = null;
 let miraITU = null;
@@ -28,9 +30,26 @@ function createTagger() {
     imageTaggerModels.addEventListener('change', handleModelChange);
     function handleModelChange() {
         lastTaggerOptions.imageTaggerModels = imageTaggerModels.value;
+        
+        const imageTaggerGenThreshold = document.querySelector('#mira-itu-image-tagger-threshold');
+        if (!imageTaggerGenThreshold) {
+            console.error("imageTaggerGenThreshold not found!");
+            return;
+        }
+
+        if(imageTaggerModels.value.toLocaleLowerCase().startsWith('cl')) {
+            imageTaggerGenThreshold.value= 0.55;
+        } else if(imageTaggerModels.value.toLocaleLowerCase().startsWith('wd')) {
+            imageTaggerGenThreshold.value= 0.35;
+        } else {
+            imageTaggerGenThreshold.value= 0.5;
+        }
+
+        lastTaggerOptions.imageTaggerGenThreshold = Number(imageTaggerGenThreshold.value);
     }
 
     const imageTaggerGenThreshold = document.createElement('select');
+    imageTaggerGenThreshold.id = 'mira-itu-image-tagger-threshold';
     imageTaggerGenThreshold.className = 'controlnet-select';
     imageTaggerGenThreshold.innerHTML = createHtmlOptions([0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1]);
     imageTaggerGenThreshold.value = lastTaggerOptions?.imageTaggerGenThreshold || 0.55;
@@ -90,7 +109,7 @@ function createMiraITUConfig() {
     ituTileSize.className = 'controlnet-select';
     ituTileSize.id = 'mira-itu-tilesize';
     ituTileSize.innerHTML = createHtmlOptions([512, 768, 1024, 1280, 1536, 1792, 2048, 2304, 2560, 2816, 3072]);
-    ituTileSize.value = lastTaggerOptions?.ituTileSize || 1280;
+    ituTileSize.value = lastTaggerOptions?.ituTileSize || 2048;
     ituTileSize.addEventListener('change', handleTileSize);
     function handleTileSize() {
         lastTaggerOptions.ituTileSize = Number(ituTileSize.value);
@@ -342,38 +361,130 @@ function createKSamplerData() {
     };
 }
 
-let isProcessing = false;
-async function handleClick() {
-    if (isProcessing) return;
-
+function createLocalTagger() {
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
-    
-    isProcessing = true;
-    const button = document.querySelector('.mira-itu');
-    
-    if (button) {
-        button.disabled = true;
-        button.style.opacity = '0.6';
-        button.style.cursor = 'not-allowed';
-        button.textContent = LANG.image_info_mira_itu_button_processing;
-        
-        // lock 500ms            
-        setTimeout(() => {
-            button.disabled = false;
-            button.style.opacity = '1';
-            button.style.cursor = 'pointer';
-            button.textContent = LANG.image_info_mira_itu_button;
-            isProcessing = false;
-        }, 500);
-    } else {        
-        setTimeout(() => {
-            isProcessing = false;
-        }, 500);
+
+    const bodyContainer = document.createElement('div');    
+    bodyContainer.style.display = 'grid';
+    bodyContainer.style.gridTemplateColumns = '6fr';
+    bodyContainer.innerHTML = `<p></p>${LANG.image_info_mira_itu_manualTags}`;
+
+    const taggerContainer = document.createElement('div');
+    taggerContainer.style.display = 'grid';
+    taggerContainer.style.gridTemplateColumns = '3fr 1fr 1fr 1fr';
+    taggerContainer.style.columnGap = '10px';
+    taggerContainer.innerHTML = LANG.image_info_mira_itu_localTagger;
+
+    const localTaggerModels = document.createElement('select');
+    localTaggerModels.className = 'controlnet-select';
+    localTaggerModels.innerHTML = createHtmlOptions(FILES.imageTaggerModels);
+    localTaggerModels.value = lastTaggerOptions?.localTaggerModels || FILES.imageTaggerModels[0];
+    localTaggerModels.addEventListener('change', handleSAATaggerModelChange);
+    function handleSAATaggerModelChange() {
+        lastTaggerOptions.localTaggerModels = localTaggerModels.value;
+
+        const localTaggerGenThreshold = document.querySelector('#mira-itu-local-tagger-threshold');
+        if (!localTaggerGenThreshold) {
+            console.error("localTaggerGenThreshold not found!");
+            return;
+        }
+
+        if(localTaggerModels.value.toLocaleLowerCase().startsWith('cl')) {
+            localTaggerGenThreshold.value= 0.55;
+        } else if(localTaggerModels.value.toLocaleLowerCase().startsWith('wd')) {
+            localTaggerGenThreshold.value= 0.35;
+        } else {
+            localTaggerGenThreshold.value= 0.5;
+        }
+
+        lastTaggerOptions.localTaggerGenThreshold = Number(localTaggerGenThreshold.value);
     }
 
+    const localTaggerGenThreshold = document.createElement('select');
+    localTaggerGenThreshold.id = 'mira-itu-local-tagger-threshold';
+    localTaggerGenThreshold.className = 'controlnet-select';
+    localTaggerGenThreshold.innerHTML = createHtmlOptions([0.25,0.3,0.35,0.4,0.45,0.5,0.55,0.6,0.65,0.7,0.75,0.8,0.85,0.9,0.95,1]);
+    localTaggerGenThreshold.value = lastTaggerOptions?.localTaggerGenThreshold || 0.55;
+    localTaggerGenThreshold.addEventListener('change', handleLocalThresholdChange);
+    function handleLocalThresholdChange() {
+        lastTaggerOptions.localTaggerGenThreshold = Number(localTaggerGenThreshold.value);
+    }
+
+    const localTaggerMethod = document.createElement('select');
+    localTaggerMethod.className = 'controlnet-select';
+    localTaggerMethod.innerHTML = createHtmlOptions(['ComfyUI', 'SAA']);
+    localTaggerMethod.value = lastTaggerOptions?.localTaggerMethod || 'ComfyUI';
+    localTaggerMethod.addEventListener('change', handleTaggerMethodChange);
+    function handleTaggerMethodChange() {
+        lastTaggerOptions.localTaggerMethod = localTaggerMethod.value;
+    }
+
+    const miraITUTaggerButton = document.createElement('button');
+    miraITUTaggerButton.className = 'mira-itu-tagger';
+    miraITUTaggerButton.textContent = LANG.image_info_mira_itu_local_tagger_button;
+    miraITUTaggerButton.style.alignSelf = 'end';
+    miraITUTaggerButton.style.minHeight = '32px';
+    miraITUTaggerButton.style.maxHeight = '32px';
+    miraITUTaggerButton.style.width = '100%';
+    miraITUTaggerButton.addEventListener('click', handleMiraTaggerClick);
+
+
+    const manualTagsContainer = document.createElement('div');
+    manualTagsContainer.style.display = 'grid';
+    manualTagsContainer.style.gridTemplateColumns = '1fr';
+    manualTagsContainer.style.columnGap = '10px';
+    manualTagsContainer.innerHTML = '';
+
+    const localTagsText = document.createElement('textarea');
+    localTagsText.id = 'mira-itu-tagger-textarea';
+    localTagsText.className = 'myTextbox-prompt-positive-textarea';
+    localTagsText.rows = 10;
+    localTagsText.placeholder = LANG.image_info_mira_itu_manualTags_placeholder;
+    localTagsText.style.resize = 'vertical';
+    localTagsText.style.boxSizing = 'border-box';
+    localTagsText.style.minHeight = '32px';
+    localTagsText.style.maxHeight = '320px';
+    localTagsText.style.maxWidth = "100%";
+    localTagsText.value = lastTaggerOptions?.localTagsText || '';
+    localTagsText.addEventListener('input', handleTagsInput);    
+    function handleTagsInput() {
+        lastTaggerOptions.localTagsText = localTagsText.value;
+    }
+
+
+    taggerContainer.appendChild(localTaggerModels);
+    taggerContainer.appendChild(localTaggerGenThreshold);
+    taggerContainer.appendChild(localTaggerMethod);
+    taggerContainer.appendChild(miraITUTaggerButton);
+    manualTagsContainer.appendChild(localTagsText);
+    bodyContainer.appendChild(taggerContainer);
+    bodyContainer.appendChild(manualTagsContainer);
+    return {
+        container: bodyContainer,
+        cleanup: () => {
+            localTaggerModels.removeEventListener('change', handleSAATaggerModelChange);
+            localTaggerGenThreshold.removeEventListener('change', handleLocalThresholdChange);
+            localTaggerMethod.removeEventListener('change', handleTaggerMethodChange);
+            miraITUTaggerButton.removeEventListener('click', handleMiraTaggerClick);
+            localTagsText.removeEventListener('input', handleTagsInput);
+        }
+    };
+}
+
+let isProcessing = false;
+async function handleMiraITUClick() {
+    if (isProcessing) return;
+
     await runMiraITU();
+}
+
+async function handleMiraTaggerClick() {
+    if (isProcessing) return;
+
+    console.log("Crop Image and Run Local Tagger");
+    await runLocalTagger();
 }
 
 function createHeader(imageData, imageWidth){
@@ -407,17 +518,23 @@ function createHeader(imageData, imageWidth){
     text.className='mira-itu-header-text';
     text.innerHTML = ``;
 
+    const buttonGridContainer = document.createElement('div');
+    buttonGridContainer.style.display = "grid";
+    buttonGridContainer.style.gridTemplateColumns = '1fr';
+    buttonGridContainer.innerHTML = '';
+
     const miraITUButton = document.createElement('button');
     miraITUButton.className = 'mira-itu';
     miraITUButton.textContent = LANG.image_info_mira_itu_button;
     miraITUButton.style.alignSelf = 'end';
-    miraITUButton.style.minHeight = '120px';
+    miraITUButton.style.minHeight = '100px';
     miraITUButton.style.maxHeight = '120px';
-    miraITUButton.addEventListener('click', handleClick);
+    miraITUButton.addEventListener('click', handleMiraITUClick);    
 
     headerContainer.appendChild(text);
-    headerContainer.appendChild(img);    
-    headerContainer.appendChild(miraITUButton);
+    headerContainer.appendChild(img);        
+    buttonGridContainer.appendChild(miraITUButton);
+    headerContainer.appendChild(buttonGridContainer);
     
     miraITU.setText(LANG.message_mira_itu_requirements);
     miraITU.headerText = text;
@@ -425,7 +542,7 @@ function createHeader(imageData, imageWidth){
     return {
         container: headerContainer,
         cleanup: () => {
-            miraITUButton.removeEventListener('click', handleClick);
+            miraITUButton.removeEventListener('click', handleMiraITUClick);            
         }
     };
 }
@@ -464,7 +581,12 @@ export async function createMiraITUWindow(imageBase64, imageRawData){
             imageTaggerModels: FILES.ONNXList[0],
             imageTaggerGenThreshold: 0.55,
 
-            ituTileSize: 1280,
+            localTaggerModels: FILES.imageTaggerModels[0],
+            localTaggerGenThreshold: 0.55,
+            localTaggerMethod: "ComfyUI",
+            localTagsText:"",
+
+            ituTileSize: 2048,
             ituOverlap: 64,
             ituFeather: 1,
 
@@ -514,6 +636,7 @@ export async function createMiraITUWindow(imageBase64, imageRawData){
     const miraConfig = createMiraITUConfig();
     const imageConfig = createImageConfig();
     const ksampler = createKSamplerData();
+    const localTagger = createLocalTagger();
 
     miraITU.container.appendChild(header.container);
     miraITU.container.appendChild(upscale.container);
@@ -521,6 +644,7 @@ export async function createMiraITUWindow(imageBase64, imageRawData){
     miraITU.container.appendChild(miraConfig.container);
     miraITU.container.appendChild(imageConfig.container);
     miraITU.container.appendChild(ksampler.container);
+    miraITU.container.appendChild(localTagger.container);
 
     // Collect all clean up
     currentCleanupFunctions = [
@@ -558,5 +682,141 @@ async function runMiraITU() {
         return;
     }
 
+    if (lastTaggerOptions.localTaggerMethod !== 'ComfyUI' && lastTaggerOptions.localTagsText.trim() === "") {
+        console.warn("Empty lastTaggerOptions.localTagsText: ", lastTaggerOptions.localTagsText);
+        console.log("Start runLocalTagger");
+        await runLocalTagger();
+    }
+    
+    isProcessing = true;
+    const buttonMiraITU = document.querySelector('.mira-itu');
+    const buttonTagger = document.querySelector('.mira-itu-tagger');    
+    
+    if (buttonMiraITU) {
+        buttonMiraITU.disabled = true;
+        buttonMiraITU.style.opacity = '0.6';
+        buttonMiraITU.style.cursor = 'not-allowed';
+        buttonMiraITU.textContent = LANG.image_info_mira_itu_button_processing;
+
+        buttonTagger.disabled = true;
+        buttonTagger.style.opacity = '0.6';
+        buttonTagger.style.cursor = 'not-allowed';
+        
+        // lock 1000ms            
+        setTimeout(() => {
+            buttonMiraITU.disabled = false;
+            buttonMiraITU.style.opacity = '1';
+            buttonMiraITU.style.cursor = 'pointer';
+            buttonMiraITU.textContent = LANG.image_info_mira_itu_button;
+
+            buttonTagger.disabled = false;
+            buttonTagger.style.opacity = '1';
+            buttonTagger.style.cursor = 'pointer';
+            isProcessing = false;
+        }, 1000);
+    } else {        
+        setTimeout(() => {
+            isProcessing = false;
+        }, 1000);
+    }
+
     await callback_generate_start('MiraITU', {imageData:cachedImage, taggerOptions:lastTaggerOptions});
 }
+
+// eslint-disable-next-line sonarjs/cognitive-complexity
+async function runLocalTagger() {
+    const SETTINGS = globalThis.globalSettings;
+    const FILES = globalThis.cachedFiles;
+    const LANG = FILES.language[SETTINGS.language];
+
+    let errorMessage = '';
+    if(lastTaggerOptions.localTaggerModels === 'None' && lastTaggerOptions.localTaggerMethod !== 'ComfyUI')
+        errorMessage += `${LANG.message_mira_itu_need_tagger}\n`;
+ 
+    if (errorMessage !== '') {
+        globalThis.overlay.custom.createErrorOverlay(errorMessage, errorMessage);
+        return;
+    }
+
+    isProcessing = true;
+    const buttonTagger = document.querySelector('.mira-itu-tagger');
+    const buttonMiraITU = document.querySelector('.mira-itu');
+
+    if (buttonTagger && buttonMiraITU) {
+        buttonTagger.disabled = true;
+        buttonTagger.style.opacity = '0.6';
+        buttonTagger.style.cursor = 'not-allowed';
+        buttonTagger.textContent = LANG.image_info_mira_itu_button_processing;
+        
+        buttonMiraITU.disabled = true;
+        buttonMiraITU.style.opacity = '0.6';
+        buttonMiraITU.style.cursor = 'not-allowed';
+    } 
+
+    const targetW = lastTaggerOptions.imageWidth * lastTaggerOptions.upscaleRatio;
+    const targetH = lastTaggerOptions.imageHeight * lastTaggerOptions.upscaleRatio;
+    const maxDeviation = Math.floor(lastTaggerOptions.ituTileSize * 0.25 / 8) * 8;
+    const {tile_width, tile_height, tile_count_w, tile_count_h} = TileHelper._findOptimalTileSize(
+        targetW, targetH, lastTaggerOptions.ituTileSize, lastTaggerOptions.ituOverlap, maxDeviation);        
+    console.log(`Tagging ${tile_width}x${tile_height} -> ${tile_count_w}x${tile_count_h}`);
+
+    const buffer = await cachedImage.arrayBuffer();
+    const cropper = await CropImageHelper.create(buffer, targetW, targetH);
+    const tileImages = await cropper.cropWithCalculation(tile_width, tile_height, lastTaggerOptions.ituOverlap);    
+
+    let tagsList = null;
+    for(const tile of tileImages.images){
+        let imageBase64 = await fileToBase64(toBlob(tile));
+        if (typeof imageBase64 === 'string' && imageBase64.startsWith('data:')) {
+            imageBase64 = imageBase64.split(',')[1];
+        }
+
+        let result = '';
+        if (globalThis.inBrowser) {
+            result = await sendWebSocketMessage({ 
+                type: 'API', 
+                method: 'runImageTagger', 
+                params: [
+                    imageBase64,
+                    lastTaggerOptions.localTaggerModels,
+                    Number(lastTaggerOptions.localTaggerGenThreshold),
+                    1,
+                    "General",
+                    true
+                ]});
+        } else {
+            result = await globalThis.api.runImageTagger({
+                image_input: imageBase64,
+                model_choice: lastTaggerOptions.localTaggerModels,
+                gen_threshold: Number(lastTaggerOptions.localTaggerGenThreshold),
+                char_threshold: 1,
+                model_options:"General",
+                wait:true
+            });
+        }
+        result = result.join(', ');
+        tagsList = tagsList?`${tagsList}\n${result}`:`${result}`;
+    }
+    console.log("Tags:", tagsList);
+
+    isProcessing = false;
+    if(buttonMiraITU && buttonTagger) {
+        buttonMiraITU.disabled = false;
+        buttonMiraITU.style.opacity = '1';
+        buttonMiraITU.style.cursor = 'pointer';
+        buttonMiraITU.textContent = LANG.image_info_mira_itu_button;
+
+        buttonTagger.disabled = false;
+        buttonTagger.style.opacity = '1';
+        buttonTagger.style.cursor = 'pointer';
+        buttonTagger.textContent = LANG.image_info_mira_itu_local_tagger_button;        
+    }
+    const localTaggerText = document.querySelector('#mira-itu-tagger-textarea');
+
+    if(localTaggerText)
+    {
+        localTaggerText.value= tagsList;
+        lastTaggerOptions.localTagsText = tagsList;
+    }
+}
+

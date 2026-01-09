@@ -562,15 +562,34 @@ function proceedWithCopy(img) {
                             new ClipboardItem({ 'image/png': blob })
                         ]);
                         console.log('Image successfully copied to clipboard');
-                    } catch (err){
-                        console.warn('Failed to copy PNG image to clipboard:', err);
-                        const SETTINGS = globalThis.globalSettings;
-                        const FILES = globalThis.cachedFiles;
-                        const LANG = FILES.language[SETTINGS.language];
-                        globalThis.overlay.custom.createCustomOverlay(
-                            'none', LANG.saac_macos_copy_image, 384, 'center', 'left', null, 'Clipboard');
+                    } catch (err) {
+                        console.warn('Failed to copy PNG image to clipboard (first attempt):', err);
+                        
+                        // wait 1000ms then retry once
+                        await new Promise(resolve => setTimeout(resolve, 1000));
+                        
+                        try {
+                        await navigator.clipboard.write([
+                            new ClipboardItem({ 'image/png': blob })
+                        ]);
+                            console.log('Image successfully copied to clipboard (retry succeeded)');
+                        } catch (error) {
+                            console.warn('Failed to copy PNG image to clipboard (retry also failed):', error);
+                            const SETTINGS = globalThis.globalSettings;
+                            const FILES = globalThis.cachedFiles;
+                            const LANG = FILES.language[SETTINGS.language];
+                            globalThis.overlay.custom.createCustomOverlay(
+                                'none',
+                                LANG.saac_macos_copy_image,
+                                384,
+                                'center',
+                                'left',
+                                null,
+                                'Clipboard'
+                            );
+                        }
                     }
-                }
+                    }
             }, 'image/png');
         };
         image.onerror = () => {
@@ -659,6 +678,7 @@ async function prompt_testAIgenerate(element){
         }
 
         const aiText = await getAiPrompt(0, text);
+        globalThis.overlay.custom.closeCustomOverlaysByGroup('aiText'); // close exist
         globalThis.overlay.custom.createCustomOverlay('none', `\n\n\n${aiText}`,
                                                     384, 'center', 'left', null, 'aiText');
     } catch (err) {

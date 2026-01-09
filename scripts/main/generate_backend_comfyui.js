@@ -1259,56 +1259,71 @@ class ComfyUI {
     workflow["4"].inputs.overlap_feather_rate = taggerOptions.ituFeather;
 
     // tagger model (Default CL Tagger)
-    if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('wd')) {
-      // WD
+    if (taggerOptions.localTaggerMethod === 'SAA' && taggerOptions.localTagsText !== '') {
+      console.log(CAT,'Replace Tagger Node to Text Node.');
+      console.log(taggerOptions.localTagsText);
       workflow["5"] = {
         "inputs": {
-          "model_name": taggerOptions.imageTaggerModels,
-          "general_threshold": taggerOptions.imageTaggerGenThreshold,
-          "character_threshold": 0.85,
-          "general_mcut": false,
-          "character_mcut": false,
-          "replace_space": true,
-          "categories": "general",
-          "exclude_tags": exclude,
-          "session_method": "GPU",
-          "image": [
-            "4",
-            0
-          ]
+          "text": taggerOptions.localTagsText
         },
-        "class_type": "wd_tagger_mira",
+        "class_type": "TextBoxMira",
         "_meta": {
-          "title": "WD Tagger"
-        }
-      };
-    } else if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('camie')) {
-      // Camie
-      workflow["5"] ={
-        "inputs": {
-          "model_name": taggerOptions.imageTaggerModels,
-          "general": taggerOptions.imageTaggerGenThreshold,
-          "min_confidence": 0.01,
-          "replace_space": true,
-          "categories": "general",
-          "exclude_tags": exclude,
-          "session_method": "GPU",
-          "image": [
-            "4",
-            0
-          ]
-        },
-        "class_type": "camie_tagger_mira",
-        "_meta": {
-          "title": "Camie Tagger"
+          "title": "Text Box"
         }
       };
     } else {
-      // CL
-      workflow["5"].inputs.model_name = taggerOptions.imageTaggerModels;
-      workflow["5"].inputs.general = taggerOptions.imageTaggerGenThreshold;
-      workflow["5"].inputs.exclude_tags = exclude;
-    }    
+      console.log(CAT, 'Using ', taggerOptions.imageTaggerModels);
+      if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('wd')) {
+        // WD
+        workflow["5"] = {
+          "inputs": {
+            "model_name": taggerOptions.imageTaggerModels,
+            "general_threshold": taggerOptions.imageTaggerGenThreshold,
+            "character_threshold": 0.85,
+            "general_mcut": false,
+            "character_mcut": false,
+            "replace_space": true,
+            "categories": "general",
+            "exclude_tags": exclude,
+            "session_method": "GPU",
+            "image": [
+              "4",
+              0
+            ]
+          },
+          "class_type": "wd_tagger_mira",
+          "_meta": {
+            "title": "WD Tagger"
+          }
+        };
+      } else if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('camie')) {
+        // Camie
+        workflow["5"] ={
+          "inputs": {
+            "model_name": taggerOptions.imageTaggerModels,
+            "general": taggerOptions.imageTaggerGenThreshold,
+            "min_confidence": 0.01,
+            "replace_space": true,
+            "categories": "general",
+            "exclude_tags": exclude,
+            "session_method": "GPU",
+            "image": [
+              "4",
+              0
+            ]
+          },
+          "class_type": "camie_tagger_mira",
+          "_meta": {
+            "title": "Camie Tagger"
+          }
+        };
+      } else {
+        // CL
+        workflow["5"].inputs.model_name = taggerOptions.imageTaggerModels;
+        workflow["5"].inputs.general = taggerOptions.imageTaggerGenThreshold;
+        workflow["5"].inputs.exclude_tags = exclude;
+      }
+    }
 
     // VPRED
     workflow["6"].inputs.ckpt_name = model;

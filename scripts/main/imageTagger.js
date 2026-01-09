@@ -13,6 +13,10 @@ import { fork } from 'node:child_process';
 import { fileURLToPath } from 'node:url';
 import path from 'node:path';
 import { app, ipcMain } from 'electron';
+import * as ort from 'onnxruntime-node';
+import { preprocessImageWD, runWd14Tagger } from './tagger/wdTagger.js';
+import { preprocessImageCL, runClTagger } from './tagger/clTagger.js';
+import { preprocessCamieImage, runCamieTagger } from './tagger/camieTagger.js';
 
 const CAT = '[imageTaggerMain]';
 const __filename = fileURLToPath(import.meta.url);
@@ -79,13 +83,48 @@ async function runModelInSubprocess(args) {
   });
 }
 
+async function runModel(Args) {
+  const {image_input, model_choice, gen_threshold, char_threshold, model_options} = Args;
+  const modelsDir = path.join(__dirname, "..", "..", "models", "tagger");
+  const modelPath = path.join(modelsDir, model_choice);
+  
+  if (String(model_choice).toLocaleLowerCase().startsWith('cl')) {
+    const spatialSize = 448;
+    const imgArray = await preprocessImageCL(image_input, spatialSize);
+    const inputTensorCl = new ort.Tensor("float32", imgArray, [1, 3, spatialSize, spatialSize]);
+    return runClTagger(modelPath, inputTensorCl, gen_threshold, char_threshold, [model_options]);
+  } else if (String(model_choice).toLocaleLowerCase().startsWith('wd')) {
+    const spatialSize = 448;
+    const imgArray = await preprocessImageWD(image_input, spatialSize);
+    const inputTensor = new ort.Tensor("float32", imgArray, [1, spatialSize, spatialSize, 3]);
+    return runWd14Tagger(modelPath, inputTensor, gen_threshold, char_threshold, false, false, [model_options]);
+  } else if (String(model_choice).toLocaleLowerCase().startsWith('camie')) {
+    const spatialSize = 512;
+    const imgArray = await preprocessCamieImage(image_input, spatialSize);
+    const inputTensor = new ort.Tensor("float32", imgArray, [1, 3, spatialSize, spatialSize]);
+    return runCamieTagger(modelPath, inputTensor, {overall:gen_threshold, categories:[model_options], min_confidence: 0.1});
+  }
+
+  return 'Unsupported model choice: ${model_choice}';
+}
+
 async function runImageTagger(args) {
-  await new Promise(resolve => setImmediate(resolve));
-  try {
-    return await runModelInSubprocess(args);
-  } catch (err) {
-    console.error(CAT, 'IPC error:', err);
-    throw err;
+  if(!args.wait || args?.wait === false) {
+    await new Promise(resolve => setImmediate(resolve));
+
+    try {
+      return await runModelInSubprocess(args);
+    } catch (err) {
+      console.error(CAT, 'IPC runModelInSubprocess error:', err);
+      throw err;
+    }
+  } else {
+    try {
+      return await runModel(args);
+    } catch (err) {
+      console.error(CAT, 'IPC runModel error:', err);
+      throw err;
+    }
   }
 }
 

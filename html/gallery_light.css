@@ -711,7 +711,7 @@
 }
 
 .copy-all-metadata, .controlnet-postprocess, .image-tagger-process,
-.send-metadata, .mira-itu {
+.send-metadata, .mira-itu, .mira-itu-tagger {
     padding: 8px 12px;
     cursor: pointer;
     border-radius: 4px;
@@ -720,13 +720,13 @@
     text-align: center;
 }
 
-.copy-all-metadata, .image-tagger-process {
+.copy-all-metadata, .image-tagger-process, .mira-itu-tagger {
     background-color: #E8B090; /* Soft coral */
     color: #4A403A; /* Dark gray-brown */
     border: none;
 }
 
-.copy-all-metadata:hover, .image-tagger-process:hover {
+.copy-all-metadata:hover, .image-tagger-process:hover, .mira-itu-tagger:hover {
     background-color: #F0D4B8; /* Soft warm peach */
 }
 
@@ -740,7 +740,7 @@
     background-color: #F0D4B8; /* Soft warm peach */
 }
 
-.controlnet-select, #mira-itu-textarea {
+.controlnet-select, #mira-itu-textarea, #mira-itu-tagger-textarea {
     overflow-wrap: break-word;
     background-color: rgba(245, 242, 230, 0.8); /* Semi-transparent creamy background */
     color: #4A403A; /* Dark gray-brown */

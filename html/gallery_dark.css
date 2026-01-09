@@ -711,7 +711,7 @@
 }
 
 .copy-all-metadata, .controlnet-postprocess, .image-tagger-process,
-.send-metadata, .mira-itu{
+.send-metadata, .mira-itu, .mira-itu-tagger{
     padding: 8px 12px;
     cursor: pointer;
     border-radius: 4px;
@@ -720,13 +720,13 @@
     text-align: center;
 }
 
-.copy-all-metadata, .image-tagger-process {
+.copy-all-metadata, .image-tagger-process, .mira-itu-tagger {
     background-color: rgb(61,154,215);
     color: rgb(30, 30, 30);
     border: none;
 }
 
-.copy-all-metadata:hover, .image-tagger-process:hover {
+.copy-all-metadata:hover, .image-tagger-process:hover, .mira-itu-tagger:hover {
     background-color: rgb(49,130,182);
 }
 
@@ -740,7 +740,7 @@
     background-color: rgb(190,65,26);
 }
 
-.controlnet-select, #mira-itu-textarea {
+.controlnet-select, #mira-itu-textarea, #mira-itu-tagger-textarea {
     overflow-wrap: break-word;
     background-color: rgb(20, 20, 25);
     color: #f0f0f0;

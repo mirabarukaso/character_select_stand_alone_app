@@ -80,6 +80,7 @@ const defaultSettings = {
     "ai_local_temp": 0.7,
     "ai_local_n_predict": 768,
     "ai_prompt_role": 1,
+    "ai_prompt_preview": true,
     
     "api_interface": "None",
     "api_preview_refresh_time": 1,

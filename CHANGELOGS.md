@@ -1,3 +1,13 @@
+2026.01.09 v2.2.0           
+Add `SAA Tagger` for `MiraITU` tagging image clips by SAA                
+Add retire for `Copy Image` when copy `MiraITU` image may failed          
+Add `Show AI Prompt` checkbox for AI prompt preview          
+Change `MiraITU` default tile size to 2048         
+Change the `A1111 Regional`, `ControlNet` and `ADetailer` reminders will only show once     
+Change `WD Tagger` now support category select        
+Bugs fix       
+
+
 2026.01.01 v2.1.0           
 Add `Mira Image Tiled Upscaler`         
   Requires [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) 0.5.6.0 or above         

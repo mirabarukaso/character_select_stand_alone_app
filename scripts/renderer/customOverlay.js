@@ -1043,6 +1043,53 @@ function createCustomOverlay(
     return overlay;
 }
 
+function closeOverlayElement(overlay) {
+    if (!overlay) return;
+
+    if (typeof overlay._cleanup === 'function') {
+        overlay._cleanup();
+    } else {
+        overlay.remove();
+    }
+}
+
+export function closeCustomOverlayById(id) {
+    const overlay = document.getElementById(id);
+    if (overlay?.classList.contains('cg-custom-overlay')) {
+        closeOverlayElement(overlay);
+        return true;
+    }
+    return false;
+}
+
+export function closeCustomOverlaysByGroup(group) {
+    if (!group) return 0;
+
+    const selector = `.cg-custom-overlay[data-group="${group}"]`;
+    const overlays = document.querySelectorAll(selector);
+    
+    let count = 0;
+    overlays.forEach(overlay => {
+        closeOverlayElement(overlay);
+        count++;
+    });
+
+    return count;
+}
+
+export function getCustomOverlayIdsByGroup(group) {
+    const selector = `.cg-custom-overlay[data-group="${group}"]`;
+    const overlays = document.querySelectorAll(selector);
+    return Array.from(overlays).map(el => el.id);
+}
+
 export function customCommonOverlay() {
-    return { createErrorOverlay, createLoadingOverlay, createCustomOverlay };
+    return { 
+        createErrorOverlay, 
+        createLoadingOverlay, 
+        createCustomOverlay,
+        closeCustomOverlayById,
+        closeCustomOverlaysByGroup,
+        getCustomOverlayIdsByGroup
+     };
 }

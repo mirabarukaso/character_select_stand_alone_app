@@ -160,6 +160,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.ai.remote_model_select.setTitle(LANG.remote_ai_model);
     globalThis.ai.remote_apikey.setTitle('API Key');
     globalThis.ai.ai_select.setTitle(LANG.batch_generate_rule, LANG.ai_select, LANG.ai_select_title);
+    globalThis.ai.ai_prompt_preview.setTitle(LANG.ai_prompt_preview);
     globalThis.ai.local_address.setTitle(LANG.ai_local_addr);
     globalThis.ai.local_temp.setTitle(LANG.ai_local_temp);
     globalThis.ai.local_n_predict.setTitle(LANG.ai_local_n_predict);
@@ -285,6 +286,7 @@ export function updateSettings() {
     globalThis.ai.local_temp.setValue(SETTINGS.ai_local_temp);
     globalThis.ai.local_n_predict.setValue(SETTINGS.ai_local_n_predict);
     globalThis.ai.ai_select.setValue(SETTINGS.ai_prompt_role);
+    globalThis.ai.ai_prompt_preview.setValue(SETTINGS.ai_prompt_preview);
 
     globalThis.generate.api_interface.updateDefaults(SETTINGS.api_interface);
     globalThis.generate.api_preview_refresh_time.setValue(SETTINGS.api_preview_refresh_time);

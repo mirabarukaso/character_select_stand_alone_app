@@ -21,7 +21,7 @@ export function createHtmlOptions(itemList) {
 
 function modelOptionsOptions(modelChoice) {
     if(modelChoice.startsWith('wd-')) {
-        return ['mCut:OFF', 'General', 'Character', 'Both'];            
+        return ['Rating/General/Character', 'General/Character', 'General', 'Rating',  'Character'];
     } else if(modelChoice.startsWith('cl_')) {
         return ['All', 'General/Character/Artist/CopyRight', 'General', 'Character', 'Artist', 'Copyright', 'Meta', 'Model', 'Rating', 'Quality'];
     } else if(modelChoice.startsWith('camie-')) {
@@ -124,6 +124,7 @@ export function createImageTagger(metadataContainer, cachedImage) {
                 if(result) {
                     imageTaggerButton.textContent = LANG.image_tagger_run_tagged;
                     console.log(result.join(', '));
+                    globalThis.overlay.custom.closeCustomOverlaysByGroup('Info'); // close exist
                     globalThis.overlay.custom.createCustomOverlay('none', "\n\n" + result.join(', '),
                                                                 384, 'center', 'left', null, 'Info');
                 } else {

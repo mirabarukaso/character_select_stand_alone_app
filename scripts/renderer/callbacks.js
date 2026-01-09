@@ -199,9 +199,10 @@ export function callback_regional_condition(trigger, dummy = false) {
     const LANG = FILES.language[SETTINGS.language];
 
     const apiInterface = globalThis.generate.api_interface.getValue();    
-    if(apiInterface !== 'ComfyUI' && trigger) {
+    if(apiInterface !== 'ComfyUI' && trigger && !globalThis.custom_message.a1111_regional) {
         const errorMessage = LANG.regional_a1111;
         globalThis.overlay.custom.createErrorOverlay(errorMessage, 'https://github.com/hako-mikan/sd-webui-regional-prompter');
+        globalThis.custom_message.a1111_regional = true;
     }
 
     if (dummy) {
@@ -241,11 +242,17 @@ export function callback_controlnet(trigger)  {
     const apiInterface = globalThis.generate.api_interface.getValue();
 
     globalThis.globalSettings.api_controlnet_enable = trigger; 
+
+    if(globalThis.custom_message.controlnet)
+        return;
     
-    if(trigger && apiInterface === 'ComfyUI') 
-        globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_comfyui , 'Links:\nhttps://github.com/Fannovel16/comfyui_controlnet_aux\nhttps://github.com/sipherxyz/comfyui-art-venture'); 
-    if(trigger && apiInterface === 'WebUI') 
-        globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_webui , 'https://github.com/Mikubill/sd-webui-controlnet'); 
+    if(trigger && apiInterface === 'ComfyUI') {
+        globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_comfyui , 'Links:\nhttps://github.com/Fannovel16/comfyui_controlnet_aux\nhttps://github.com/sipherxyz/comfyui-art-venture');         
+    }
+    if(trigger && apiInterface === 'WebUI') {
+        globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_webui , 'https://github.com/Mikubill/sd-webui-controlnet');         
+    }
+    globalThis.custom_message.controlnet = true;
 }
 
 export function callback_adetailer(trigger)  {                
@@ -255,13 +262,17 @@ export function callback_adetailer(trigger)  {
     const apiInterface = globalThis.generate.api_interface.getValue();
 
     globalThis.globalSettings.api_adetailer_enable = trigger; 
+
+    if(globalThis.custom_message.adetailer)
+        return;
+
     if(trigger && apiInterface === 'ComfyUI') {        
         globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_comfyui, 'https://github.com/ltdrdata/ComfyUI-Impact-Pack\nhttps://github.com/ltdrdata/ComfyUI-Impact-Subpack');
-    }
-    
+    }    
     if(trigger && apiInterface === 'WebUI') {
         globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_webui , 'https://github.com/Bing-su/adetailer');         
-    }    
+    }
+    globalThis.custom_message.adetailer = true;
 }
 
 export async function callback_queue_autostart(trigger, isDummy=false) {

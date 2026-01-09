@@ -22,8 +22,9 @@ function getClCategories(model_options) {
 
 function getWd14Flags(model_options) {
   return {
-    mCutGeneral: model_options === 'General' || model_options === 'Both',
-    mCutCharacter: model_options === 'Character' || model_options === 'Both'
+    mCutGeneral: false,
+    mCutCharacter: false,
+    categories: model_options
   };
 }
 
@@ -58,11 +59,11 @@ async function runModel({ image_input, model_choice, gen_threshold, char_thresho
       const inputTensorCl = new ort.Tensor("float32", imgArray, [1, 3, spatialSize, spatialSize]);
       result = await runClTagger(modelPath, inputTensorCl, gen_threshold, char_threshold, cat);
     } else if (model_choice.startsWith('wd-')) {
-      const { mCutGeneral, mCutCharacter } = getWd14Flags(model_options);
+      const { mCutGeneral, mCutCharacter, categories } = getWd14Flags(model_options);
       const spatialSize = 448;
       const imgArray = await preprocessImageWD(image_input, spatialSize);
       const inputTensor = new ort.Tensor("float32", imgArray, [1, spatialSize, spatialSize, 3]);
-      result = await runWd14Tagger(modelPath, inputTensor, gen_threshold, char_threshold, mCutGeneral, mCutCharacter);
+      result = await runWd14Tagger(modelPath, inputTensor, gen_threshold, char_threshold, mCutGeneral, mCutCharacter, categories);
     } else if (model_choice.startsWith("camie-")) {
       const cat = getCamieCategories(model_options);
       const spatialSize = 512;

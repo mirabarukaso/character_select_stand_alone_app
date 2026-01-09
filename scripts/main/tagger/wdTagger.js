@@ -107,7 +107,9 @@ function mcutThreshold(probs) {
   return (sortedProbs[t] + sortedProbs[t + 1]) / 2;
 }
 
-async function runWd14Tagger(modelPath, inputTensor, gen_threshold=0.35, char_threshold=0.85, general_mcut_enabled=false, character_mcut_enabled=false) {
+async function runWd14Tagger(modelPath, inputTensor, gen_threshold=0.35, char_threshold=0.85, 
+  general_mcut_enabled=false, character_mcut_enabled=false,
+cat = ['General', 'Character', 'Rating']) {
     const session = await ort.InferenceSession.create(modelPath, { 
       executionProviders: ['dml', 'cpu'],
       
@@ -152,16 +154,16 @@ async function runWd14Tagger(modelPath, inputTensor, gen_threshold=0.35, char_th
     if (!p) continue;
 
     // Category 9: Rating tags
-    if (tag.category === "9") {
+    if (tag.category === "9" && cat.includes('Rating')) {
       ratingTags.push({ name: tag.name, prob: p });
     }
     // Category 0: General tags - collect probs
-    else if (tag.category === "0") {
+    else if (tag.category === "0" && cat.includes('General')) {
       generalProbs.push(p);
       generalTags.push({ name: tag.name, prob: p });
     }
     // Category 4: Character tags - collect probs
-    else if (tag.category === "4") {
+    else if (tag.category === "4"&& cat.includes('Character')) {
       characterProbs.push(p);
       characterTags.push({ name: tag.name, prob: p });
     }
@@ -197,7 +199,7 @@ async function runWd14Tagger(modelPath, inputTensor, gen_threshold=0.35, char_th
   console.log(CAT, `Generated ${outputTags.length} tags (${filteredCharacterTags.length} characters, ${filteredGeneralTags.length} general).`);
   
   // Log rating prediction (argmax equivalent)
-  if (ratingTags.length > 0) {
+  if (ratingTags.length > 0 && cat.includes('Rating')) {
     const topRating = ratingTags.reduce((max, tag) => tag.prob > max.prob ? tag : max, ratingTags[0]);
     console.log(CAT, `Rating: ${topRating.name} (${(topRating.prob * 100).toFixed(2)}%)`);
     outputTags.unshift(topRating.name);  // prepend rating tag
