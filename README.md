@@ -25,7 +25,7 @@ This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Web
 
 ## Install and run
 > [!IMPORTANT]
-> Setup your [Image API Interface](https://github.com/mirabarukaso/character_select_stand_alone_app#image-api-interface) before you start SAA.     
+> Setup your [Image API Interface](#image-api-interface) before you start SAA.     
 > 
 > For ComfyUI, you need [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) for SAA.     
 
