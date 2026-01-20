@@ -375,7 +375,18 @@ py ComfyUI\main.py --fast --use-sage-attention --cuda-malloc --windows-standalon
 4. Make sure `Image Interface IP Address:Port` same as your WerUI page   
 5. Have fun    
 
-## Folder path issue for Remote usage   
+## Custom path for 3rd party package       
+> [!WARNING]
+> Enable custom path will override your model path settings.     
+> Not recommend for official WebUI(A1111/Forge) and ComfyUI API.      
+To enable a custom path, modify the file `data/custom_path.yaml`.       
+1. Set `use_custom_path` to `true`      
+2. Set `enable` to `false` to disable whole category        
+3. Comment out to disable any single custom path you don't need to override      
+4. Supports both single string and multi-line string for path lists     
+5. Supports absolute and relative paths (relative to base_path)      
+
+## Folder path issue for Remote usage    
 SAA needs to search your ComfyUI/WebUI checkpoints folder to retrieve models, LoRAs and other items. If you use a remote back-end address instead of 127.0.0.1, the folder search will fail and SAA will run in 'Default' mode. In this mode, you cannot change the models or set the LoRAs by LoRA slot.    
 There are two ways to solve this problem:    
 1. `Mirror folder` - copy your remote `models` folder to local, then setup SAA with the local folder. This is simple, but you need more space to mirror the entire `models` folder to local folder.

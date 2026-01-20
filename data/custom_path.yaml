@@ -1,0 +1,44 @@
+# Warning: This will override default paths in the application.
+# Not recommend for official WebUI(A1111/Forge) and ComfyUI API.
+
+# Set to true to enable custom paths
+use_custom_path: false
+
+# Supports both single string and multi-line string for path lists
+# Supports absolute and relative paths (relative to base_path)
+# Comment out to disable single custom paths
+a1111:
+  enable: true
+  base_path: F:/Stable-diffusion/stable-diffusion-webui
+  model: models/Stable-diffusion
+  lora: |
+      models/Lora
+      models/LyCORIS
+  controlnet: extensions/sd-webui-controlnet/models
+  upscale_models: |
+                models/ESRGAN
+                models/RealESRGAN
+                models/SwinIR
+  adetailer: models/adetailer
+
+forge:
+  enable: true
+  base_path: F:/sd-webui-forge-neo
+  model: models/Stable-diffusion
+  lora: models/Lora
+  controlnet: models/ControlNet
+  upscale_models: models/upscale_models
+  adetailer: models/adetailer
+
+comfyui:
+  enable: true
+  base_path: F:/ComfyUI/ComfyUI_windows_portable/ComfyUI
+  model: models/checkpoints
+  lora: models/Loras
+  controlnet: models/controlnet
+  clip_vision: models/clip_vision
+  ipadapter: models/ipadapter
+  upscale_models: models/upscale_models
+  aDetailer_bbox: models/ultralytics/bbox
+  aDetailer_sams: models/sams
+  onnx: models/onnx

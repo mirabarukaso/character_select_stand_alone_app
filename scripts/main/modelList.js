@@ -29,6 +29,11 @@ let EXTRA_MODELS = {
 };
 let IMAGE_TAGGER = ['none'];
 
+let CUSTOM_CONFIG = {
+    active: false,
+    data: null
+};
+
 const appPath = app.isPackaged ? path.join(path.dirname(app.getPath('exe')), 'resources', 'app') : app.getAppPath();
 
 function readDirectory(directory='', basePath = '', search_subfolder = false, maxDepth = Infinity, currentDepth = 0, extName = '.safetensors', replaceSlash = false) {
@@ -75,23 +80,39 @@ function updateONNXList(model_path_comfyui, search_subfolder) {
 }
 
 function updateADetailerList(model_path_comfyui, model_path_webui, search_subfolder) {
-    const adPatchComfyUIBbox = path.join(path.dirname(model_path_comfyui), 'ultralytics', 'bbox');
-    const adPatchComfyUISams = path.join(path.dirname(model_path_comfyui), 'sams');
-    const adPatchWebUI = path.join(path.dirname(model_path_webui), 'adetailer');
+    // --- ComfyUI ---
+    const bboxPaths = resolveCustomPaths(['comfyui'], 'aDetailer_bbox');
+    const samsPaths = resolveCustomPaths(['comfyui'], 'aDetailer_sams');
 
-    if (fs.existsSync(adPatchComfyUIBbox) && fs.existsSync(adPatchComfyUISams) ) {
-         const bbox = readDirectory(adPatchComfyUIBbox, '', search_subfolder, Infinity, 0, '.pt');
-         const sams  = readDirectory(adPatchComfyUISams, '', search_subfolder, Infinity, 0, '.pth');
-         ADETAILER_COMFYUI = [...bbox, ...sams];
+    if (bboxPaths.length > 0 || samsPaths.length > 0) {
+        const bbox = scanMultipleDirectories(bboxPaths, search_subfolder, '.pt');
+        const sams = scanMultipleDirectories(samsPaths, search_subfolder, '.pth');
+        ADETAILER_COMFYUI = [...bbox, ...sams];
     } else {
-        ADETAILER_COMFYUI = [];
-    }
+        const adPatchComfyUIBbox = path.join(path.dirname(model_path_comfyui), 'ultralytics', 'bbox');
+        const adPatchComfyUISams = path.join(path.dirname(model_path_comfyui), 'sams');    
 
-    if (fs.existsSync(adPatchWebUI)) {
-        ADETAILER_WEBUI = readDirectory(adPatchWebUI, '', search_subfolder, Infinity, 0, '.pt');
-    } else {
-        ADETAILER_WEBUI = [];
+        if (fs.existsSync(adPatchComfyUIBbox) && fs.existsSync(adPatchComfyUISams) ) {
+            const bbox = readDirectory(adPatchComfyUIBbox, '', search_subfolder, Infinity, 0, '.pt');
+            const sams  = readDirectory(adPatchComfyUISams, '', search_subfolder, Infinity, 0, '.pth');
+            ADETAILER_COMFYUI = [...bbox, ...sams];
+        } else {
+            ADETAILER_COMFYUI = [];
+        }
     }
+    
+    // --- WebUI ---
+    const webPaths = resolveCustomPaths(['a1111', 'forge'], 'adetailer');
+    if (webPaths.length > 0) {
+        ADETAILER_WEBUI = scanMultipleDirectories(webPaths, search_subfolder);
+    } else {
+        const adPatchWebUI = path.join(path.dirname(model_path_webui), 'adetailer');
+        if (fs.existsSync(adPatchWebUI)) {
+            ADETAILER_WEBUI = readDirectory(adPatchWebUI, '', search_subfolder, Infinity, 0, '.pt');
+        } else {
+            ADETAILER_WEBUI = [];
+        }
+    }    
 
     if (ADETAILER_COMFYUI.length > 0) {
         // do nothing
@@ -106,6 +127,7 @@ function updateADetailerList(model_path_comfyui, model_path_webui, search_subfol
     }
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 function updateUpscalerList(model_path_comfyui, model_path_webui, search_subfolder) {
     const LATENT_UPSCALERS = [
         'Latent (nearest-exact)', 
@@ -114,28 +136,46 @@ function updateUpscalerList(model_path_comfyui, model_path_webui, search_subfold
         'Latent (bicubic)',
         'Latent (bislerp)'
     ];
-    const upPathComfyUI = path.join(path.dirname(model_path_comfyui), 'upscale_models');
-    const upPathWebUI = path.join(path.dirname(model_path_webui), 'upscale_models');
 
-    if (fs.existsSync(upPathComfyUI)) {
-        const pthList = readDirectory(upPathComfyUI, '', search_subfolder, Infinity, 0, '.pth');
-        const safetensorsList = readDirectory(upPathComfyUI, '', search_subfolder, Infinity, 0, '.safetensors');
-        UPSCALER_COMFYUI = [...pthList, ...safetensorsList];
+    // --- ComfyUI ---
+    const customComfyPaths = resolveCustomPaths(['comfyui'], 'upscale_models');    
+    if (customComfyPaths.length > 0) {
+        const pthList = scanMultipleDirectories(customComfyPaths, search_subfolder, '.pth');
+        const stList = scanMultipleDirectories(customComfyPaths, search_subfolder, '.safetensors');
+        UPSCALER_COMFYUI = [...pthList, ...stList];
     } else {
-        UPSCALER_COMFYUI = [];
+        const upPathComfyUI = path.join(path.dirname(model_path_comfyui), 'upscale_models');
+        if (fs.existsSync(upPathComfyUI)) {
+            const pthList = readDirectory(upPathComfyUI, '', search_subfolder, Infinity, 0, '.pth');
+            const safetensorsList = readDirectory(upPathComfyUI, '', search_subfolder, Infinity, 0, '.safetensors');
+            UPSCALER_COMFYUI = [...pthList, ...safetensorsList];
+        } else {
+            UPSCALER_COMFYUI = [];
+        }
     }
-
+    
     if (EXTRA_MODELS.exist && Array.isArray(EXTRA_MODELS.upscale) && EXTRA_MODELS.upscale.length > 0) {
         const baseList = Array.isArray(UPSCALER_COMFYUI) ? UPSCALER_COMFYUI : [];
         UPSCALER_COMFYUI = Array.from(new Set([...baseList, ...EXTRA_MODELS.upscale]));
     }
 
-    if (fs.existsSync(upPathWebUI)) {
-        const pthList = readDirectory(upPathWebUI, '', search_subfolder, Infinity, 0, '.pth');
-        const safetensorsList = readDirectory(upPathWebUI, '', search_subfolder, Infinity, 0, '.safetensors');
-        UPSCALER_WEBUI =  [...pthList, ...safetensorsList];
+    // --- WebUI ---
+    const customWebUIPaths = resolveCustomPaths(['a1111'], 'upscale_models'); 
+    const forgePaths = resolveCustomPaths(['forge'], 'upscale_models');
+    const allWebCustomPaths = [...customWebUIPaths, ...forgePaths];
+    if (allWebCustomPaths.length > 0) {
+         const pthList = scanMultipleDirectories(allWebCustomPaths, search_subfolder, '.pth');
+         const stList = scanMultipleDirectories(allWebCustomPaths, search_subfolder, '.safetensors');
+         UPSCALER_WEBUI = [...pthList, ...stList];
     } else {
-        UPSCALER_WEBUI = [];
+        const upPathWebUI = path.join(path.dirname(model_path_webui), 'upscale_models');
+        if (fs.existsSync(upPathWebUI)) {
+            const pthList = readDirectory(upPathWebUI, '', search_subfolder, Infinity, 0, '.pth');
+            const safetensorsList = readDirectory(upPathWebUI, '', search_subfolder, Infinity, 0, '.safetensors');
+            UPSCALER_WEBUI =  [...pthList, ...safetensorsList];
+        } else {
+            UPSCALER_WEBUI = [];
+        }
     }
 
     if (UPSCALER_COMFYUI.length > 0) {
@@ -184,46 +224,63 @@ function updateImageTaggerList() {
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function updateControlNetList(model_path_comfyui, model_path_webui, search_subfolder) {
-    const cnPathComfyUI = path.join(path.dirname(model_path_comfyui), 'controlnet');
-    const clipVisionPathComfyUI = path.join(path.dirname(model_path_comfyui), 'clip_vision');
-    const ipadapterPathComfyUI = path.join(path.dirname(model_path_comfyui), 'ipadapter');
-    const cnPathWebUI_A1111 = path.join(path.dirname(model_path_webui), '..', 'extensions', 'sd-webui-controlnet', 'models');
-    const cnPathWebUI_Forge = path.join(path.dirname(model_path_webui), 'ControlNet');
-
-    if (fs.existsSync(cnPathComfyUI)) {
-        CONTROLNET_COMFYUI = readDirectory(cnPathComfyUI, '', search_subfolder);
-        if(fs.existsSync(clipVisionPathComfyUI) && fs.existsSync(ipadapterPathComfyUI)) {
-            let clipList = readDirectory(clipVisionPathComfyUI, '', search_subfolder);
-            let ipaList = readDirectory(ipadapterPathComfyUI, '', search_subfolder);
-
-            let clipVisionListWithPrefix = [];
-            for (const item of clipList) {
-                clipVisionListWithPrefix.push('CV->' + item);
-            }
-
-            let ipaListWithPrefix = [];
-            for (const item of ipaList ) {
-                ipaListWithPrefix.push('IPA->' + item);
-            }
-
+    // --- ComfyUI ---
+    const cnPaths = resolveCustomPaths(['comfyui'], 'controlnet');
+    if (cnPaths.length > 0) {
+        CONTROLNET_COMFYUI = scanMultipleDirectories(cnPaths, search_subfolder);       
+        // Check Clip Vision & IPAdapter
+        const cvPaths = resolveCustomPaths(['comfyui'], 'clip_vision');
+        const ipaPaths = resolveCustomPaths(['comfyui'], 'ipadapter');
+        
+        if (cvPaths.length > 0 && ipaPaths.length > 0) {
+            let clipList = scanMultipleDirectories(cvPaths, search_subfolder);
+            let ipaList = scanMultipleDirectories(ipaPaths, search_subfolder);
+            
+            let clipVisionListWithPrefix = clipList.map(item => 'CV->' + item);
+            let ipaListWithPrefix = ipaList.map(item => 'IPA->' + item);
             CONTROLNET_COMFYUI = CONTROLNET_COMFYUI.concat(clipVisionListWithPrefix, ipaListWithPrefix);
-
-            if (EXTRA_MODELS.exist && Array.isArray(EXTRA_MODELS.controlnet) && EXTRA_MODELS.controlnet.length > 0) {
-                const baseList = Array.isArray(CONTROLNET_COMFYUI) ? CONTROLNET_COMFYUI : [];
-                CONTROLNET_COMFYUI = Array.from(new Set([...baseList, ...EXTRA_MODELS.controlnet]));
-            }
         }
     } else {
-        CONTROLNET_COMFYUI = [];
+        const cnPathComfyUI = path.join(path.dirname(model_path_comfyui), 'controlnet');
+        const clipVisionPathComfyUI = path.join(path.dirname(model_path_comfyui), 'clip_vision');
+        const ipadapterPathComfyUI = path.join(path.dirname(model_path_comfyui), 'ipadapter');
+        if (fs.existsSync(cnPathComfyUI)) {
+            CONTROLNET_COMFYUI = readDirectory(cnPathComfyUI, '', search_subfolder);
+            if(fs.existsSync(clipVisionPathComfyUI) && fs.existsSync(ipadapterPathComfyUI)) {
+                let clipList = readDirectory(clipVisionPathComfyUI, '', search_subfolder);
+                let ipaList = readDirectory(ipadapterPathComfyUI, '', search_subfolder);
+
+                let clipVisionListWithPrefix = clipList.map(item => 'CV->' + item);
+                let ipaListWithPrefix = ipaList.map(item => 'IPA->' + item);
+                CONTROLNET_COMFYUI = CONTROLNET_COMFYUI.concat(clipVisionListWithPrefix, ipaListWithPrefix);
+            }
+        } else {
+            CONTROLNET_COMFYUI = [];
+        }
     }
-    
-    if (fs.existsSync(cnPathWebUI_A1111)) {
-        CONTROLNET_WEBUI = readDirectory(cnPathWebUI_A1111, '', search_subfolder);
-    } else if (fs.existsSync(cnPathWebUI_Forge)) {
-        CONTROLNET_WEBUI = readDirectory(cnPathWebUI_Forge, '', search_subfolder);
+
+    if (EXTRA_MODELS.exist && Array.isArray(EXTRA_MODELS.controlnet) && EXTRA_MODELS.controlnet.length > 0) {
+        const baseList = Array.isArray(CONTROLNET_COMFYUI) ? CONTROLNET_COMFYUI : [];
+        CONTROLNET_COMFYUI = Array.from(new Set([...baseList, ...EXTRA_MODELS.controlnet]));
+    }
+
+
+    // --- WebUI ---
+    const webCnPaths = resolveCustomPaths(['a1111', 'forge'], 'controlnet');
+    if (webCnPaths.length > 0) {
+        CONTROLNET_WEBUI = scanMultipleDirectories(webCnPaths, search_subfolder);
     } else {
-        CONTROLNET_WEBUI = [];
-    }
+        const cnPathWebUI_A1111 = path.join(path.dirname(model_path_webui), '..', 'extensions', 'sd-webui-controlnet', 'models');
+        const cnPathWebUI_Forge = path.join(path.dirname(model_path_webui), 'ControlNet');
+        
+        if (fs.existsSync(cnPathWebUI_A1111)) {
+            CONTROLNET_WEBUI = readDirectory(cnPathWebUI_A1111, '', search_subfolder);
+        } else if (fs.existsSync(cnPathWebUI_Forge)) {
+            CONTROLNET_WEBUI = readDirectory(cnPathWebUI_Forge, '', search_subfolder);
+        } else {
+            CONTROLNET_WEBUI = [];
+        }
+    }    
 
     if (CONTROLNET_COMFYUI.length > 0) {
         CONTROLNET_COMFYUI.unshift('none');
@@ -239,47 +296,68 @@ function updateControlNetList(model_path_comfyui, model_path_webui, search_subfo
 }
 
 function updateLoRAList(model_path_comfyui, model_path_webui, search_subfolder) {
-    const loraPathComfyUI = path.join(path.dirname(model_path_comfyui), 'loras');
-    const loraPathWebUI = path.join(path.dirname(model_path_webui), 'Lora');
-
-    if (fs.existsSync(loraPathComfyUI)) {
-        LORALIST_COMFYUI = readDirectory(loraPathComfyUI, '', search_subfolder);
-
-        if (EXTRA_MODELS.exist && Array.isArray(EXTRA_MODELS.loras) && EXTRA_MODELS.loras.length > 0) {
-            const baseList = Array.isArray(LORALIST_COMFYUI) ? LORALIST_COMFYUI : [];
-            LORALIST_COMFYUI = Array.from(new Set([...baseList, ...EXTRA_MODELS.loras]));
-        }
+    // --- ComfyUI ---
+    const customComfyPaths = resolveCustomPaths(['comfyui'], 'lora');    
+    if (customComfyPaths.length > 0) {
+        LORALIST_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder, '.safetensors');
     } else {
-        LORALIST_COMFYUI = [];
+        const loraPathComfyUI = path.join(path.dirname(model_path_comfyui), 'loras');
+        if (fs.existsSync(loraPathComfyUI)) {
+            LORALIST_COMFYUI = readDirectory(loraPathComfyUI, '', search_subfolder);
+        } else {
+            LORALIST_COMFYUI = [];
+        }
+    }
+
+    // Merge Extra Models
+    if (EXTRA_MODELS.exist && Array.isArray(EXTRA_MODELS.loras) && EXTRA_MODELS.loras.length > 0) {
+        const baseList = Array.isArray(LORALIST_COMFYUI) ? LORALIST_COMFYUI : [];
+        LORALIST_COMFYUI = Array.from(new Set([...baseList, ...EXTRA_MODELS.loras]));
     }
     
-    if (fs.existsSync(loraPathWebUI)) {
-        LORALIST_WEBUI = readDirectory(loraPathWebUI, '', search_subfolder);
+    // --- WebUI (A1111 & Forge) ---
+    const customWebUIPaths = resolveCustomPaths(['a1111', 'forge'], 'lora');
+    if (customWebUIPaths.length > 0) {
+        LORALIST_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder, '.safetensors');
     } else {
-        LORALIST_WEBUI = [];
+        const loraPathWebUI = path.join(path.dirname(model_path_webui), 'Lora');
+        if (fs.existsSync(loraPathWebUI)) {
+            LORALIST_WEBUI = readDirectory(loraPathWebUI, '', search_subfolder);
+        } else {
+            LORALIST_WEBUI = [];
+        }
     }
-
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function updateModelList(model_path_comfyui, model_path_webui, model_filter, enable_filter, search_subfolder) {
-    if (fs.existsSync(model_path_comfyui)) {
+    // --- ComfyUI ---
+    const customComfyPaths = resolveCustomPaths(['comfyui'], 'model'); // yaml key is 'model'
+    
+    if (customComfyPaths.length > 0) {
+        MODELLIST_ALL_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+    } else if (fs.existsSync(model_path_comfyui)) {
         MODELLIST_ALL_COMFYUI = readDirectory(model_path_comfyui, '', search_subfolder);
-
-        if (EXTRA_MODELS.exist && Array.isArray(EXTRA_MODELS.checkpoints) && EXTRA_MODELS.checkpoints.length > 0) {
-            const baseList = Array.isArray(MODELLIST_ALL_COMFYUI) ? MODELLIST_ALL_COMFYUI : [];
-            MODELLIST_ALL_COMFYUI = Array.from(new Set([...baseList, ...EXTRA_MODELS.checkpoints]));
-        }
     } else {
         MODELLIST_ALL_COMFYUI = [];
+    }    
+    // Merge Extra Models
+    if (EXTRA_MODELS.exist && Array.isArray(EXTRA_MODELS.checkpoints) && EXTRA_MODELS.checkpoints.length > 0) {
+        const baseList = Array.isArray(MODELLIST_ALL_COMFYUI) ? MODELLIST_ALL_COMFYUI : [];
+        MODELLIST_ALL_COMFYUI = Array.from(new Set([...baseList, ...EXTRA_MODELS.checkpoints]));
     }
     
-    if (fs.existsSync(model_path_webui)) {
+    // --- WebUI ---
+    const customWebUIPaths = resolveCustomPaths(['a1111', 'forge'], 'model');
+    if (customWebUIPaths.length > 0) {
+        MODELLIST_ALL_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder);
+    } else if (fs.existsSync(model_path_webui)) {
         MODELLIST_ALL_WEBUI = readDirectory(model_path_webui, '', search_subfolder);
     } else {
         MODELLIST_ALL_WEBUI = [];
     }
 
+    // Apply filter
     if (enable_filter && model_filter) {
         const filters = model_filter.split(',').map(f => f.trim().toLowerCase());
         MODELLIST_COMFYUI = MODELLIST_ALL_COMFYUI.filter(fileName =>
@@ -401,6 +479,93 @@ function readExtraModelPaths(model_path_comfyui) {
     return true;
 }
 
+function loadCustomConfig() {    
+    const configPath = path.join(appPath, 'data', 'custom_path.yaml');
+    let targetPath = fs.existsSync(configPath) ? configPath : null;
+
+    if (targetPath) {
+        try {
+            const raw = fs.readFileSync(targetPath, 'utf8');
+            const parsed = yaml.load(raw);
+            if (parsed?.use_custom_path === true) {
+                CUSTOM_CONFIG.data = parsed;
+                CUSTOM_CONFIG.active = true;
+                console.log(CAT, 'Custom path config loaded and active:', targetPath);
+                return;
+            }
+            console.log(CAT, 'Custom path config found but use_custom_path is not true:', targetPath);
+        } catch (e) {
+            console.warn(CAT, 'Error loading custom_path.yaml:', e);
+        }
+    }
+    CUSTOM_CONFIG.active = false;
+    CUSTOM_CONFIG.data = null;
+}
+
+// eslint-disable-next-line sonarjs/cognitive-complexity
+function resolveCustomPaths(appKeys, modelKey) {
+    if (!CUSTOM_CONFIG.active || !CUSTOM_CONFIG.data) return [];
+
+    let finalPaths = [];
+
+    for (const appKey of appKeys) {
+        const section = CUSTOM_CONFIG.data[appKey];
+        if (!section) continue;
+
+        const enabled = section['enable'];
+        if (!enabled) {
+            continue;
+        }
+
+        const basePath = section.base_path;
+        if(fs.existsSync(basePath) === false) {
+            console.warn(CAT, `Base path does not exist for ${appKey} - ${modelKey}:`, basePath);
+            continue;
+        }
+
+        const rawValue = section[modelKey];
+        if (!rawValue) {
+            console.log(CAT, `No paths specified for ${appKey} - ${modelKey}, use default.`);
+            continue;
+        }
+
+        let rawPaths = [];
+        if (Array.isArray(rawValue)) {
+            rawPaths = rawValue;
+        } else if (typeof rawValue === 'string') {
+            rawPaths = rawValue.split(/[\r\n]+/).map(s => s.trim()).filter(s => s.length > 0);
+        }
+
+        for (const p of rawPaths) {
+            let absPath;
+            if (path.isAbsolute(p)) {
+                absPath = p;
+            } else if (basePath) {
+                absPath = path.join(basePath, p);
+            } else {
+                continue;
+            }
+
+            if (fs.existsSync(absPath)) {
+                finalPaths.push(absPath);
+            }
+        }
+    }
+
+    return Array.from(new Set(finalPaths));
+}
+
+function scanMultipleDirectories(paths, search_subfolder, extName, replaceSlash = false) {
+    let allFiles = [];
+    for (const dir of paths) {
+        // readDirectory(directory, basePath, search_subfolder, maxDepth, currentDepth, extName, replaceSlash)
+        // basePath send '', all returned paths are relative to that directory (e.g., "SDXL/my_lora.safetensors")
+        const files = readDirectory(dir, '', search_subfolder, Infinity, 0, extName, replaceSlash);
+        allFiles = [...allFiles, ...files];
+    }
+    return Array.from(new Set(allFiles));
+}
+
 function setupModelList(settings) {
     ipcMain.handle('update-model-list', (event, args) => {                
         updateModelAndLoRAList(args);
@@ -438,6 +603,7 @@ function setupModelList(settings) {
         return getONNXList(args);
     });
 
+    loadCustomConfig();
     EXTRA_MODELS.exist = readExtraModelPaths(settings.model_path_comfyui);
 
     updateModelList(
@@ -553,6 +719,9 @@ function getONNXList(apiInterface) {
 }
 
 function updateModelAndLoRAList(args) {
+    // reload custom paths
+    loadCustomConfig();
+
     // model_path, model_path_2nd, model_filter, enable_filter, search_subfolder
     console.log(CAT, 'Update model/lora list with following args: ', args);
 

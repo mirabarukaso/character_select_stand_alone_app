@@ -1,3 +1,6 @@
+2026.01.21 v2.3.0        
+Add `data/custom_path.yaml` to fully customize folder path         
+
 2026.01.09 v2.2.0           
 Add `SAA Tagger` for `MiraITU` tagging image clips by SAA                
 Add retire for `Copy Image` when copy `MiraITU` image may failed          
