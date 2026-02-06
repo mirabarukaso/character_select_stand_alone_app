@@ -211,7 +211,7 @@ Put your `SAM` models in `ComfyUI\\models\\adetailer`
 `ADetailer` requires [ADetailer Plugin](https://github.com/Bing-su/adetailer/)             
 `Upscaler`, `Control Processor`, `ADetailer`  lists have to be read from the API.       
 The default ADetailer model list will be updated after the first generation. Simply start generating an image as normal.        
-Put your `ADetailer` models in `sd-webui-forge-neo\\adetailer`      
+Put your `ADetailer` models in `sd-webui-forge-neo\\models\\adetailer` or `stable-diffusion-webui\\models\\adetailer`       
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/aDetailer.png" width=35%>   
 
