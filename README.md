@@ -5,7 +5,10 @@ This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Web
 > If you find a character that isn't show on the list but can be generated correctly, please don't hesitate to let me know.     
 > The default list `v160 Remove invalid and duplicate (5076)` is based on `waiIllustriousSDXL_v160`.    
 > If you are interested in the `v120 (5327)` list, navigate to [HF](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app) download `v120` files and replace `data/wai_characters.csv` `data/wai_character_thumbs.json`     
+>
 > For browser based SAAC information, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)
+>
+> For Python based CLI tool [SAA Agent (BETA)](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md)  
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%>   
 

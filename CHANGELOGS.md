@@ -1,3 +1,7 @@
+2026.02.11 v2.4.0
+Add `SAA Agent`, a Python based CLI tool for local AI Agent       
+[Read more](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md)       
+
 2026.01.21 v2.3.0        
 Add `data/custom_path.yaml` to fully customize folder path         
 

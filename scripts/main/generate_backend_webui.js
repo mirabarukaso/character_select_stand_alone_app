@@ -974,6 +974,36 @@ async function runWebUI_ControlNet(generateData) {
     }
 }
 
+async function python_runWebUI(generateData, isRegional=false, skeletonKey=false) {
+    backendWebUI.uuid = generateData.uuid;
+    if(skeletonKey) {
+        console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
+        setMutexBackendBusy(false);
+        sendToRenderer(backendWebUI.uuid, `updateProgress`, 'warn', CAT,  'The Skeleton Key triggerd, Mutex Lock set to false');
+    }
+
+    const infoMsg = `Running WebUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${backendWebUI.uuid}`;
+    sendToRenderer(backendWebUI.uuid, `updateProgress`, 'log', CAT, infoMsg);
+    console.log(CAT, infoMsg);
+
+    let newImage = null;
+    if (isRegional) {
+        newImage = await runWebUI_Regional(generateData);
+    } else {
+        newImage = await runWebUI(generateData);
+    }    
+
+    if (typeof newImage === 'string' && newImage.startsWith('Error:')) {
+        console.log(CAT, 'Failed to retrieve image from WebUI Python run:', newImage);
+        return newImage;
+    } 
+
+    // Use Callback to send image to renderer, not APIResponse
+    console.log(CAT, 'Image retrieved from WebUI Python run.');
+    sendToRenderer(backendWebUI.uuid, `updateProgress`, newImage);
+    return "Success";
+}
+
 function cancelWebUI() {
     console.log(CAT, 'Processing interrupted');
     cancelMark = true;
@@ -1019,5 +1049,6 @@ export {
     getControlNetProcessorList,
     getADetailerModelList,
     getUpscalersModelList,
-    resetModelLists
+    resetModelLists,
+    python_runWebUI
 };

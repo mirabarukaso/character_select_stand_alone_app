@@ -580,6 +580,7 @@ class ComfyUI {
     this.step = 0;
     this.firstValidPreview = false;
     this.uuid = 'none';
+    this.pythonRun = false;
   }
 
   cancelGenerate() {
@@ -699,11 +700,11 @@ class ComfyUI {
                   if (image && Buffer.isBuffer(image)) {
                       const base64Image = processImage(image);
                       if (base64Image) {
-                          finalize(`data:image/png;base64,${base64Image}`);
-                          return;
+                        finalize(`data:image/png;base64,${base64Image}`);
+                        return;
                       } else {
-                          finalize('Error: Failed to convert image to base64');
-                          return;
+                        finalize('Error: Failed to convert image to base64');
+                        return;
                       }
                   }
                   if(cancelMark)
@@ -775,13 +776,30 @@ class ComfyUI {
   }
 
   closeWS(){
-      this.webSocket.close();
-      this.webSocke = null;        
+    // Graceful shutdown: ensure all pending data is sent before closing
+    if (this.webSocket) {
+      // readyState: 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED
+      if (this.webSocket.readyState === 1) {  // 1 = OPEN
+        console.log(CAT, 'Closing WebSocket gracefully...');
+        // delay close to allow pending messages to be sent
+        setTimeout(() => {
+          try {
+            this.webSocket.close(1000, 'Normal closure');
+            console.log(CAT, 'WebSocket closed.');
+          } catch(err) {
+            console.error(CAT, 'Error closing WebSocket:', err);
+          }
+          this.webSocket = null;
+        }, 200);  // 200ms delay
+      } else {
+        this.webSocket = null;
+      }
+    }
   }
 
-  async getImage(index='29') {
+  async getImage(index='29', prompt_id = null) {
     try {
-        this.urlPrefix = `history/${this.prompt_id}`;
+        this.urlPrefix = `history/${prompt_id || this.prompt_id}`;
         const historyResponse = await this.getUrl();            
         if (typeof historyResponse === 'string' && historyResponse.startsWith('Error:')) {
             console.error(CAT, historyResponse);
@@ -789,21 +807,24 @@ class ComfyUI {
         }
         
         const jsonData = JSON.parse(historyResponse);
-        if (!jsonData[this.prompt_id]?.outputs[index]?.images) {
-            return null;
+        if (!jsonData[prompt_id ||this.prompt_id]?.outputs[index]?.images) {
+          console.error(CAT, `No images found in history for prompt_id: ${prompt_id || this.prompt_id}, index: ${index}`);
+          return null;
         }
         
-        const imageInfo = jsonData[this.prompt_id].outputs[index].images[0];            
+        const imageInfo = jsonData[prompt_id ||this.prompt_id].outputs[index].images[0];            
         this.urlPrefix = `view?filename=${imageInfo.filename}&subfolder=${imageInfo.subfolder}&type=${imageInfo.type}`;            
         const imageData = await this.getUrl();
         if (typeof imageData === 'string' && imageData.startsWith('Error:')) {
             console.error(CAT, imageData);
             return null;
         }
-        
+        console.log(CAT, `Image retrieved: ${imageInfo.filename}`);
+        setMutexBackendBusy(false); // Release the mutex lock after successful image retrieval        
         return imageData;
     } catch (error) {
         console.error(CAT, 'Error in getImage:', error.message);
+        setMutexBackendBusy(false); // Ensure mutex is released even on error
         return null;
     }
   }
@@ -1451,7 +1472,8 @@ class ComfyUI {
     return workflow;
   }
 
-  run(workflow) {
+  run(workflow, pythonRun=false) {
+    this.pythonRun = pythonRun;
     return new Promise((resolve, reject) => {
       const requestBody = {
         prompt: workflow,
@@ -1622,6 +1644,58 @@ async function runComfyUI_ControlNet(generateData){
   return result;
 }
 
+async function python_runComfyUI(generateData, isRegional=false, skeletonKey=false) {  
+  backendComfyUI.uuid = generateData.uuid;
+  if(skeletonKey) {
+    console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
+    setMutexBackendBusy(false);
+    sendToRenderer(backendComfyUI.uuid, `updateProgress`, 'warn', CAT,  'The Skeleton Key triggerd, Mutex Lock set to false');
+  }
+
+  const isBusy = await getMutexBackendBusy();
+  if (isBusy) {
+    console.warn(CAT, 'ComfyUI is busy, cannot run new generation, please try again later.');
+    return 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+  }
+  setMutexBackendBusy(true); // Acquire the mutex lock
+  cancelMark = false;
+
+  const infoMsg = `Running ComfyUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${backendComfyUI.uuid}`;
+  sendToRenderer(backendComfyUI.uuid, `updateProgress`, 'log', CAT, infoMsg);
+  console.log(CAT, infoMsg);
+
+  const workflow = isRegional ? backendComfyUI.createWorkflowRegional(generateData) : backendComfyUI.createWorkflow(generateData);  
+  const result = await backendComfyUI.run(workflow, true);
+
+  if(result.startsWith('Error')){
+    console.log("Error:", result);    
+  } else {
+    const parsedResult = JSON.parse(result);
+    let newImage;
+    if (parsedResult.prompt_id) {
+      try {                
+        newImage = await openWsComfyUI(parsedResult.prompt_id, true, '29');
+      } catch (error){
+        console.log("Error:", error);
+      } finally {
+        closeWsComfyUI();
+      }
+
+      if (newImage.startsWith('Error')) {
+        console.log(CAT, 'Failed to retrieve image from ComfyUI Python run:', newImage);
+        return newImage;
+      } 
+
+      // Use Callback to send image to renderer, not APIResponse
+      console.log(CAT, 'Image retrieved from ComfyUI Python run.');
+      sendToRenderer(backendComfyUI.uuid, `updateProgress`, newImage);
+      return "Success";
+    } 
+  }
+
+  return result;
+}
+
 async function openWsComfyUI(prompt_id, skipFirst=true, index='29') {
   return await backendComfyUI.openWS(prompt_id, skipFirst, index);
 }
@@ -1645,5 +1719,6 @@ export {
   runComfyUI_MiraITU,
   openWsComfyUI,
   closeWsComfyUI,
-  cancelComfyUI
+  cancelComfyUI,
+  python_runComfyUI
 };

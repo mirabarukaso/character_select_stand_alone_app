@@ -7,5 +7,8 @@ data/danbooru_e621_merged.csv
 settings/*.json
 data/wildcards/wildcardPoses.txt
 data/wildcards/wildcardMyFurries.txt
+scripts/python/saa-agent/__pycache__/
+scripts/python/saa-agent/*.png
 *.pem
 *.log
+*.DS_Store
