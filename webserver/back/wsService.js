@@ -17,8 +17,9 @@ import { getModelList, getModelListAll, getLoRAList, getImageTaggerModels, updat
     getUpscalerList, getADetailerList, getONNXList } from '../../scripts/main/modelList.js';
 import { updateWildcards, loadWildcard } from '../../scripts/main/wildCards.js';
 import { tagReload, tagGet } from '../../scripts/main/tagAutoComplete_backend.js';
-import { runComfyUI, runComfyUI_Regional, runComfyUI_ControlNet, runComfyUI_MiraITU, openWsComfyUI, closeWsComfyUI, cancelComfyUI } from '../../scripts/main/generate_backend_comfyui.js';
-import { runWebUI, runWebUI_Regional, cancelWebUI, startPollingWebUI, stopPollingWebUI, runWebUI_ControlNet,
+import { runComfyUI, runComfyUI_Regional, runComfyUI_ControlNet, runComfyUI_MiraITU, 
+    openWsComfyUI, closeWsComfyUI, cancelComfyUI, python_runComfyUI } from '../../scripts/main/generate_backend_comfyui.js';
+import { runWebUI, runWebUI_Regional, cancelWebUI, startPollingWebUI, stopPollingWebUI, runWebUI_ControlNet, python_runWebUI,
     getControlNetProcessorList, getADetailerModelList, getUpscalersModelList, resetModelLists } from '../../scripts/main/generate_backend_webui.js';
 import { remoteAI, localAI } from '../../scripts/main/remoteAI_backend.js';
 import { loadFile, readImage, readSafetensors, readBase64Image } from '../../scripts/main/fileHandlers.js';
@@ -278,7 +279,8 @@ function createWebSocketServer(server, useHttps) {
                         const client = clients.get(uuid);
 
                         if (client.ws !== ws) {
-                            console.log(CAT, 'APIError: UUID does not match this connection');
+                            console.warn(CAT, 'APIError: UUID does not match this connection');
+                            console.log(CAT, `Expected WS: ${client.ws}, Actual WS: ${ws}`);
                             ws.send(JSON.stringify({ type: 'APIError', id, error: 'UUID does not match this connection' }));
                             ws.close(4001, 'Authentication required');
                             return;
@@ -477,6 +479,10 @@ const methodHandlers = {
     }
     return runImageTagger(packedArgs);
   },
+
+  // Python Tools Requests
+  'python_runComfyUI': (params) => python_runComfyUI(...params),
+  'python_runWebUI': (params) => python_runWebUI(...params),
 };
 
 async function handleApiRequest(ws, method, params, id) {
