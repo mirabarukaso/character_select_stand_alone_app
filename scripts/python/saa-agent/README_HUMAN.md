@@ -236,7 +236,7 @@ The tool returns standard exit codes:
   `DPM++ 2S a`, `DPM++ 3M SDE`, `LMS`, `Heun`, `DPM2`, `DPM2 a`, `DPM fast`, 
   `DPM adaptive`, `Restart`    
 
-**WebUI:** `
+**WebUI:** 
   `Automatic`, `Uniform`, `Karras`, `Exponential`, `Polyexponential`, `SGM Uniform`, 
   `KL Optimal`, `Align Your Steps`, `Simple`, `Normal`, `DDIM`, `Beta`
 
