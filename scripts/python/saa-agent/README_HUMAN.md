@@ -218,14 +218,27 @@ The tool returns standard exit codes:
 ## Supported Samplers and Schedulers
 
 ### ComfyUI Samplers
-`euler_ancestral`, `euler`, `dpm_2`, `dpmpp_2m`, `dpmpp_sde`, `heun`, and many more.
+  `euler_ancestral`, `euler`, `euler_cfg_pp`, `euler_ancestral_cfg_pp`, `heun`, `heunpp2`,
+  `dpm_2`, `dpm_2_ancestral`, `lms`, `dpm_fast`, `dpm_adaptive`, `dpmpp_2s_ancestral`, 
+  `dpmpp_2s_ancestral_cfg_pp`, `dpmpp_sde`, `dpmpp_sde_gpu`, `dpmpp_2m`, `dpmpp_2m_cfg_pp`, 
+  `dpmpp_2m_sde`, `dpmpp_2m_sde_gpu`, `dpmpp_3m_sde`, `dpmpp_3m_sde_gpu`, `ddpm`, `lcm`,
+  `ipndm`, `ipndm_v`, `deis`, `res_multistep`, `res_multistep_cfg_pp`, `res_multistep_ancestral`, 
+  `res_multistep_ancestral_cfg_pp`, `gradient_estimation`, `er_sde`, `seeds_2`, `seeds_3`
+
 
 ### WebUI Samplers
-`Euler a`, `Euler`, `DPM++ 2M`, `DPM++ SDE`, `DPM++ 2M SDE`, and more.
+  `normal`, `karras`, `exponential`, `sgm_uniform`, `simple`, `ddim_uniform`, 
+  `beta`, `linear_quadratic`, `kl_optimal`
 
 ### Schedulers
-**ComfyUI:** `normal`, `karras`, `exponential`, `sgm_uniform`, `simple`, etc.  
-**WebUI:** `Automatic`, `Uniform`, `Karras`, `Exponential`, etc.
+**ComfyUI:** 
+  `Euler a`, `Euler`, `DPM++ 2M`, `DPM++ SDE`, `DPM++ 2M SDE`, `DPM++ 2M SDE Heun`, 
+  `DPM++ 2S a`, `DPM++ 3M SDE`, `LMS`, `Heun`, `DPM2`, `DPM2 a`, `DPM fast`, 
+  `DPM adaptive`, `Restart`    
+
+**WebUI:** `
+  `Automatic`, `Uniform`, `Karras`, `Exponential`, `Polyexponential`, `SGM Uniform`, 
+  `KL Optimal`, `Align Your Steps`, `Simple`, `Normal`, `DDIM`, `Beta`
 
 ## Troubleshooting
 
