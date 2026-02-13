@@ -20,6 +20,7 @@ a1111:
                 models/RealESRGAN
                 models/SwinIR
   adetailer: models/adetailer
+  vae: models/VAE
 
 forge:
   enable: true
@@ -29,6 +30,7 @@ forge:
   controlnet: models/ControlNet
   upscale_models: models/upscale_models
   adetailer: models/adetailer
+  vae: models/VAE
 
 comfyui:
   enable: true
@@ -42,3 +44,8 @@ comfyui:
   aDetailer_bbox: models/ultralytics/bbox
   aDetailer_sams: models/sams
   onnx: models/onnx
+  diffusion_models: |
+                  models/diffusion_models
+                  models/unet
+  text_encoders: models/text_encoders
+  vae: models/vae
