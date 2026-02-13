@@ -2,7 +2,7 @@ import { ipcMain, BrowserWindow, net } from 'electron';
 import { WebSocket } from 'ws';
 import * as wsService from '../../webserver/back/wsService.js';
 import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
-import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, WORKFLOW_MIRA_ITU} from './comfyui_workflow.js';
+import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, WORKFLOW_MIRA_ITU, WORKFLOW_UNET} from './comfyui_workflow.js';
 
 const CAT = '[ComfyUI]';
 let backendComfyUI = null;
@@ -694,7 +694,7 @@ class ComfyUI {
           const message = JSON.parse(data.toString('utf8'));
           if (message.type === 'executing' || message.type === 'status') {
             const msgData = message.data;
-            if (msgData.node === null && msgData.prompt_id === this.prompt_id) {
+            if (msgData.node === null && msgData.prompt_id === this.prompt_id && this.step !== 0) {
               try {
                   const image = await this.getImage(index);
                   if (image && Buffer.isBuffer(image)) {
@@ -721,8 +721,37 @@ class ComfyUI {
               if(cancelMark) {
                 finalize('Error: Cancelled');                  
               } else {
-                console.log(CAT, 'No result from backend, running same promot? message =', message);
-                finalize(`Error: No result from backend, running same promot?`);
+                // Check if this is a cached result (has sid) or a new result (no sampling but config changed like VAE)
+                const hasSid = msgData?.sid !== undefined;                
+                
+                if (hasSid) {
+                  // Results were cached from previous identical run - invalid
+                  console.log(CAT, 'No result from backend, running same promot? message =', message);
+                  finalize(`Error: No result from backend, running same promot?`);
+                } else {
+                  // New result without sampling (VAE/config changed) - try to retrieve it
+                  console.log(CAT, 'Attempting to retrieve result (no sampling)...');
+                  try {
+                    const image = await this.getImage(index);
+                    if (image && Buffer.isBuffer(image)) {
+                      const base64Image = processImage(image);
+                      if (base64Image) {
+                        finalize(`data:image/png;base64,${base64Image}`);
+                        return;
+                      } else {
+                        finalize('Error: Failed to convert image to base64');
+                        return;
+                      }
+                    } else {
+                      finalize('Error: Image not found or invalid');
+                      return;
+                    }
+                  } catch (err) {
+                    console.error(CAT, 'Error getting no sampling image:', err);
+                    finalize(`Error: ${err.message ?? err}`);
+                    return;
+                  }
+                }
               }
               return;
             }
@@ -776,25 +805,8 @@ class ComfyUI {
   }
 
   closeWS(){
-    // Graceful shutdown: ensure all pending data is sent before closing
-    if (this.webSocket) {
-      // readyState: 0=CONNECTING, 1=OPEN, 2=CLOSING, 3=CLOSED
-      if (this.webSocket.readyState === 1) {  // 1 = OPEN
-        console.log(CAT, 'Closing WebSocket gracefully...');
-        // delay close to allow pending messages to be sent
-        setTimeout(() => {
-          try {
-            this.webSocket.close(1000, 'Normal closure');
-            console.log(CAT, 'WebSocket closed.');
-          } catch(err) {
-            console.error(CAT, 'Error closing WebSocket:', err);
-          }
-          this.webSocket = null;
-        }, 200);  // 200ms delay
-      } else {
-        this.webSocket = null;
-      }
-    }
+    this.webSocket.close();
+    this.webSocke = null; 
   }
 
   async getImage(index='29', prompt_id = null) {
@@ -927,7 +939,8 @@ class ComfyUI {
   createWorkflow(generateData) {
     const {addr, auth, uuid, model, vpred, positive, negative, 
       width, height, cfg, step, seed, sampler, scheduler, refresh, 
-      hifix, refiner, controlnet, adetailer} = generateData;
+      hifix, refiner, controlnet, adetailer, vae} = generateData;
+
     this.addr = addr;
     this.refresh = refresh;
     this.auth = auth;
@@ -1054,9 +1067,17 @@ class ComfyUI {
       workflow["29"].inputs.images = ["6", 0];
     }
 
+    if (vae.vae_override && vae.vae !== 'None') {
+      // Override VAE settings
+      workflow["47"].inputs.vae_name = vae.vae;
+      workflow["6"].inputs.vae = ["47", 0];
+      workflow["18"].inputs.vae = ["47", 0];      
+      workflow["19"].inputs.vae = ["47", 0];
+    }
+
     // default pos and neg to ksampler
     let workflowInfo = {
-      startIndex: 46,
+      startIndex: 47,
       now_pos:    2,
       now_neg:    3,
       refiner:    refiner.enable,
@@ -1075,11 +1096,67 @@ class ComfyUI {
     return workflow;
   }
 
+  createWorkflowUNet(generateData) {
+    const {addr, auth, uuid, refresh, positive, negative, 
+      width, height, cfg, step, seed, sampler, scheduler,  
+      unet} = generateData;
+
+    this.addr = addr;
+    this.refresh = refresh;
+    this.auth = auth;
+    this.uuid = uuid;
+
+    let workflow = structuredClone(WORKFLOW_UNET);
+
+     // Set UNET different model
+    workflow["51"].inputs.unet_name = unet.model;
+    workflow["51"].inputs.weight_dtype = unet.dtype;
+    
+    // Set Text Encoder CLIP model
+    workflow["50"].inputs.clip_name = unet.clip_model;
+    workflow["50"].inputs.type = unet.clip_type;
+    workflow["50"].inputs.device = unet.clip_device;
+
+    // Set VAE model
+    workflow["52"].inputs.vae_name = unet.vae_model;
+
+    // Set model name to Image Save
+    workflow["29"].inputs.modelname = unet.model;
+
+    // Set steps and cfg
+    workflow["13"].inputs.steps = step;
+    workflow["13"].inputs.cfg = cfg;
+
+    // Set width and height
+    workflow["17"].inputs.Width = width;
+    workflow["17"].inputs.Height = height;
+                
+    // Set Image Saver seed
+    workflow["29"].inputs.seed_value = seed;
+    // Set Ksampler seed and steps
+    workflow["36"].inputs.noise_seed = seed;
+    
+    // Set Sampler and Scheduler
+    workflow["29"].inputs.sampler_name = sampler;
+    workflow["29"].inputs.scheduler = scheduler;
+    // Set Ksampler Sampler and Scheduler
+    workflow["36"].inputs.sampler_name = sampler;    
+    workflow["36"].inputs.scheduler = scheduler;
+    
+    // Set Positive prompt
+    workflow["32"].inputs.text = positive;        
+    // Set Negative prompt
+    workflow["33"].inputs.text = negative;    
+
+    return workflow;
+  }
+
   // eslint-disable-next-line sonarjs/cognitive-complexity
   createWorkflowRegional(generateData) {      
     const {addr, auth, uuid, model, vpred, positive_left, positive_right, negative, 
       width, height, cfg, step, seed, sampler, scheduler, refresh, 
-      hifix, refiner, regional, controlnet, adetailer} = generateData;
+      hifix, refiner, regional, controlnet, adetailer, vae} = generateData;
+
     this.addr = addr;
     this.refresh = refresh;
     this.auth = auth;
@@ -1224,9 +1301,17 @@ class ComfyUI {
       workflow["29"].inputs.images = ["6", 0];
     }
 
+    if (vae.vae_override && vae.vae !== 'None') {
+      // Override VAE settings
+      workflow["59"].inputs.vae_name = vae.vae;
+      workflow["6"].inputs.vae = ["59", 0];
+      workflow["18"].inputs.vae = ["59", 0];      
+      workflow["19"].inputs.vae = ["59", 0];
+    }
+
     // default pos and neg to ksampler
     let workflowInfo = {
-      startIndex: 58,
+      startIndex: 59,
       now_pos:    53,
       now_neg:    3,
       refiner:    refiner.enable,
@@ -1572,9 +1657,18 @@ async function runComfyUI(generateData) {
   setMutexBackendBusy(true); // Acquire the mutex lock
   cancelMark = false;
 
-  const workflow = backendComfyUI.createWorkflow(generateData)
+  let workflow;
+  if (generateData.unet?.enable){
+    console.log(CAT, 'Creating ComfyUI workflow with UNet workflow.');
+    workflow = backendComfyUI.createWorkflowUNet(generateData);
+  } else {
+    console.log(CAT, 'Creating ComfyUI standard workflow.');
+    workflow = backendComfyUI.createWorkflow(generateData);
+  }
+  
   if(backendComfyUI.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI with uuid:', backendComfyUI.uuid);
+
   const result = await backendComfyUI.run(workflow);            
   return result;
 }
@@ -1663,6 +1757,11 @@ async function python_runComfyUI(generateData, isRegional=false, skeletonKey=fal
   const infoMsg = `Running ComfyUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${backendComfyUI.uuid}`;
   sendToRenderer(backendComfyUI.uuid, `updateProgress`, 'log', CAT, infoMsg);
   console.log(CAT, infoMsg);
+
+  // Ensure VAE settings for saa-agent
+  if (!generateData.vae) {
+    generateData.vae = { vae_override: false, vae: 'None' };
+  }
 
   const workflow = isRegional ? backendComfyUI.createWorkflowRegional(generateData) : backendComfyUI.createWorkflow(generateData);  
   const result = await backendComfyUI.run(workflow, true);

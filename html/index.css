@@ -65,10 +65,11 @@ html, body {
 .gallery-main-container,.image-infobox-container,
 .gallery-thumb-container, #prompt-text-container, 
 .highres-fix-container, .refiner-container, .controlnet-container,
-.add-lora-container, .system-settings-container, .regional-condition-container,
+.model-settings-container, .add-lora-container, 
+.system-settings-container, .regional-condition-container,
 .jsonlist-container, .adetailer-container, .queue-container
 {
-    margin-top: 10px;
+    margin-top: 6px;
 }
 
 #generate-settings-static-left, #generate-settings-static-right {
@@ -92,6 +93,22 @@ html, body {
     display: inline-block;
     white-space: pre-line;
     text-align: center;
+}
+
+.myCheckbox-disabled {
+  opacity: 0.72;
+  pointer-events: none;
+  cursor: not-allowed;
+  transition: opacity 0.12s ease;
+}
+
+.myCheckbox-disabled input[type="checkbox"] {
+  cursor: not-allowed;
+  opacity: 0.72;
+}
+
+.myCheckbox-disabled span {
+  color: #888;
 }
 
 #settings-save-icon {

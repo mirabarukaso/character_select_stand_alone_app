@@ -51,8 +51,19 @@ const defaultSettings = {
     
     "api_model_sampler" : "euler_ancestral", 
     "api_model_scheduler" : "normal",
-    "api_model_file_select" : "Default",
+    "api_model_file_select" : "Default",    
     "api_model_file_vpred" : "Auto",
+    "api_model_type" : "SDXL",
+    "api_vae_unet_model": "None",
+    "api_vae_sdxl_model": "None",
+    "api_vae_sdxl_override": false,
+
+    "api_model_file_diffusion_select": "None",
+    "api_model_file_diffusion_weight_dtype": "default",
+    "api_model_file_text_encoder": "None",
+    "api_model_file_text_encoder_type": "stable_diffusion",
+    "api_model_file_text_encoder_device": "default",
+
     "random_seed": -1,
     "cfg": 7,
     "step": 30,

@@ -1,4 +1,4 @@
-import { callback_regional_condition } from './callbacks.js';
+import { callback_api_model_type, callback_regional_condition } from './callbacks.js';
  const CAT = '[Language]'
 
 export const SAMPLER_COMFYUI = ["euler_ancestral", "euler", "euler_cfg_pp", "euler_ancestral_cfg_pp", "heun", "heunpp2","dpm_2", "dpm_2_ancestral",
@@ -49,7 +49,22 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     const LANG = globalThis.cachedFiles.language[globalThis.globalSettings.language];
 
     // Header 
-    globalThis.dropdownList.model.setTitle(LANG.api_model_file_select);
+    if (globalThis.globalSettings.api_model_type === 'Stable Diffusion') {
+        globalThis.dropdownList.model.setTitle(LANG.api_model_file_select);
+    } else {
+        globalThis.dropdownList.model.setTitle(LANG.api_diffusion_model);
+    }
+    globalThis.dropdownList.model_type.setTitle(LANG.api_model_type);
+    
+    globalThis.dropdownList.vae_unet.setTitle(LANG.api_vae_model);
+    globalThis.dropdownList.vae_sdxl.setTitle(LANG.api_vae_model);
+    globalThis.dropdownList.vae_sdxl_override.setTitle(LANG.api_vae_sdxl_override);
+
+    globalThis.dropdownList.diffusion_model_weight_dtype.setTitle(LANG.api_diffusion_model_weight_dtype);
+    globalThis.dropdownList.textencoder.setTitle(LANG.api_text_encoder);
+    globalThis.dropdownList.textencoder_type.setTitle(LANG.api_text_encoder_type);
+    globalThis.dropdownList.textencoder_device.setTitle(LANG.api_text_encoder_device);
+
     globalThis.dropdownList.vpred.setTitle(LANG.vpred);
     globalThis.dropdownList.vpred.setValue(LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_off]);
     globalThis.dropdownList.settings.setTitle(LANG.title_settings_load);
@@ -262,7 +277,20 @@ export function updateSettings() {
         }
     }
 
-    globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_select);
+    if (globalThis.globalSettings.api_model_type === 'Stable Diffusion') {
+        globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_select);
+    } else {
+        globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_diffusion_select);
+    }
+    globalThis.dropdownList.model_type.updateDefaults(SETTINGS.api_model_type);
+    globalThis.dropdownList.vae_unet.updateDefaults(SETTINGS.api_vae_unet_model);
+    globalThis.dropdownList.vae_sdxl.updateDefaults(SETTINGS.api_vae_sdxl_model);
+    globalThis.dropdownList.vae_sdxl_override.setValue(SETTINGS.api_vae_sdxl_override);
+    globalThis.dropdownList.diffusion_model_weight_dtype.updateDefaults(SETTINGS.api_model_file_diffusion_weight_dtype);
+    globalThis.dropdownList.textencoder.updateDefaults(SETTINGS.api_model_file_text_encoder);
+    globalThis.dropdownList.textencoder_type.updateDefaults(SETTINGS.api_model_file_text_encoder_type);
+    globalThis.dropdownList.textencoder_device.updateDefaults(SETTINGS.api_model_file_text_encoder_device);    
+
     globalThis.dropdownList.vpred.updateDefaults(SETTINGS.api_model_file_vpred);
     globalThis.generate.seed.setValue(SETTINGS.random_seed);
     globalThis.generate.cfg.setValue(SETTINGS.cfg);
@@ -296,11 +324,8 @@ export function updateSettings() {
     globalThis.generate.hifix_dummy.setValue(SETTINGS.api_hf_enable);
     globalThis.hifix.scale.setValue(SETTINGS.api_hf_scale);
     globalThis.hifix.denoise.setValue(SETTINGS.api_hf_denoise);
-    if(globalThis.hifix.model.isValueExist(SETTINGS.api_hf_upscaler_selected)){
-        globalThis.hifix.model.updateDefaults(SETTINGS.api_hf_upscaler_selected);
-    } else {
-        globalThis.hifix.model.updateDefaults(globalThis.cachedFiles.upscalerList[0]);
-    }
+    globalThis.hifix.model.updateDefaults(SETTINGS.api_hf_upscaler_selected);
+
     globalThis.hifix.colorTransfer.updateDefaults(SETTINGS.api_hf_colortransfer);
     globalThis.hifix.randomSeed.setValue(SETTINGS.api_hf_random_seed);
     globalThis.hifix.steps.setValue(SETTINGS.api_hf_steps);    
@@ -313,5 +338,6 @@ export function updateSettings() {
     globalThis.refiner.vpred.updateDefaults(SETTINGS.api_refiner_model_vpred);
     globalThis.refiner.ratio.setValue(SETTINGS.api_refiner_ratio);
 
+    callback_api_model_type(0, [globalThis.dropdownList.model_type.getValue()]); //Model Type
     callback_regional_condition(globalThis.generate.regionalCondition.getValue(), false); //Regional Condition
 }

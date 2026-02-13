@@ -19,6 +19,11 @@ let ADETAILER_COMFYUI  = ['None'];
 let ADETAILER_WEBUI = ['None'];
 let ONNX_COMFYUI = ['None'];
 
+let DIFFUSION_MODELS_COMFYUI = ['None'];
+let TEXT_ENCODERS_COMFYUI = ['None'];
+let VAE_COMFYUI = ['None'];
+let VAE_WEBUI = ['None'];
+
 let EXTRA_MODELS = {
     exist: false,
     yamlContent: null,
@@ -371,16 +376,83 @@ function updateModelList(model_path_comfyui, model_path_webui, model_filter, ena
         MODELLIST_WEBUI = [...MODELLIST_ALL_WEBUI];
     }
 
-    if (MODELLIST_COMFYUI.length > 0) {        
-        MODELLIST_COMFYUI.unshift('Default');
-    } else {
+    if (MODELLIST_COMFYUI.length === 0) {        
         MODELLIST_COMFYUI = ['Default'];
     }
 
-    if (MODELLIST_WEBUI.length > 0) {
-        MODELLIST_WEBUI.unshift('Default');
-    } else {
+    if (MODELLIST_WEBUI.length === 0) {
         MODELLIST_WEBUI = ['Default'];
+    }
+}
+
+function updateVAEList(model_path_comfyui, model_path_webui, search_subfolder) {
+    // --- ComfyUI ---
+    const customComfyPaths = resolveCustomPaths(['comfyui'], 'vae'); // yaml key is 'vae'
+    
+    if (customComfyPaths.length > 0) {
+        VAE_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+    } else if (fs.existsSync(model_path_comfyui)) {
+        const vaePathComfyUI = path.join(path.dirname(model_path_comfyui), 'vae');
+        VAE_COMFYUI = readDirectory(vaePathComfyUI, '', search_subfolder);
+    } else {
+        VAE_COMFYUI = ['None'];
+    }    
+    
+    // --- WebUI ---
+    const customWebUIPaths = resolveCustomPaths(['a1111', 'forge'], 'vae');
+    if (customWebUIPaths.length > 0) {
+        VAE_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder);
+    } else if (fs.existsSync(model_path_webui)) {
+        const vaePathWebUI = path.join(path.dirname(model_path_webui), 'VAE');
+        VAE_WEBUI = readDirectory(vaePathWebUI, '', search_subfolder);
+    } else {
+        VAE_WEBUI = ['None'];
+    }
+
+    if (VAE_COMFYUI.length === 0) {        
+        VAE_COMFYUI = ['None'];
+    }
+
+    if (VAE_WEBUI.length === 0) {
+        VAE_WEBUI = ['None'];
+    }
+}
+
+function updateDiffusionModelList(model_path_comfyui, search_subfolder) {
+    // --- ComfyUI ---
+    const customComfyPaths = resolveCustomPaths(['comfyui'], 'diffusion_models'); 
+    
+    if (customComfyPaths.length > 0) {
+        DIFFUSION_MODELS_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+    } else if (fs.existsSync(model_path_comfyui)) {
+        const diffusionModelsPath = path.join(path.dirname(model_path_comfyui), 'diffusion_models');
+        const unetPath = path.join(path.dirname(model_path_comfyui), 'unet');
+        DIFFUSION_MODELS_COMFYUI = [...readDirectory(diffusionModelsPath, '', search_subfolder),
+             ...readDirectory(unetPath, '', search_subfolder)];
+    } else {
+        DIFFUSION_MODELS_COMFYUI = ['None'];
+    }    
+    
+    if (DIFFUSION_MODELS_COMFYUI.length === 0) {        
+        DIFFUSION_MODELS_COMFYUI = ['None'];
+    }
+}
+
+function updateTextEncoderList(model_path_comfyui, search_subfolder) {
+    // --- ComfyUI ---
+    const customComfyPaths = resolveCustomPaths(['comfyui'], 'text_encoders'); // yaml key is 'text_encoders'
+    
+    if (customComfyPaths.length > 0) {
+        TEXT_ENCODERS_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+    } else if (fs.existsSync(model_path_comfyui)) {
+        const textEncodersPath = path.join(path.dirname(model_path_comfyui), 'text_encoders');
+        TEXT_ENCODERS_COMFYUI = readDirectory(textEncodersPath, '', search_subfolder);
+    } else {
+        TEXT_ENCODERS_COMFYUI = ['None'];
+    }    
+    
+    if (TEXT_ENCODERS_COMFYUI.length === 0) {        
+        TEXT_ENCODERS_COMFYUI = ['None'];
     }
 }
 
@@ -579,6 +651,18 @@ function setupModelList(settings) {
         return getModelListAll(args);
     });
 
+    ipcMain.handle('get-vae-list', async (event, args) => {
+        return getVAEList(args);
+    });
+
+    ipcMain.handle('get-diffusion-model-list', async (event, args) => {
+        return getDiffusionModelList(args);
+    });
+
+    ipcMain.handle('get-text-encoder-list', async (event, args) => {
+        return getTextEncoderList(args);
+    });
+
     ipcMain.handle('get-lora-list-all', async (event, args) => {
         return getLoRAList(args);
     });
@@ -611,6 +695,22 @@ function setupModelList(settings) {
         settings.model_path_webui,
         settings.model_filter_keyword,
         settings.model_filter,
+        settings.search_modelinsubfolder
+    );
+
+    updateVAEList(
+        settings.model_path_comfyui,
+        settings.model_path_webui,
+        settings.search_modelinsubfolder
+    );
+
+    updateDiffusionModelList(
+        settings.model_path_comfyui,
+        settings.search_modelinsubfolder
+    );
+
+    updateTextEncoderList(
+        settings.model_path_comfyui,
         settings.search_modelinsubfolder
     );
 
@@ -665,6 +765,32 @@ function getModelListAll(apiInterface) {
         return MODELLIST_ALL_COMFYUI;
     } else if (apiInterface === 'WebUI') {
         return MODELLIST_ALL_WEBUI;
+    } else {
+        return ['None'];
+    }
+}
+
+function getVAEList(apiInterface) {
+    if (apiInterface === 'ComfyUI') {
+        return VAE_COMFYUI;
+    } else if (apiInterface === 'WebUI') {
+        return VAE_WEBUI;
+    } else {
+        return ['None'];
+    }   
+}
+
+function getDiffusionModelList(apiInterface) {
+    if (apiInterface === 'ComfyUI') {
+        return DIFFUSION_MODELS_COMFYUI;
+    } else {
+        return ['None'];
+    }
+}
+
+function getTextEncoderList(apiInterface) {
+    if (apiInterface === 'ComfyUI') {
+        return TEXT_ENCODERS_COMFYUI;
     } else {
         return ['None'];
     }
@@ -728,6 +854,10 @@ function updateModelAndLoRAList(args) {
     EXTRA_MODELS.exist = readExtraModelPaths(args[0]);
 
     updateModelList(args[0], args[1], args[2], args[3], args[4]);
+    updateVAEList(args[0], args[1], args[4]);
+    updateDiffusionModelList(args[0], args[4]);
+    updateTextEncoderList(args[0], args[4]);
+
     updateLoRAList(args[0], args[1], args[4]);
     updateControlNetList(args[0], args[1], args[4]);
     updateUpscalerList(args[0], args[1], args[4]);
@@ -750,6 +880,9 @@ export {
     setupModelList,
     getModelList,
     getModelListAll,
+    getVAEList,
+    getDiffusionModelList,
+    getTextEncoderList,
     getLoRAList,
     getControlNetList,
     getUpscalerList,

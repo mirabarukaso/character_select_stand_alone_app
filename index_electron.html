@@ -28,7 +28,6 @@
             </button>
           </div>
           <div class="model-select"></div>
-          <div class="model-vpred"></div>
         </div>
 
         <div id="global-settings-right">
@@ -78,10 +77,113 @@
               <div class="gallery-main-header-span">
                 <span id="gallery-main-span"></span>
                 <img id="gallery-main-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>              
+              </div>
             </div>
             <div class="gallery-main-main"></div>
-          </div>          
+          </div>
+
+          <div class="highres-fix-container">
+            <div class="highres-fix-header">
+              <div class="generate-hires-fix"></div>
+              <div class="hires-fix-random-seed"></div>              
+              <div class="highres-fix-header-span">
+                <span id="highres-fix-span"></span>
+                <img id="highres-fix-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="highres-fix-main">
+              <div class="highres-fix-settings-1">
+                <div class="hires-fix-model"></div>
+                <div class="hires-fix-scale"></div>
+              </div>
+              <div class="highres-fix-settings-2">
+                <div class="hires-fix-color-transfer"></div>
+                <div class="hires-fix-denoise"></div>
+                <div></div>
+                <div class="hires-fix-steps"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="refiner-container">
+            <div class="refiner-header">
+              <div class="generate-refiner"></div>
+              <div class="refiner-addnoise"></div>              
+              <div class="refiner-header-span">
+                <span id="refiner-span"></span>
+                <img id="refiner-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="refiner-main">
+              <div class="refiner-settings-1">
+                <div class="refiner-model"></div>
+                <div class="refiner-vpred"></div>
+                <div></div>
+                <div class="refiner-ratio"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="regional-condition-container">
+            <div class="regional-condition-header">
+              <div class="regional-condition-trigger-dummy"></div>
+              <div class="regional-condition-swap"></div>
+              <div class="regional-condition-header-span">
+                <span id="regional-condition-span"></span>
+                <img id="regional-condition-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="regional-condition-main">
+              <div class="regional-condition-settings-1">
+                <div class="regional-condition-image-ratio"></div>
+                <div class="regional-condition-overlap-ratio"></div>
+                <div class="regional-condition-strength-left"></div>
+                <div class="regional-condition-strength-right"></div>
+                <div class="regional-condition-option-left"></div>
+                <div class="regional-condition-option-right"></div>
+              </div>
+            </div>
+          </div>
+
+          <div class="system-settings-container">
+            <div class="system-settings-header">
+              <div></div>
+              <div></div>
+              <div class="system-settings-header-span">
+                <span id="system-settings-span">Settings</span>
+                <img id="system-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="system-settings-main">
+              <div class="system-settings-main-1">
+                <div class="system-settings-api-interface"></div>
+                <div class="system-settings-api-refresh-rate"></div>                                
+                <div class="system-settings-api-address"></div>
+                <div class="system-settings-api-subfolder"></div>
+                <div class="system-settings-api-webui-auth"></div>
+                <div class="system-settings-api-webui-auth-enable"></div>
+              </div>
+              <div class="system-settings-main-2">
+                <div class="system-settings-api-fliter"></div>
+                <div class="system-settings-api-fliter-list"></div>
+                <div class="system-settings-api-comfyui"></div>
+                <div class="system-settings-api-webui"></div>                
+              </div>
+              <div class="system-settings-main-1">
+                <div class="system-settings-ai-interface"></div>
+                <div class="system-settings-ai-timeout"></div>
+              </div>
+              <div class="system-settings-main-2">
+                <div class="system-settings-ai-address"></div>
+                <div class="system-settings-ai-modelselect"></div>
+                <div class="system-settings-ai-apikey"></div>
+                <div class="system-settings-ai-local-address"></div>
+                <div class="system-settings-ai-local-temperature"></div>
+                <div class="system-settings-ai-local-npredict"></div>
+                <div class="system-settings-ai-sysprompt"></div>
+              </div>
+            </div>
+          </div>
 
           <div class="image-infobox-container">
             <div class="image-infobox-header">
@@ -127,7 +229,41 @@
             <div class="gallery-thumb-main"></div>
           </div>
 
-          <div class="add-lora-container">            
+          <div class="model-settings-container">
+            <div class="model-settings-header">
+              <div class="model-type"></div>
+              <div class="vae-override"></div>
+              <div class="model-settings-span">
+                <span id="model-settings-span"></span>
+                <img id="model-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="model-settings-main">
+              <div class="system-settings-main-1">
+                <div><p>UNET: Anima/Z Image/Qwen Image/Flux</p></div>
+                <div class="diffusion-model-weight-dtype"></div>
+              </div>
+              <div class="system-settings-main-2">                
+                <div class="vae-unet"></div>
+                <div class="text-encoder"></div>
+              </div>
+              <div class="system-settings-main-1">
+                <div></div>
+                <div class="text-encoder-type"></div>
+                <div><p>Checkpoint: SDXL/Noob/IL/Pony/SD15</p></div>
+                <div class="text-encoder-device"></div>
+              </div>              
+              <div class="system-settings-main-2">
+                <div class="vae-sdxl"></div>
+              </div>
+              <div class="system-settings-main-1">                
+                <div></div>
+                <div class="model-vpred"></div>              
+              </div>
+            </div>
+          </div>
+
+          <div class="add-lora-container">
             <div class="add-lora-header">
               <div class="generate-hires-fix-dummy"></div>
               <div class="generate-refiner-dummy"></div>
@@ -137,6 +273,27 @@
               </div>
             </div>
             <div class="add-lora-main"></div>
+          </div>
+          
+          <div id="prompt-text-container">
+            <div class="prompt-common">common</div>
+            <div class="prompt-positive">positive</div>
+            <div class="prompt-positive-right">positive-right</div>
+            <div class="prompt-negative">negative</div>
+            <div class="prompt-ai">negative</div>
+            <div class="prompt-exclude">exclude</div>
+          </div>
+
+          <div class="jsonlist-container">
+            <div class="jsonlist-header">              
+              <div class="system-settings-ai-select"></div>
+              <div class="system-settings-ai-preview"></div>
+              <div class="jsonlist-header-span">
+                <span id="jsonlist-span">JSON/CSV</span>
+                <img id="jsonlist-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="jsonlist-main"></div>
           </div>
 
           <div class="controlnet-container">
@@ -161,130 +318,6 @@
               </div>
             </div>
             <div class="adetailer-main"></div>
-          </div>
-
-          <div id="prompt-text-container">
-            <div class="prompt-common">common</div>
-            <div class="prompt-positive">positive</div>
-            <div class="prompt-positive-right">positive-right</div>
-            <div class="prompt-negative">negative</div>
-            <div class="prompt-ai">negative</div>
-            <div class="prompt-exclude">exclude</div>
-          </div>
-
-          <div class="highres-fix-container">
-            <div class="highres-fix-header">
-              <div class="generate-hires-fix"></div>
-              <div class="hires-fix-random-seed"></div>              
-              <div class="highres-fix-header-span">
-                <span id="highres-fix-span"></span>
-                <img id="highres-fix-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>
-            </div>
-            <div class="highres-fix-main">
-              <div class="highres-fix-settings-1">
-                <div class="hires-fix-model"></div>
-                <div class="hires-fix-scale"></div>
-              </div>
-              <div class="highres-fix-settings-2">
-                <div class="hires-fix-color-transfer"></div>
-                <div class="hires-fix-denoise"></div>
-                <div></div>
-                <div class="hires-fix-steps"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="refiner-container">
-            <div class="refiner-header">
-              <div class="generate-refiner"></div>
-              <div class="refiner-addnoise"></div>              
-              <div class="refiner-header-span">
-                <span id="refiner-span"></span>
-                <img id="refiner-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>
-            </div>
-            <div class="refiner-main">
-              <div class="refiner-settings-1">
-                <div class="refiner-model"></div>
-                <div class="refiner-vpred"></div>
-                <div></div>
-                <div class="refiner-ratio"></div>
-              </div>
-            </div>
-          </div>          
-
-          <div class="system-settings-container">
-            <div class="system-settings-header">
-              <div class="system-settings-ai-select"></div>
-              <div class="system-settings-ai-preview"></div>
-              <div class="system-settings-header-span">
-                <span id="system-settings-span"></span>
-                <img id="system-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>
-            </div>
-            <div class="system-settings-main">
-              <div class="system-settings-main-1">
-                <div class="system-settings-api-interface"></div>
-                <div class="system-settings-api-refresh-rate"></div>                                
-                <div class="system-settings-api-address"></div>
-                <div class="system-settings-api-subfolder"></div>
-                <div class="system-settings-api-fliter-list"></div>                
-                <div class="system-settings-api-fliter"></div>              
-                <div class="system-settings-api-webui-auth"></div>
-                <div class="system-settings-api-webui-auth-enable"></div>
-              </div>
-              <div class="system-settings-main-2">
-                <div class="system-settings-api-comfyui"></div>
-                <div class="system-settings-api-webui"></div>                
-              </div>
-              <div class="system-settings-main-1">
-                <div class="system-settings-ai-interface"></div>
-                <div class="system-settings-ai-timeout"></div>
-              </div>
-              <div class="system-settings-main-2">
-                <div class="system-settings-ai-address"></div>
-                <div class="system-settings-ai-modelselect"></div>
-                <div class="system-settings-ai-apikey"></div>
-                <div class="system-settings-ai-local-address"></div>
-                <div class="system-settings-ai-local-temperature"></div>
-                <div class="system-settings-ai-local-npredict"></div>
-                <div class="system-settings-ai-sysprompt"></div>
-              </div>
-            </div>
-          </div>
-
-          <div class="jsonlist-container">
-            <div class="jsonlist-header">
-              <div></div>
-              <div></div>
-              <div class="jsonlist-header-span">
-                <span id="jsonlist-span">JSON/CSV</span>
-                <img id="jsonlist-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>
-            </div>
-            <div class="jsonlist-main"></div>
-          </div>
-
-          <div class="regional-condition-container">
-            <div class="regional-condition-header">
-              <div class="regional-condition-trigger-dummy"></div>
-              <div class="regional-condition-swap"></div>
-              <div class="regional-condition-header-span">
-                <span id="regional-condition-span"></span>
-                <img id="regional-condition-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>
-            </div>
-            <div class="regional-condition-main">
-              <div class="regional-condition-settings-1">
-                <div class="regional-condition-image-ratio"></div>
-                <div class="regional-condition-overlap-ratio"></div>
-                <div class="regional-condition-strength-left"></div>
-                <div class="regional-condition-strength-right"></div>
-                <div class="regional-condition-option-left"></div>
-                <div class="regional-condition-option-right"></div>
-              </div>
-            </div>
           </div>
 
           <div class="queue-container">

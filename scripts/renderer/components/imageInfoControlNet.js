@@ -145,6 +145,13 @@ export function createControlNetButtons(apiInterface, cachedImage, previewImg) {
 
     postProcessButton.addEventListener('click', async (e) => {
         if (postProcessButton.disabled) return;
+
+        const modelType = globalThis.dropdownList.model_type.getValue();
+        if (modelType !== 'Checkpoint') {
+            console.warn('ControlNet is only supported for SDXL/SD15 models.');
+            return;
+        }
+
         setProcessingState();
 
         try {

@@ -179,6 +179,31 @@ function createUpscaleModelConfig() {
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
 
+    const hostContainer = document.createElement('div');
+    hostContainer.style.display = 'grid';
+    hostContainer.style.gridTemplateColumns = '6fr';
+    hostContainer.innerHTML = ``;
+
+    const modelContainer = document.createElement('div');
+    modelContainer.style.display = 'grid';
+    modelContainer.style.gridTemplateColumns = '3fr 1.5fr 1.5fr';
+    modelContainer.innerHTML = LANG.image_info_mira_itu_modelContainer;
+
+    const sdxlModels = document.createElement('select');
+    sdxlModels.className = 'controlnet-select';
+    sdxlModels.innerHTML = createHtmlOptions(FILES.modelList);
+    sdxlModels.value = lastTaggerOptions?.sdxlModels || FILES.modelList[0];
+    sdxlModels.addEventListener('change', handleSDXLModel);
+    function handleSDXLModel() {
+        lastTaggerOptions.sdxlModels = sdxlModels.value;
+    }
+
+    const dummy1 = document.createElement('div');
+    const dummy2 = document.createElement('div');
+    modelContainer.appendChild(sdxlModels);
+    modelContainer.appendChild(dummy1);
+    modelContainer.appendChild(dummy2);
+
     const upscaleContainer = document.createElement('div');
     upscaleContainer.style.display = 'grid';
     upscaleContainer.style.gridTemplateColumns = '3fr 1.5fr 1.5fr';
@@ -215,14 +240,18 @@ function createUpscaleModelConfig() {
     function handleVAE() {
         lastTaggerOptions.upscaleVAEmethod = upscaleVAEmethod.value;
     }
-
+    
     upscaleContainer.appendChild(upscaleModels);
     upscaleContainer.appendChild(upscaleRatio);
     upscaleContainer.appendChild(upscaleVAEmethod);
 
+    hostContainer.appendChild(modelContainer);
+    hostContainer.appendChild(upscaleContainer);
+
     return {
-        container: upscaleContainer,
+        container: hostContainer,
         cleanup: () => {
+            sdxlModels.removeEventListener('change', handleSDXLModel);
             upscaleModels.removeEventListener('change', handleUpscaleModel);
             upscaleRatio.removeEventListener('change', handleRatio);
             upscaleVAEmethod.removeEventListener('change', handleVAE);
@@ -590,6 +619,7 @@ export async function createMiraITUWindow(imageBase64, imageRawData){
             ituOverlap: 64,
             ituFeather: 1,
 
+            sdxlModels: FILES.modelList[0],
             upscaleModels: FILES.upscalerList[0],
             upscaleRatio: 2,
             upscaleVAEmethod: 'Full',

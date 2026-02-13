@@ -644,7 +644,6 @@ export function createADetailer(apiInterface) {
 
     return aDetailerToBackend;
 }
-
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export async function generateControlnetImage(imageData, controlNetSelect, controlNetResolution, skipGzip=false){
     let ret = 'success';
@@ -787,6 +786,12 @@ export async function generateImage(dataPack){
             break;
         }
 
+        if (SETTINGS.api_model_type !== 'Checkpoint' && apiInterface !== 'ComfyUI') {
+            console.warn('Only SDXL model is supported for non-ComfyUI API interface.');
+            globalThis.overlay.custom.createErrorOverlay(LANG.message_unet_webui , LANG.message_unet_webui);
+            break;
+        }
+
         if(!globalThis.inGenerating)
             globalThis.generate.loadingMessage = LANG.generate_warmup.replace('{0}', `${loop+1}`).replace('{1}', loops);
 
@@ -797,6 +802,14 @@ export async function generateImage(dataPack){
         
         const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor);
         const refiner = createRefiner();
+
+        const vae = globalThis.dropdownList.vae_sdxl.getValue();
+        let vae_override = globalThis.dropdownList.vae_sdxl_override.getValue();
+        if(vae_override && vae !== 'None'){
+            console.log('Override VAE to', vae);
+        } else {
+            vae_override = false;
+        }
         
         globalThis.generate.lastPos = createPromptResult.positivePrompt;
         globalThis.generate.lastPosColored = createPromptResult.positivePromptColored;
@@ -805,12 +818,12 @@ export async function generateImage(dataPack){
         if(createPromptResult.thumbImage)
             globalThis.generate.lastThumb = createPromptResult.thumbImage;
 
-
-        let generateData = {
+        const generateData = {
             addr: apiAddress,
             auth: apiAuth,
             uuid: browserUUID,
-            
+            refresh:globalThis.generate.api_preview_refresh_time.getValue(),
+
             queueManager : {
                 genType:'normal',
                 isRegional:false,
@@ -839,8 +852,6 @@ export async function generateImage(dataPack){
                 id:createPromptResult.charactersName,
             },
             
-            model: globalThis.dropdownList.model.getValue(),
-            vpred: checkVpred(),
             positive: createPromptResult.positivePrompt,
             negative: createPromptResult.negativePrompt,
             width: width,
@@ -849,13 +860,27 @@ export async function generateImage(dataPack){
             step: globalThis.generate.step.getValue(),
             seed: createPromptResult.randomSeed,
             sampler: globalThis.generate.sampler.getValue(),
-            scheduler: globalThis.generate.scheduler.getValue(),
-            refresh:globalThis.generate.api_preview_refresh_time.getValue(),
-            hifix: hifix,
-            refiner: refiner,
-            controlnet: createControlNet(),
-            adetailer: createADetailer(apiInterface),
-        }
+            scheduler: globalThis.generate.scheduler.getValue(),            
+            ...(SETTINGS.api_model_type === 'Checkpoint' ? {
+                model: globalThis.dropdownList.model.getValue(),
+                vpred: checkVpred(),
+                hifix: hifix,
+                refiner: refiner,
+                controlnet: createControlNet(),
+                adetailer: createADetailer(apiInterface),
+                vae: {vae_override: vae_override, vae: vae},
+            } : {
+                unet: {
+                    enable: true,
+                    model: globalThis.dropdownList.model.getValue(),
+                    dtype: globalThis.dropdownList.diffusion_model_weight_dtype.getValue(),
+                    vae_model: globalThis.dropdownList.vae_unet.getValue(),
+                    clip_model: globalThis.dropdownList.textencoder.getValue(),
+                    clip_type: globalThis.dropdownList.textencoder_type.getValue(),
+                    clip_device: globalThis.dropdownList.textencoder_device.getValue(),
+                },
+            })
+        };        
 
         let finalInfo = `${createPromptResult.finalInfo}\n`;
             finalInfo += `Positive: ${createPromptResult.positivePromptColored}\n`;
@@ -1174,8 +1199,6 @@ export async function updateADetailerModelList() {
     const currentModelSelect = globalThis.hifix.model.getValue();        
     globalThis.cachedFiles.upscalerList = [...globalThis.cachedFiles.upscalerListWebUI];
     globalThis.hifix.model.setValue(LANG.api_hf_upscaler_selected, globalThis.cachedFiles.upscalerList);
-    if(globalThis.hifix.model.isValueExist(currentModelSelect)){
-        globalThis.hifix.model.updateDefaults(currentModelSelect);
-    }
+    globalThis.hifix.model.updateDefaults(currentModelSelect);
 }
 

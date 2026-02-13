@@ -312,32 +312,6 @@ class SlotManager {
         return ret;
     }
 
-    debugShowSlotValues(slotClass) {
-        const slot = this.slotIndex.get(slotClass);
-        if (!slot) {
-            console.log('Slot not found:', slotClass);
-            return;
-        }
-
-        console.log('Slot data structure:', slot);
-        console.log('Component instances for this slot:');
-        
-        let index = 0;
-        for (const item of slot.items) {
-            const itemClass = item[0];
-            const componentKey = `${slotClass}-${itemClass}`;
-            const component = this.componentInstances.get(componentKey);
-            
-            if (component) {
-                const value = component.getValue ? component.getValue() : 'No getValue method';
-                console.log(index, `${itemClass} value:`, value);
-            } else {
-                console.log(`${itemClass}: No component instance found`);
-            }
-            index += 1;
-        }
-    }
-
     generateClassName(prefix) {
         return `${prefix}-${generateGUID()}`;
     }

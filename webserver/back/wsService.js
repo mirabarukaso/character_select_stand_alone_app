@@ -13,7 +13,8 @@ import bcrypt from 'bcrypt';
 import { WebSocketServer } from 'ws';
 import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings } from '../../scripts/main/globalSettings.js';
 import { getCachedFilesWithoutThumb, getCharacterThumb } from '../../scripts/main/cachedFiles.js';
-import { getModelList, getModelListAll, getLoRAList, getImageTaggerModels, updateModelAndLoRAList, getControlNetList,
+import { getModelList, getModelListAll, getVAEList, getDiffusionModelList, getTextEncoderList,
+    getLoRAList, getImageTaggerModels, updateModelAndLoRAList, getControlNetList,
     getUpscalerList, getADetailerList, getONNXList } from '../../scripts/main/modelList.js';
 import { updateWildcards, loadWildcard } from '../../scripts/main/wildCards.js';
 import { tagReload, tagGet } from '../../scripts/main/tagAutoComplete_backend.js';
@@ -395,6 +396,10 @@ const methodHandlers = {
   // file lists
   'getModelList': (params)=> getModelList(...params),
   'getModelListAll': (params)=> getModelListAll(...params),
+  'getVAEList': (params)=> getVAEList(...params),
+  'getDiffusionModelList': (params)=> getDiffusionModelList(...params),
+  'getTextEncoderList': (params)=> getTextEncoderList(...params),
+
   'getLoRAList': (params)=> getLoRAList(...params),
   'getControlNetList': (params)=> getControlNetList(...params),
   'getUpscalerList': (params)=> getUpscalerList(...params),

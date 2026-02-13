@@ -47,6 +47,71 @@ export async function callback_mySettingList(index, selectedValue) {
     globalThis.globalSettings.lastLoadedSettings = value.slice(0, -5);
 }
 
+export async function callback_api_model_select(index, selectedValue) {
+    const value = selectedValue[0];    
+
+    const SETTINGS = globalThis.globalSettings;
+    if (SETTINGS.api_model_type === 'Checkpoint') {
+        globalThis.globalSettings.api_model_file_select = value;
+    } else {
+        globalThis.globalSettings.api_model_file_diffusion_select = value;
+    }
+}
+
+export async function callback_api_model_type(index, selectedValue) {
+    const SETTINGS = globalThis.globalSettings;
+    const LANG = globalThis.cachedFiles.language[SETTINGS.language];
+
+    const value = selectedValue[0];
+    console.log('Selected model type:', value);
+    globalThis.globalSettings.api_model_type = value; 
+
+    if (value === 'Checkpoint') {
+        globalThis.dropdownList.model.setValue(LANG.api_model_file_select, globalThis.cachedFiles.modelList);
+        globalThis.dropdownList.model.setTitle(LANG.api_model_file_select);
+        globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_select);
+
+        globalThis.generate.regionalCondition.setEnable(true);
+        globalThis.generate.regionalCondition_dummy.setEnable(true);
+
+        globalThis.generate.hifix.setEnable(true);
+        globalThis.generate.hifix_dummy.setEnable(true);
+
+        globalThis.generate.refiner.setEnable(true);
+        globalThis.generate.refiner_dummy.setEnable(true);
+
+        globalThis.generate.controlnet.setEnable(true);
+
+        globalThis.generate.adetailer.setEnable(true);
+    } else {
+        globalThis.dropdownList.model.setValue(LANG.api_diffusion_model, globalThis.cachedFiles.diffusionList);
+        globalThis.dropdownList.model.setTitle(LANG.api_diffusion_model);
+        globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_diffusion_select);
+
+        callback_regional_condition(false, false);
+        globalThis.generate.regionalCondition.setValue(false);
+        globalThis.generate.regionalCondition_dummy.setValue(false);
+        globalThis.generate.regionalCondition.setEnable(false);
+        globalThis.generate.regionalCondition_dummy.setEnable(false);
+
+        globalThis.generate.hifix.setValue(false);
+        globalThis.generate.hifix_dummy.setValue(false);
+        globalThis.generate.hifix.setEnable(false);
+        globalThis.generate.hifix_dummy.setEnable(false);
+
+        globalThis.generate.refiner.setValue(false);
+        globalThis.generate.refiner_dummy.setValue(false);
+        globalThis.generate.refiner.setEnable(false);
+        globalThis.generate.refiner_dummy.setEnable(false);
+
+        globalThis.generate.controlnet.setValue(false);
+        globalThis.generate.controlnet.setEnable(false);
+
+        globalThis.generate.adetailer.setValue(false);
+        globalThis.generate.adetailer.setEnable(false);
+    }
+}
+
 export async function callback_api_interface(index, selectedValue){
     globalThis.globalSettings.api_interface = selectedValue[0];
 
@@ -55,11 +120,10 @@ export async function callback_api_interface(index, selectedValue){
     globalThis.generate.sampler.setValue(LANG.api_model_sampler, (SETTINGS.api_interface==='ComfyUI')?SAMPLER_COMFYUI:SAMPLER_WEBUI);
     globalThis.generate.scheduler.setValue(LANG.api_model_scheduler, (SETTINGS.api_interface==='ComfyUI')?SCHEDULER_COMFYUI:SCHEDULER_WEBUI);    
 
-    const currentModelSelect = globalThis.dropdownList.model.getValue();
+    const modelType = globalThis.dropdownList.model_type.getValue();
+    const currentModelSelect = globalThis.dropdownList.model.getValue();    
     await reloadFiles();
-    if(globalThis.dropdownList.model.isValueExist(currentModelSelect)){
-        globalThis.dropdownList.model.updateDefaults(currentModelSelect);
-    }
+    globalThis.dropdownList.model.updateDefaults(currentModelSelect);
 
     globalThis.lora.reload();
     globalThis.controlnet.reload();
@@ -69,9 +133,26 @@ export async function callback_api_interface(index, selectedValue){
     if(SETTINGS.api_interface === 'ComfyUI') {
         globalThis.hifix.colorTransfer.setValue(LANG.api_hf_colortransfer, ['None', 'Mean', 'Lab']);
         globalThis.hifix.colorTransfer.updateDefaults(SETTINGS.api_hf_colortransfer);
+
+        globalThis.hifix.randomSeed.setEnable(true);
+        globalThis.hifix.randomSeed.setValue(SETTINGS.api_hf_random_seed);
+
+        globalThis.refiner.addnoise.setEnable(true);
+        globalThis.refiner.addnoise.setValue(SETTINGS.api_refiner_add_noise);
     } else {
         globalThis.hifix.colorTransfer.setValue(LANG.api_hf_colortransfer, ['None']);
-        globalThis.hifix.colorTransfer.updateDefaults('None');        
+        globalThis.hifix.colorTransfer.updateDefaults('None');
+
+        globalThis.hifix.randomSeed.setValue(false);
+        globalThis.hifix.randomSeed.setEnable(false);
+
+        globalThis.refiner.addnoise.setValue(false);
+        globalThis.refiner.addnoise.setEnable(false);
+
+        if(modelType !== 'Checkpoint') {
+            globalThis.dropdownList.model_type.updateDefaults('Checkpoint');
+            callback_api_model_type(0, ['Checkpoint']);
+        }
     }
 
     if (globalThis.inBrowser) {

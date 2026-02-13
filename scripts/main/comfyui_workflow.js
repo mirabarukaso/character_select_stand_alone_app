@@ -489,6 +489,15 @@ export const WORKFLOW = {
     "_meta": {
       "title": "Upscale Latent By"
     }
+  },
+  "47": {
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
   }
 };
 
@@ -1180,6 +1189,15 @@ export const WORKFLOW_REGIONAL = {
     "_meta": {
       "title": "Upscale Latent By"
     }
+  },
+  "59": {
+    "inputs": {
+      "vae_name": "sdxl_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
   }
 };
 
@@ -1481,6 +1499,258 @@ export const WORKFLOW_MIRA_ITU = {
     "class_type": "ModelSamplingDiscrete",
     "_meta": {
       "title": "ModelSamplingDiscrete"
+    }
+  }
+};
+
+export const WORKFLOW_UNET = 
+{
+  "2": {
+    "inputs": {
+      "text": [
+        "34",
+        4
+      ],
+      "clip": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": [
+        "33",
+        0
+      ],
+      "clip": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "5": {
+    "inputs": {
+      "width": [
+        "17",
+        0
+      ],
+      "height": [
+        "17",
+        1
+      ],
+      "batch_size": 1
+    },
+    "class_type": "EmptyLatentImage",
+    "_meta": {
+      "title": "Empty Latent Image"
+    }
+  },
+  "6": {
+    "inputs": {
+      "samples": [
+        "36",
+        0
+      ],
+      "vae": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "13": {
+    "inputs": {
+      "steps": 11,
+      "cfg": 1
+    },
+    "class_type": "StepsAndCfg",
+    "_meta": {
+      "title": "Steps & Cfg"
+    }
+  },
+  "17": {
+    "inputs": {
+      "Width": 1024,
+      "Height": 1360,
+      "Batch": 1,
+      "Landscape": false,
+      "HiResMultiplier": 1.5
+    },
+    "class_type": "CanvasCreatorAdvanced",
+    "_meta": {
+      "title": "Create Canvas Advanced"
+    }
+  },
+  "29": {
+    "inputs": {
+      "filename": "%time_%seed",
+      "path": "%date",
+      "extension": "png",
+      "steps": [
+        "13",
+        0
+      ],
+      "cfg": [
+        "13",
+        1
+      ],
+      "modelname": "anima-preview.safetensors",
+      "sampler_name": "euler_ancestral",
+      "scheduler": "simple",
+      "positive": [
+        "32",
+        0
+      ],
+      "negative": [
+        "33",
+        0
+      ],
+      "seed_value": 1775747588,
+      "width": [
+        "17",
+        0
+      ],
+      "height": [
+        "17",
+        1
+      ],
+      "lossless_webp": true,
+      "quality_jpeg_or_webp": 100,
+      "optimize_png": false,
+      "counter": 0,
+      "denoise": 1,
+      "clip_skip": -2,
+      "time_format": "%Y-%m-%d-%H%M%S",
+      "save_workflow_as_json": false,
+      "embed_workflow": true,
+      "additional_hashes": "",
+      "images": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "ImageSaverMira",
+    "_meta": {
+      "title": "Image Saver"
+    }
+  },
+  "32": {
+    "inputs": {
+      "text": ""
+    },
+    "class_type": "TextBoxMira",
+    "_meta": {
+      "title": "Text Box"
+    }
+  },
+  "33": {
+    "inputs": {
+      "text": ""
+    },
+    "class_type": "TextBoxMira",
+    "_meta": {
+      "title": "Text Box"
+    }
+  },
+  "34": {
+    "inputs": {
+      "text": [
+        "32",
+        0
+      ],
+      "model": [
+        "51",
+        0
+      ],
+      "clip": [
+        "50",
+        0
+      ]
+    },
+    "class_type": "LoRAfromText",
+    "_meta": {
+      "title": "LoRA Loader from Text"
+    }
+  },
+  "36": {
+    "inputs": {
+      "add_noise": "enable",
+      "noise_seed": 153956129556641,
+      "steps": [
+        "13",
+        0
+      ],
+      "cfg": [
+        "13",
+        1
+      ],
+      "sampler_name": "er_sde",
+      "scheduler": "simple",
+      "start_at_step": 0,
+      "end_at_step": 1000,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "34",
+        0
+      ],
+      "positive": [
+        "2",
+        0
+      ],
+      "negative": [
+        "3",
+        0
+      ],
+      "latent_image": [
+        "5",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler (Advanced)"
+    }
+  },
+  "50": {
+    "inputs": {
+      "clip_name": "Anima\\qwen_3_06b_base.safetensors",
+      "type": "stable_diffusion",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "51": {
+    "inputs": {
+      "unet_name": "Anima\\anima-preview.safetensors",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "52": {
+    "inputs": {
+      "vae_name": "qwen_image_vae.safetensors"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
     }
   }
 };

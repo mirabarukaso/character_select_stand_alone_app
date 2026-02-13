@@ -402,7 +402,16 @@ function createDropdown({
             for (let index = 0; index < inputs.length; index++) {
                 if (!isEditing[index]) {
                     const input = inputs[index];
-                    const value = defaultValues[index] || '';
+                    let value = defaultValues[index] || '';
+                    
+                    // Check if the value exists in the options, if not use the first option
+                    if (value && !this.isValueExist(value)) {
+                        // Use the first option's value if the default value doesn't exist
+                        if (options[index] && options[index].length > 0) {
+                            value = options[index][0].value;
+                        }
+                    }
+                    
                     selectedValues[index] = value;
                     selectedKeys[index] = value;
                     input.value = value;

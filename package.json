@@ -5,7 +5,7 @@
   "keywords": [],
   "main": "./main.js",
   "type": "module",
-  "version": "2.4.0",
+  "version": "2.5.0",
   "author": "oOkami",
   "scripts": {
     "start": "electron .",
@@ -13,7 +13,7 @@
     "package_mac": "electron-packager ./ saa --platform=darwin --out=release --overwrite"
   },
   "devDependencies": {
-    "electron": "^39.2.7"
+    "electron": "^39.6.0"
   },
   "dependencies": {
     "async-mutex": "^0.5.0",
@@ -23,7 +23,7 @@
     "helmet": "^8.1.0",
     "https": "^1.0.0",
     "js-yaml": "^4.1.1",
-    "onnxruntime-node": "^1.23.2",
+    "onnxruntime-node": "^1.24.1",
     "sharp": "^0.34.5",
     "ws": "^8.19.0"
   }

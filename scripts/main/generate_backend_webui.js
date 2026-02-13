@@ -114,13 +114,83 @@ class WebUI {
         this.vpred = false;
         this.auth = '';
         this.uuid = 'none';
+        this.isForge = null; // null = not detected, true = Forge, false = A1111
     }
 
-    async setModel(addr, model, auth) {
+    async detectBackendType(addr, auth) {
+        return new Promise((resolve, reject) => {
+            const apiUrl = `http://${addr}/sdapi/v1/options`;
+
+            let headers = {};
+            if (auth?.includes(':')) {
+                const encoded = Buffer.from(auth).toString('base64');
+                headers['Authorization'] = `Basic ${encoded}`;
+            }
+
+            let request = net.request({
+                method: 'GET',
+                url: apiUrl,
+                headers: headers,
+                timeout: this.timeout,
+            });
+
+            let responseData = '';
+            request.on('response', (response) => {
+                response.on('data', (chunk) => {
+                    responseData += chunk;
+                });
+                response.on('end', () => {
+                    if (response.statusCode !== 200) {
+                        console.warn(`${CAT} Failed to detect backend type, assuming A1111`);
+                        resolve(false);
+                        return;
+                    }
+                    
+                    try {
+                        const options = JSON.parse(responseData);
+                        const isForge = 'forge_additional_modules' in options;
+                        console.log(CAT, `Backend detected: ${isForge ? 'Forge' : 'A1111'}`);
+                        resolve(isForge);
+                    } catch (error) {
+                        console.warn(`${CAT} Failed to parse options, assuming A1111:`, error);
+                        resolve(false);
+                    }
+                });
+            });
+            
+            request.on('error', (error) => {
+                console.warn(`${CAT} Failed to detect backend type:`, error.message);
+                resolve(false); // 默认为 A1111
+            });
+    
+            request.on('timeout', () => {
+                request.destroy();
+                console.warn(`${CAT} Backend detection timed out, assuming A1111`);
+                resolve(false);
+            });
+
+            request.end();
+        });
+    }
+
+    async setModel(addr, model, auth, vae) {
         this.addr = addr;
+        
+        if (this.isForge === null) {
+            this.isForge = await this.detectBackendType(addr, auth);
+        }
+        
         return new Promise((resolve, reject) => {            
             if (model !== 'Default') {
-                const optionPayload = {"sd_model_checkpoint": model }
+                const optionPayload = {
+                    "sd_model_checkpoint": model,
+                    "sd_vae": vae.vae_override ? vae.vae : 'Automatic', // A1111
+                };
+                
+                if (this.isForge) {
+                    optionPayload["forge_additional_modules"] = vae.vae_override ? [vae.vae] : 'Automatic';
+                }
+
                 const body = JSON.stringify(optionPayload);
                 const apiUrl = `http://${this.addr}/sdapi/v1/options`;
 
@@ -221,7 +291,10 @@ class WebUI {
                     "hr_scheduler": scheduler,
                     "hr_prompt": positive,
                     "hr_negative_prompt": negative,
-                    "hr_additional_modules": [],        //Fix Forge Error #10
+                };
+                
+                if (this.isForge) {
+                    payload["hr_additional_modules"] = [];  //Fix Forge Error #10
                 }
             }
 
@@ -375,7 +448,10 @@ class WebUI {
                     "hr_scheduler": scheduler,
                     "hr_prompt": positive,
                     "hr_negative_prompt": negative,
-                    "hr_additional_modules": [],        //Fix Forge Error #10
+                };
+                
+                if (this.isForge) {
+                    payload["hr_additional_modules"] = [];  //Fix Forge Error #10
                 }
             }
 
@@ -818,6 +894,8 @@ async function updateUpscalerModelList(generateData) {
 }
 
 async function refreshModelLists(generateData) {
+    backendWebUI.isForge = await backendWebUI.detectBackendType(generateData.addr, generateData.auth);
+
     if (contronNetModelHashList === 'none') {
         console.log(CAT, "Refresh controlNet model hash list:");
         const result = await updateControlNetHashList(generateData);
@@ -854,7 +932,7 @@ async function runWebUI(generateData){
 
     await refreshModelLists(generateData);
     
-    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth);
+    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, generateData.vae);
     if(result === '200') {
         try {
             if(backendWebUI.uuid !== 'none')
@@ -985,6 +1063,11 @@ async function python_runWebUI(generateData, isRegional=false, skeletonKey=false
     const infoMsg = `Running WebUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${backendWebUI.uuid}`;
     sendToRenderer(backendWebUI.uuid, `updateProgress`, 'log', CAT, infoMsg);
     console.log(CAT, infoMsg);
+
+    // Ensure VAE settings for saa-agent
+    if (!generateData.vae) {
+        generateData.vae = { vae_override: false, vae: 'None' };
+    }
 
     let newImage = null;
     if (isRegional) {

@@ -550,6 +550,7 @@ export function setupImageUploadOverlay() {
     // eslint-disable-next-line sonarjs/cognitive-complexity
     function displayFormattedMetadata(metadata, fallbackMetadata=null) {
         const apiInterface = globalThis.generate.api_interface.getValue();
+        const modelType = globalThis.dropdownList.model_type.getValue();
         const parsedMetadata = parseGenerationParameters(metadata);
         parsedMetadata.nodes = metadata.generationParameters || null;
         globalThis.currentImageMetadata = parsedMetadata;
@@ -561,7 +562,7 @@ export function setupImageUploadOverlay() {
         
         createImageTagger(metadataContainer, cachedImage);
 
-        if(apiInterface !== 'None') {
+        if(apiInterface !== 'None' && modelType === 'Checkpoint' ) {
             metadataContainer.appendChild(createControlNetButtons(apiInterface, cachedImage, previewImg));        
         }
 

@@ -119,10 +119,7 @@ export async function setupModelReloadToggle() {
     refreshButton.addEventListener('click', async () => {
         const currentModelSelect = globalThis.dropdownList.model.getValue();
         await reloadFiles();
-        if(globalThis.dropdownList.model.isValueExist(currentModelSelect)){
-            globalThis.dropdownList.model.updateDefaults(currentModelSelect);
-        }
-
+        globalThis.dropdownList.model.updateDefaults(currentModelSelect);
         globalThis.lora.reload();
         globalThis.controlnet.reload();
         globalThis.aDetailer.reload();
@@ -147,6 +144,9 @@ export async function reloadFiles(){
 
         globalThis.cachedFiles.modelList = await sendWebSocketMessage({ type: 'API', method: 'getModelList', params: [SETTINGS.api_interface] });
         globalThis.cachedFiles.modelListAll = await sendWebSocketMessage({ type: 'API', method: 'getModelListAll', params: [SETTINGS.api_interface] });
+        globalThis.cachedFiles.vaeList = await sendWebSocketMessage({ type: 'API', method: 'getVAEList', params: [SETTINGS.api_interface] });
+        globalThis.cachedFiles.diffusionList = await sendWebSocketMessage({ type: 'API', method: 'getDiffusionModelList', params: [SETTINGS.api_interface] });
+        globalThis.cachedFiles.textEncoderList = await sendWebSocketMessage({ type: 'API', method: 'getTextEncoderList', params: [SETTINGS.api_interface] });
         globalThis.cachedFiles.loraList = await sendWebSocketMessage({ type: 'API', method: 'getLoRAList', params: [SETTINGS.api_interface] });
         globalThis.cachedFiles.controlnetList = await sendWebSocketMessage({ type: 'API', method: 'getControlNetList', params: [SETTINGS.api_interface] });
         globalThis.cachedFiles.upscalerList = await sendWebSocketMessage({ type: 'API', method: 'getUpscalerList', params: [SETTINGS.api_interface] });
@@ -162,6 +162,9 @@ export async function reloadFiles(){
 
         globalThis.cachedFiles.modelList = await globalThis.api.getModelList(SETTINGS.api_interface);
         globalThis.cachedFiles.modelListAll = await globalThis.api.getModelListAll(SETTINGS.api_interface);
+        globalThis.cachedFiles.vaeList = await globalThis.api.getVAEList(SETTINGS.api_interface);
+        globalThis.cachedFiles.diffusionList = await globalThis.api.getDiffusionModelList(SETTINGS.api_interface);
+        globalThis.cachedFiles.textEncoderList = await globalThis.api.getTextEncoderList(SETTINGS.api_interface);
         globalThis.cachedFiles.loraList = await globalThis.api.getLoRAList(SETTINGS.api_interface);
         globalThis.cachedFiles.controlnetList = await globalThis.api.getControlNetList(SETTINGS.api_interface);
         globalThis.cachedFiles.upscalerList = await globalThis.api.getUpscalerList(SETTINGS.api_interface);
@@ -182,9 +185,18 @@ export async function reloadFiles(){
         setADetailerModelList(globalThis.cachedFiles.aDetailerList);
     }
 
-    globalThis.dropdownList.model.setValue(LANG.api_model_file_select, globalThis.cachedFiles.modelList);
-    globalThis.dropdownList.settings.setValue('', globalThis.cachedFiles.settingList);
+    if (globalThis.globalSettings.api_model_type === 'Checkpoint') {
+        globalThis.dropdownList.model.setValue(LANG.api_model_file_select, globalThis.cachedFiles.modelList);
+        globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_select);
+    } else {
+        globalThis.dropdownList.model.setValue(LANG.api_model_file_select, globalThis.cachedFiles.diffusionList);
+        globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_diffusion_select);
+    }
+    globalThis.dropdownList.vae_unet.setValue(LANG.api_vae_model, globalThis.cachedFiles.vaeList);
+    globalThis.dropdownList.vae_sdxl.setValue(LANG.api_vae_model, globalThis.cachedFiles.vaeList);
+    globalThis.dropdownList.textencoder.setValue(LANG.api_text_encoder, globalThis.cachedFiles.textEncoderList);
 
+    globalThis.dropdownList.settings.setValue('', globalThis.cachedFiles.settingList);
     globalThis.refiner.model.setValue(LANG.api_refiner_model, globalThis.cachedFiles.modelListAll);    
 }
 

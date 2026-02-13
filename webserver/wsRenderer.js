@@ -4,7 +4,7 @@ import { setupThumbOverlay, setupThumb } from '../scripts/renderer/customThumbGa
 import { setupSuggestionSystem } from '../scripts/renderer/tagAutoComplete.js';
 import { setupButtonOverlay, customCommonOverlay } from '../scripts/renderer/customOverlay.js';
 import { myCharacterList, myRegionalCharacterList, myViewsList, myLanguageList, mySimpleList } from '../scripts/renderer/components/myDropdown.js';
-import { callback_mySettingList, callback_api_interface, 
+import { callback_mySettingList, callback_api_model_select, callback_api_model_type, callback_api_interface, 
     callback_generate_start, callback_generate_skip, callback_generate_cancel,callback_keep_gallery,
     callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart
  } from '../scripts/renderer/callbacks.js';
@@ -64,9 +64,32 @@ export async function setupHeader(SETTINGS, FILES, LANG){
     globalThis.dropdownList = {
         languageList: myLanguageList(FILES.language),            
         model: mySimpleList('model-select', LANG.api_model_file_select, FILES.modelList, 
-            (index, value) => { globalThis.globalSettings.api_model_file_select = value; }, 50),
+            callback_api_model_select, 50),
+        model_type: mySimpleList('model-type', LANG.api_model_type, ['Checkpoint', 'Diffusion Models'],
+            callback_api_model_type, 5, false, true),
+
+        vae_unet: mySimpleList('vae-unet', LANG.api_vae_model, FILES.vaeList,
+            (index, value) => { globalThis.globalSettings.vae_unet_model = value; }, 20, true, true),
+        vae_sdxl: mySimpleList('vae-sdxl', LANG.api_vae_model, FILES.vaeList,
+            (index, value) => { globalThis.globalSettings.vae_sdxl_model = value; }, 20, true, true),
+        vae_sdxl_override: setupCheckbox('vae-override', LANG.api_vae_sdxl_override, SETTINGS.api_vae_sdxl_override, true,
+            (value) => { globalThis.globalSettings.api_vae_sdxl_override = value; }),
+
+        diffusion_model_weight_dtype: mySimpleList('diffusion-model-weight-dtype', LANG.api_diffusion_model_weight_dtype,
+            ['default', 'fp8_e4m3fn', 'fp8_e4m3fn_fast', 'fp8_e5m2'],
+            (index, value) => { globalThis.globalSettings.diffusion_model_weight_dtype = value; }, 5, false, true),
+
+        textencoder: mySimpleList('text-encoder', LANG.api_text_encoder, FILES.textEncoderList,
+            (index, value) => { globalThis.globalSettings.api_model_file_text_encoder = value; }, 20, true, true),
+        textencoder_type: mySimpleList('text-encoder-type', LANG.api_text_encoder_type,
+            ["stable_diffusion", "stable_cascade", "sd3", "stable_audio", "mochi", "ltxv", "pixart", "cosmos", "lumina2", "wan", "hidream", "chroma", "ace", "omnigen2", "qwen_image", "hunyuan_image", "flux2", "ovis"],
+            (index, value) => { globalThis.globalSettings.api_model_file_text_encoder_type = value; }, 10, false, true),
+        textencoder_device: mySimpleList('text-encoder-device', LANG.api_text_encoder_device,
+            ['default', 'cpu'],
+            (index, value) => { globalThis.globalSettings.api_model_file_text_encoder_device = value; }, 5, false, true),
+
         vpred:  mySimpleList('model-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_off], 
-            (index, value) => { globalThis.globalSettings.api_model_file_vpred = value; }, 5, false, false),            
+            (index, value) => { globalThis.globalSettings.api_model_file_vpred = value; }, 5, false, true),        
         settings: mySimpleList('settings-select', LANG.title_settings_load, FILES.settingList, callback_mySettingList)
     }
     globalThis.dropdownList.languageList.updateDefaults(LANG.language);
@@ -106,6 +129,7 @@ export async function setupLeftRight(SETTINGS, FILES, LANG) {
         hires: setupCollapsed('highres-fix', true),
         refiner: setupCollapsed('refiner', true),
         controlnet: setupCollapsed('controlnet', true),
+        modelSettings: setupCollapsed('model-settings', true),
         lora: setupCollapsed('add-lora', true),
         settings: setupCollapsed('system-settings', true),
         regional: setupCollapsed('regional-condition', true),
@@ -450,6 +474,10 @@ async function init() {
 
         globalThis.cachedFiles.modelList = await sendWebSocketMessage({ type: 'API', method: 'getModelList', params: [SETTINGS.api_interface] });
         globalThis.cachedFiles.modelListAll = await sendWebSocketMessage({ type: 'API', method: 'getModelListAll', params: [SETTINGS.api_interface] });
+        globalThis.cachedFiles.vaeList = await sendWebSocketMessage({ type: 'API', method: 'getVAEList', params: [SETTINGS.api_interface] });
+        globalThis.cachedFiles.diffusionList = await sendWebSocketMessage({ type: 'API', method: 'getDiffusionModelList', params: [SETTINGS.api_interface] });
+        globalThis.cachedFiles.textEncoderList = await sendWebSocketMessage({ type: 'API', method: 'getTextEncoderList', params: [SETTINGS.api_interface] });
+
         globalThis.cachedFiles.loraList = await sendWebSocketMessage({ type: 'API', method: 'getLoRAList', params: [SETTINGS.api_interface] });
         globalThis.cachedFiles.controlnetList = await sendWebSocketMessage({ type: 'API', method: 'getControlNetList', params: [SETTINGS.api_interface] });
         globalThis.cachedFiles.controlnetProcessorListWebUI = await sendWebSocketMessage({ type: 'API', method: 'getControlNetProcessorListWebUI'});
@@ -473,7 +501,7 @@ async function init() {
         await createHifixRefiner(SETTINGS, FILES, LANG);
         await createRegional(SETTINGS, FILES, LANG);
         await createAI(SETTINGS, FILES, LANG);
-        
+
         // LoRA
         globalThis.lora = setupLoRA('add-lora-main');
                 

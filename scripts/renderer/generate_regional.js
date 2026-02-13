@@ -418,6 +418,14 @@ export async function generateRegionalImage(dataPack){
         const height = landscape?globalThis.generate.width.getValue():globalThis.generate.height.getValue();
         const swap = globalThis.regional.swap.getValue();
 
+        const vae = globalThis.dropdownList.vae_sdxl.getValue();
+        let vae_override = globalThis.dropdownList.vae_sdxl_override.getValue();
+        if(vae_override && vae !== 'None'){
+            console.log('Override VAE to', vae);
+        } else {
+            vae_override = false;
+        }
+
         globalThis.generate.lastPos = createPromptResult.positivePromptLeft;
         globalThis.generate.lastPosColored = createPromptResult.positivePromptLeftColored;
         globalThis.generate.lastPosR = createPromptResult.positivePromptRight;
@@ -477,7 +485,8 @@ export async function generateRegionalImage(dataPack){
             refiner: refiner,
             regional: regional,
             controlnet: createControlNet(),      
-            adetailer: createADetailer(apiInterface),      
+            adetailer: createADetailer(apiInterface),
+            vae: {vae_override: vae_override, vae: vae},
         }
         
         let finalInfo = `${createPromptResult.finalInfo}\n`;

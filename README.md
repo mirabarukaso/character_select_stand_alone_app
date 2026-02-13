@@ -23,6 +23,8 @@ This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Web
 | ADetailer | Yes | Yes | Yes |
 | API authentication| No | Yes | Yes |
 | MiraITU | Yes | No | No |
+| UNET Model | Yes | No | TBD |
+| Custom VAE for SDXL | Yes | Yes | Yes |
 
 *Try Online Character Select Simple Advanced App* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
 
@@ -68,6 +70,14 @@ UdinXProgrammer [#62 Missing character](https://github.com/mirabarukaso/characte
      
 ------
 # Highlights
+## UNET (Diffusion Models) Support
+> [!NOTE]
+> Test and Verified Models:
+> Anima / Qwen Image / Z Image / Flux
+> Only for ComfyUI now, Forge neo may support later, NOT support original A1111.
+
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/diffusion_models.png" width=25%>      
+
 ## Mira Image Tiled Upscaler
 > [!NOTE]
 > MiraITU
@@ -390,7 +400,7 @@ To enable a custom path, modify the file `data/custom_path.yaml`.
 5. Supports absolute and relative paths (relative to base_path)      
 
 ## Folder path issue for Remote usage    
-SAA needs to search your ComfyUI/WebUI checkpoints folder to retrieve models, LoRAs and other items. If you use a remote back-end address instead of 127.0.0.1, the folder search will fail and SAA will run in 'Default' mode. In this mode, you cannot change the models or set the LoRAs by LoRA slot.    
+SAA needs to search your ComfyUI/WebUI checkpoints folder to retrieve models, LoRAs and other items. If you use a remote back-end address instead of 127.0.0.1, the folder search will fail and SAA will run in `Default` mode. In this mode, you cannot change the models or set the LoRAs by LoRA slot.    
 There are two ways to solve this problem:    
 1. `Mirror folder` - copy your remote `models` folder to local, then setup SAA with the local folder. This is simple, but you need more space to mirror the entire `models` folder to local folder.
 2. `Symbolic link or Shared folder` - Create a `Symbolic link ` or simply setup your remote `models` folder as shared folder (read-only recommended), then setup SAA with that folder.     

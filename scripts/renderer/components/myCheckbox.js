@@ -25,11 +25,28 @@ export function setupCheckbox(containerId, spanText = 'myCheckbox', defaultCheck
         checkboxSpan.before(checkboxInput);
     }
 
+    // control whether the checkbox can be modified by user interaction
+    let enabled = true;
+
+    const applyEnable = (enable) => {
+        enabled = !!enable;
+        checkboxInput.disabled = !enabled;
+        if (enabled) {
+            container.classList.remove('myCheckbox-disabled');
+        } else {
+            container.classList.add('myCheckbox-disabled');
+        }
+    };
+
+    // initialize disabled state according to enabled (default true)
+    applyEnable(true);
+
     container.addEventListener('click', (event) => {
+        if (!enabled) return; // ignore user clicks when disabled
         if (event.target !== checkboxInput) {
             checkboxInput.checked = !checkboxInput.checked;            
-        }   
-        if(callback)
+        }
+        if (callback)
             callback(checkboxInput.checked);
     });
 
@@ -41,12 +58,16 @@ export function setupCheckbox(containerId, spanText = 'myCheckbox', defaultCheck
                 console.warn(CAT_CB, `Invalid value for setValue. Expected true or false: `, typeof value);
             }
         },
+        setEnable: (enable) => {
+            applyEnable(enable);
+        },
         getValue: () => {
             return checkboxInput.checked;
         },
         setTitle: (text) => {
             checkboxSpan.textContent = text;
         }
+        
     };
 }
 

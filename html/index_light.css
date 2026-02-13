@@ -249,7 +249,7 @@ body {
 }
 
 /* collapsed style */
-.image-infobox-header, .add-lora-header, .highres-fix-header, .refiner-header, 
+.image-infobox-header, .add-lora-header, .model-settings-header, .highres-fix-header, .refiner-header, 
 .controlnet-header, .regional-condition-header, .jsonlist-header, .adetailer-header, .queue-header {
     padding-right: 2px;
     display: flex;
@@ -275,13 +275,14 @@ body {
     grid-template-columns: 2fr 2.5fr 2fr 2.5fr 0.25fr; 
 }
 
-.system-settings-header {
+.system-settings-header, .jsonlist-header {
     display: grid;
     grid-template-columns: 4fr 1fr 1fr;
     padding-left: 10px;
 }
 
-.highres-fix-header, .refiner-header, .controlnet-header, .regional-condition-header, .add-lora-header, .jsonlist-header, .adetailer-header, .queue-header {
+.highres-fix-header, .refiner-header, .controlnet-header, .regional-condition-header, 
+.model-settings-header, .add-lora-header, .adetailer-header, .queue-header {
     display: grid;
     grid-template-columns: 2fr 2fr 1fr; 
     padding-left: 10px;
@@ -289,14 +290,14 @@ body {
 
 .highres-fix-header-span, .refiner-header-span, .controlnet-header-span, .regional-condition-header-span, 
 .system-settings-header-span, .gallery-main-header-span, .gallery-thumb-header-span,
-.add-lora-span, .jsonlist-header-span, .adetailer-header-span, .queue-header-span {
+.model-settings-span, .add-lora-span, .jsonlist-header-span, .adetailer-header-span, .queue-header-span {
     display: flex;
     justify-self: flex-end;
 }
 
 #image-infobox-span, #gallery-main-span,
 #gallery-thumb-span, #highres-fix-span, #refiner-span, #controlnet-span, 
-#regional-condition-span, #add-lora-span, #system-settings-span, #jsonlist-span, #adetailer-span, #queue-span {
+#regional-condition-span, #add-lora-span, #model-settings-span, #system-settings-span, #jsonlist-span, #adetailer-span, #queue-span {
     order: 1;
     color: #4A403A; /* Dark gray-brown */
     padding-right: 2px;
@@ -304,7 +305,7 @@ body {
 
 #image-infobox-toggle, #gallery-main-toggle,
 #gallery-thumb-toggle, #highres-fix-toggle, #refiner-toggle, #controlnet-toggle, 
-#regional-condition-toggle, #add-lora-toggle, #jsonlist-toggle, 
+#regional-condition-toggle, #add-lora-toggle, #model-settings-toggle, #jsonlist-toggle, 
 #adetailer-toggle, #queue-toggle {
     margin-top: 2px;
     width: 12px;
@@ -335,14 +336,14 @@ body {
 
 #image-infobox-toggle:hover, #gallery-main-toggle:hover,
 #gallery-thumb-toggle:hover, #highres-fix-toggle:hover, #refiner-toggle:hover, #controlnet-toggle:hover, 
-#regional-condition-toggle:hover, #add-lora-toggle:hover, #jsonlist-toggle:hover, #adetailer-toggle:hover,
+#regional-condition-toggle:hover, #model-settings-toggle:hover, #add-lora-toggle:hover, #jsonlist-toggle:hover, #adetailer-toggle:hover,
 #system-settings-toggle:hover, #queue-toggle:hover {
     opacity: 0.9;
 }
 
 #image-infobox-toggle.collapsed, #gallery-main-toggle.collapsed,
 #gallery-thumb-toggle.collapsed, #highres-fix-toggle.collapsed, #refiner-toggle.collapsed, #controlnet-toggle.collapsed,
-#regional-condition-toggle.collapsed, #add-lora-toggle.collapsed, #jsonlist-toggle.collapsed,  #adetailer-toggle.collapsed,
+#regional-condition-toggle.collapsed, #model-settings-toggle.collapsed, #add-lora-toggle.collapsed, #jsonlist-toggle.collapsed,  #adetailer-toggle.collapsed,
 #system-settings-toggle.collapsed, #queue-toggle.collapsed {
     transform: rotate(90deg);
 }
@@ -402,7 +403,7 @@ body {
 
 .mydropdown-input {
     width: 100%;
-    padding: 8px;
+    padding: 4px;
     border: 1px solid #D2CBB8; /* Warm beige */
     border-radius: 5px;
     background: rgb(230, 227, 210); /* Warm off-white */
@@ -475,9 +476,9 @@ body {
 .image-infobox-container,
 .image-infobox-main,
 #prompt-text-container,
-.highres-fix-container, .refiner-container, .controlnet-container, .regional-condition-container, .add-lora-container, 
+.highres-fix-container, .refiner-container, .controlnet-container, .regional-condition-container, .model-settings-container, .add-lora-container, 
 .system-settings-container, .jsonlist-container, .adetailer-container, .queue-container, 
-.highres-fix-main, .refiner-main, .controlnet-main, .regional-condition-main, .add-lora-main, 
+.highres-fix-main, .refiner-main, .controlnet-main, .regional-condition-main, .model-settings-main, .add-lora-main, 
 .system-settings-main, .jsonlist-main, .adetailer-main, .queue-main {
     padding: 1px;
     box-sizing: border-box;
@@ -649,7 +650,7 @@ body {
 }
 
 .image-infobox-main,
-.highres-fix-main, .refiner-main, .controlnet-main, .regional-condition-main, .add-lora-main, 
+.highres-fix-main, .refiner-main, .controlnet-main, .regional-condition-main, .model-settings-main, .add-lora-main, 
 .system-settings-main, .jsonlist-main, .adetailer-main, .queue-main {
     transition: max-height 0.3s ease, opacity 0.3s ease;
     overflow: hidden;
@@ -662,7 +663,7 @@ body {
 
 .image-infobox-main.collapsed,
 .highres-fix-main.collapsed, .refiner-main.collapsed, .controlnet-main.collapsed, .regional-condition-main.collapsed, 
-.add-lora-main.collapsed, .system-settings-main.collapsed, .jsonlist-main.collapsed, .adetailer-main.collapsed,
+.model-settings-main.collapsed, .add-lora-main.collapsed, .system-settings-main.collapsed, .jsonlist-main.collapsed, .adetailer-main.collapsed,
 .queue-main.collapsed {
     margin: 0;
     padding: 0;
@@ -673,7 +674,7 @@ body {
 }
 
 #image-infobox-toggle,
-#highres-fix-toggle, #refiner-toggle, #controlnet-toggle, #regional-condition-toggle, #add-lora-toggle, 
+#highres-fix-toggle, #refiner-toggle, #controlnet-toggle, #regional-condition-toggle, #model-settings-toggle, #add-lora-toggle, 
 #system-settings-toggle, #jsonlist-toggle, #adetailer-toggle, #queue-toggle {
     margin-right: 5px;
 }

@@ -4,9 +4,11 @@ SAA CLI Tool
 
 A command-line interface for interacting with Character Select SAA via WebSocket connections. 
 Supports both ComfyUI and WebUI backends.
+Requires SAA above 2.5.0
 
 Author: mirabarukaso
 License: MIT
+Version: 1.1.0
 
 https://github.com/mirabarukaso/character_select_stand_alone_app
 """

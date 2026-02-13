@@ -44,7 +44,7 @@ export async function generateMiraITU(dataPack){
             apiInterface:apiInterface,
         },
 
-        model: globalThis.dropdownList.model.getValue(),
+        model: taggerOptions.sdxlModels,
         vpred: checkVpred(),
         seed:seed,
         exclude:globalThis.prompt.exclude.getValue(),

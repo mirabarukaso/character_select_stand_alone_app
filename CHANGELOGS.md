@@ -1,3 +1,10 @@
+2026.02.14 v2.5.0
+Add `UNET (Diffusion Models)` support for `Anima`, `Z Image`, `Qwen Image`, `Flux` and others(need test and verify)        
+Add `VAE override` for SDXL          
+Rearrange the UI interface       
+Bugs fix       
+
+
 2026.02.11 v2.4.0
 Add `SAA Agent`, a Python based CLI tool for local AI Agent       
 [Read more](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md)       

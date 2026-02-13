@@ -107,6 +107,7 @@ function mcutThreshold(probs) {
   return (sortedProbs[t] + sortedProbs[t + 1]) / 2;
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 async function runWd14Tagger(modelPath, inputTensor, gen_threshold=0.35, char_threshold=0.85, 
   general_mcut_enabled=false, character_mcut_enabled=false,
 cat = ['General', 'Character', 'Rating']) {
