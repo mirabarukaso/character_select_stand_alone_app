@@ -23,7 +23,7 @@ This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Web
 | ADetailer | Yes | Yes | Yes |
 | API authentication| No | Yes | Yes |
 | MiraITU | Yes | No | No |
-| UNET Model | Yes | No | TBD |
+| UNET Model | Yes | No | YES |
 | Custom VAE for SDXL | Yes | Yes | Yes |
 
 *Try Online Character Select Simple Advanced App* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
