@@ -1725,7 +1725,7 @@ export const WORKFLOW_UNET =
   },
   "50": {
     "inputs": {
-      "clip_name": "Anima\\qwen_3_06b_base.safetensors",
+      "clip_name": "model",
       "type": "stable_diffusion",
       "device": "default"
     },
@@ -1736,7 +1736,7 @@ export const WORKFLOW_UNET =
   },
   "51": {
     "inputs": {
-      "unet_name": "Anima\\anima-preview.safetensors",
+      "unet_name": "clip",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -1746,7 +1746,7 @@ export const WORKFLOW_UNET =
   },
   "52": {
     "inputs": {
-      "vae_name": "qwen_image_vae.safetensors"
+      "vae_name": "vae"
     },
     "class_type": "VAELoader",
     "_meta": {

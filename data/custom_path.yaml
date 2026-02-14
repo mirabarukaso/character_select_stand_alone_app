@@ -30,6 +30,7 @@ forge:
   controlnet: models/ControlNet
   upscale_models: models/upscale_models
   adetailer: models/adetailer
+  text_encoders: models/text_encoder
   vae: models/VAE
 
 comfyui:

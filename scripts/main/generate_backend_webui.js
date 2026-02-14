@@ -160,7 +160,7 @@ class WebUI {
             
             request.on('error', (error) => {
                 console.warn(`${CAT} Failed to detect backend type:`, error.message);
-                resolve(false); // 默认为 A1111
+                resolve(false); 
             });
     
             request.on('timeout', () => {
@@ -173,78 +173,93 @@ class WebUI {
         });
     }
 
-    async setModel(addr, model, auth, vae) {
+    async setModel(addr, model, auth, vae, unet) {
         this.addr = addr;
         
         if (this.isForge === null) {
             this.isForge = await this.detectBackendType(addr, auth);
         }
+
+        if (!this.isForge && unet?.enable) {
+            console.error(CAT, 'Diffusion Model is not supported by original A1111, please use Forge Neo backend to enable this feature.');
+            return 'Error: Diffusion Model is not supported by original A1111, please use Forge Neo backend to enable this feature.';
+        } 
         
+        // eslint-disable-next-line sonarjs/cognitive-complexity
         return new Promise((resolve, reject) => {            
-            if (model !== 'Default') {
-                const optionPayload = {
-                    "sd_model_checkpoint": model,
-                    "sd_vae": vae.vae_override ? vae.vae : 'Automatic', // A1111
-                };
-                
-                if (this.isForge) {
-                    optionPayload["forge_additional_modules"] = vae.vae_override ? [vae.vae] : 'Automatic';
-                }
-
-                const body = JSON.stringify(optionPayload);
-                const apiUrl = `http://${this.addr}/sdapi/v1/options`;
-
-                let headers = {
-                    'Content-Type': 'application/json'
-                };
-                if (auth?.includes(':')) {
-                    const encoded = Buffer.from(auth).toString('base64');
-                    headers['Authorization'] = `Basic ${encoded}`;
-                }
-
-                let request = net.request({
-                    method: 'POST',
-                    url: apiUrl,
-                    headers: headers,
-                    timeout: this.timeout,
-                });
-
-                request.on('response', (response) => {
-                    let responseData = ''            
-                    response.on('data', (chunk) => {
-                        responseData += chunk
-                    })
-                    response.on('end', () => {
-                        if (response.statusCode !== 200) {
-                            console.error(`${CAT} Error: setModel HTTP code: ${response.statusCode} - ${response.Data}`);
-                            resolve(`Error HTTP ${response.statusCode}`);
-                        }
-                        
-                        resolve('200');
-                    })
-                });
-                
-                request.on('error', (error) => {
-                    let ret = '';
-                    if (error.code === 'ECONNABORTED') {
-                        console.error(`${CAT} Request timed out after ${this.timeout}ms`);
-                        ret = `Error: Request timed out after ${this.timeout}ms`;
-                    } else {
-                        console.error(CAT, 'Request failed:', error.message);
-                        ret = `Error: Request failed:, ${error.message}`;
-                    }
-                    resolve(ret);
-                });
-        
-                request.on('timeout', () => {
-                    request.destroy();
-                    console.error(`${CAT} Request timed out after ${this.timeout}ms`);
-                    resolve(`Error: Request timed out after ${this.timeout}ms`);
-                });
-
-                request.write(body);
-                request.end();   
+            const optionPayload = {};
+            
+            if(model) {
+                if(model !== 'Default')
+                    optionPayload["sd_model_checkpoint"] = model;
             }
+
+            if (this.isForge) {
+                if (vae?.vae_override)
+                    optionPayload["forge_additional_modules"] = vae.vae;
+
+                if(unet?.enable) {
+                    optionPayload["sd_model_checkpoint"] = unet.model; 
+                    optionPayload["forge_additional_modules"] = [unet.clip_model, unet.vae_model];
+                }
+            } else { // A1111
+                if (vae?.vae_override)
+                    optionPayload["sd_vae"] = vae.vae; 
+            }
+
+            const body = JSON.stringify(optionPayload);
+            const apiUrl = `http://${this.addr}/sdapi/v1/options`;
+
+            let headers = {
+                'Content-Type': 'application/json'
+            };
+            if (auth?.includes(':')) {
+                const encoded = Buffer.from(auth).toString('base64');
+                headers['Authorization'] = `Basic ${encoded}`;
+            }
+
+            const request = net.request({
+                method: 'POST',
+                url: apiUrl,
+                headers: headers,
+                timeout: this.timeout,
+            });
+
+            request.on('response', (response) => {
+                let responseData = ''            
+                response.on('data', (chunk) => {
+                    responseData += chunk
+                })
+                response.on('end', () => {
+                    if (response.statusCode !== 200) {
+                        console.error(`${CAT} Error: setModel HTTP code: ${response.statusCode} - ${response.Data}`);
+                        resolve(`Error HTTP ${response.statusCode}`);
+                    }
+                    
+                    resolve('200');
+                })
+            });
+            
+            request.on('error', (error) => {
+                let ret = '';
+                if (error.code === 'ECONNABORTED') {
+                    console.error(`${CAT} Request timed out after ${this.timeout}ms`);
+                    ret = `Error: Request timed out after ${this.timeout}ms`;
+                } else {
+                    console.error(CAT, 'Request failed:', error.message);
+                    ret = `Error: Request failed:, ${error.message}`;
+                }
+                resolve(ret);
+            });
+    
+            request.on('timeout', () => {
+                request.destroy();
+                console.error(`${CAT} Request timed out after ${this.timeout}ms`);
+                resolve(`Error: Request timed out after ${this.timeout}ms`);
+            });
+
+            request.write(body);
+            request.end();
 
             resolve('200');
         });
@@ -252,7 +267,8 @@ class WebUI {
 
     async run (generateData) {
         return new Promise((resolve, reject) => {
-            const {addr, auth, uuid, model, vpred, positive, negative, width, height, cfg, step, seed, sampler, scheduler, refresh, hifix, refiner, controlnet, adetailer} = generateData;
+            const {addr, auth, uuid, model, vpred, positive, negative, width, height, 
+                cfg, step, seed, sampler, scheduler, refresh, hifix, refiner, controlnet, adetailer} = generateData;
             this.addr = addr;
             this.refresh = refresh;
             this.lastProgress = -1;
@@ -277,7 +293,7 @@ class WebUI {
                 "alwayson_scripts": {},
             }
 
-            if (hifix.enable){
+            if (hifix?.enable){
                 payload = {
                     ...payload,
                     "enable_hr": true,
@@ -298,7 +314,7 @@ class WebUI {
                 }
             }
 
-            if (refiner.enable && model !== refiner.model) {
+            if (refiner?.enable && model !== refiner?.model) {
                 payload = {
                     ...payload,
                     "refiner_checkpoint": refiner.model,
@@ -326,7 +342,7 @@ class WebUI {
                 headers['Authorization'] = `Basic ${encoded}`;
             }
 
-            let request = net.request({
+            const request = net.request({
                 method: 'POST',
                 url: apiUrl,
                 headers: headers,
@@ -932,7 +948,8 @@ async function runWebUI(generateData){
 
     await refreshModelLists(generateData);
     
-    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, generateData.vae);
+    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
+        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, generateData?.unet);
     if(result === '200') {
         try {
             if(backendWebUI.uuid !== 'none')
@@ -961,6 +978,7 @@ async function runWebUI(generateData){
     }
 
     console.log(CAT, 'result is not 200', result);
+    setMutexBackendBusy(false); // Release the mutex lock in case of early return
     return result;
 } 
 
@@ -975,7 +993,8 @@ async function runWebUI_Regional(generateData){
 
     await refreshModelLists(generateData);
     
-    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth);
+    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
+        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null);
     if(result === '200') {
         try {
             if(backendWebUI.uuid !== 'none')
@@ -1004,6 +1023,7 @@ async function runWebUI_Regional(generateData){
     }
 
     console.log(CAT, 'result is not 200', result);
+    setMutexBackendBusy(false); // Release the mutex lock in case of early return
     return result;
 }
 
@@ -1119,6 +1139,8 @@ function resetModelLists() {
     contronNetModelHashList = 'none';
     aDetailerModelList = 'none';
     upscalersModelList = 'none';
+    // reset isForge to null, so next time it will re-detect backend type, in case user switch between Forge and A1111
+    backendWebUI.isForge = null;
 }
 
 export {

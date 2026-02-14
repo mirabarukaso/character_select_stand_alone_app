@@ -21,6 +21,7 @@ let ONNX_COMFYUI = ['None'];
 
 let DIFFUSION_MODELS_COMFYUI = ['None'];
 let TEXT_ENCODERS_COMFYUI = ['None'];
+let TEXT_ENCODERS_WEBUI = ['None'];
 let VAE_COMFYUI = ['None'];
 let VAE_WEBUI = ['None'];
 
@@ -357,7 +358,10 @@ function updateModelList(model_path_comfyui, model_path_webui, model_filter, ena
     if (customWebUIPaths.length > 0) {
         MODELLIST_ALL_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder);
     } else if (fs.existsSync(model_path_webui)) {
-        MODELLIST_ALL_WEBUI = readDirectory(model_path_webui, '', search_subfolder);
+        MODELLIST_ALL_WEBUI = [
+            ...readDirectory(model_path_webui, '', search_subfolder, Infinity, 0, '.safetensors'),
+            ...readDirectory(model_path_webui, '', search_subfolder, Infinity, 0, '.gguf')
+        ];
     } else {
         MODELLIST_ALL_WEBUI = [];
     }
@@ -427,8 +431,10 @@ function updateDiffusionModelList(model_path_comfyui, search_subfolder) {
     } else if (fs.existsSync(model_path_comfyui)) {
         const diffusionModelsPath = path.join(path.dirname(model_path_comfyui), 'diffusion_models');
         const unetPath = path.join(path.dirname(model_path_comfyui), 'unet');
-        DIFFUSION_MODELS_COMFYUI = [...readDirectory(diffusionModelsPath, '', search_subfolder),
-             ...readDirectory(unetPath, '', search_subfolder)];
+        DIFFUSION_MODELS_COMFYUI = [...readDirectory(diffusionModelsPath, '', search_subfolder, Infinity, 0, '.safetensors'),
+             ...readDirectory(unetPath, '', search_subfolder, Infinity, 0, '.safetensors'),
+             ...readDirectory(diffusionModelsPath, '', search_subfolder, Infinity, 0, '.gguf'),
+             ...readDirectory(unetPath, '', search_subfolder, Infinity, 0, '.gguf')];
     } else {
         DIFFUSION_MODELS_COMFYUI = ['None'];
     }    
@@ -438,7 +444,7 @@ function updateDiffusionModelList(model_path_comfyui, search_subfolder) {
     }
 }
 
-function updateTextEncoderList(model_path_comfyui, search_subfolder) {
+function updateTextEncoderList(model_path_comfyui, model_path_webui, search_subfolder) {
     // --- ComfyUI ---
     const customComfyPaths = resolveCustomPaths(['comfyui'], 'text_encoders'); // yaml key is 'text_encoders'
     
@@ -446,13 +452,33 @@ function updateTextEncoderList(model_path_comfyui, search_subfolder) {
         TEXT_ENCODERS_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
     } else if (fs.existsSync(model_path_comfyui)) {
         const textEncodersPath = path.join(path.dirname(model_path_comfyui), 'text_encoders');
-        TEXT_ENCODERS_COMFYUI = readDirectory(textEncodersPath, '', search_subfolder);
+        TEXT_ENCODERS_COMFYUI = [...readDirectory(textEncodersPath, '', search_subfolder, Infinity, 0, '.safetensors'),
+             ...readDirectory(textEncodersPath, '', search_subfolder, Infinity, 0, '.gguf')];
     } else {
         TEXT_ENCODERS_COMFYUI = ['None'];
     }    
     
     if (TEXT_ENCODERS_COMFYUI.length === 0) {        
         TEXT_ENCODERS_COMFYUI = ['None'];
+    }
+
+    // --- WebUI ---
+    const customWebUIPaths = resolveCustomPaths(['forge'], 'text_encoder');
+    if (customWebUIPaths.length > 0) {
+        TEXT_ENCODERS_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder);
+    } else if (fs.existsSync(model_path_webui)) {
+        // orinal A1111 does not have text encoder folder, only forge neo has, so we check folder exist first before reading
+        const textEncodersPathWebUI = path.join(path.dirname(model_path_webui), 'text_encoder');
+        if (fs.existsSync(textEncodersPathWebUI)) {
+            TEXT_ENCODERS_WEBUI = [...readDirectory(textEncodersPathWebUI, '', search_subfolder, Infinity, 0, '.safetensors'),
+             ...readDirectory(textEncodersPathWebUI, '', search_subfolder, Infinity, 0, '.gguf')];
+        }
+    } else {
+        TEXT_ENCODERS_WEBUI = ['None'];
+    }
+
+    if (TEXT_ENCODERS_WEBUI.length === 0) {
+        TEXT_ENCODERS_WEBUI = ['None'];
     }
 }
 
@@ -711,6 +737,7 @@ function setupModelList(settings) {
 
     updateTextEncoderList(
         settings.model_path_comfyui,
+        settings.model_path_webui,
         settings.search_modelinsubfolder
     );
 
@@ -783,6 +810,8 @@ function getVAEList(apiInterface) {
 function getDiffusionModelList(apiInterface) {
     if (apiInterface === 'ComfyUI') {
         return DIFFUSION_MODELS_COMFYUI;
+    } else if (apiInterface === 'WebUI') {
+        return MODELLIST_ALL_WEBUI; // WebUI uses the same models for diffusion, no separate folder
     } else {
         return ['None'];
     }
@@ -791,6 +820,8 @@ function getDiffusionModelList(apiInterface) {
 function getTextEncoderList(apiInterface) {
     if (apiInterface === 'ComfyUI') {
         return TEXT_ENCODERS_COMFYUI;
+    } else if (apiInterface === 'WebUI') {
+        return TEXT_ENCODERS_WEBUI;
     } else {
         return ['None'];
     }
@@ -848,7 +879,7 @@ function updateModelAndLoRAList(args) {
     // reload custom paths
     loadCustomConfig();
 
-    // model_path, model_path_2nd, model_filter, enable_filter, search_subfolder
+    // model_path_comfyui, model_path_webui, model_filter, enable_filter, search_subfolder
     console.log(CAT, 'Update model/lora list with following args: ', args);
 
     EXTRA_MODELS.exist = readExtraModelPaths(args[0]);
@@ -856,7 +887,7 @@ function updateModelAndLoRAList(args) {
     updateModelList(args[0], args[1], args[2], args[3], args[4]);
     updateVAEList(args[0], args[1], args[4]);
     updateDiffusionModelList(args[0], args[4]);
-    updateTextEncoderList(args[0], args[4]);
+    updateTextEncoderList(args[0], args[1], args[4]);
 
     updateLoRAList(args[0], args[1], args[4]);
     updateControlNetList(args[0], args[1], args[4]);

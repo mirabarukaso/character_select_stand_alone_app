@@ -49,8 +49,8 @@ export async function setupHeader(SETTINGS, FILES, LANG){
         languageList: myLanguageList(FILES.language),            
         model: mySimpleList('model-select', LANG.api_model_file_select, FILES.modelList, 
             callback_api_model_select, 50),
-        model_type: mySimpleList('model-type', LANG.api_model_type, ['Checkpoint', 'Diffusion Models'],
-            callback_api_model_type, 5, false, true),
+        model_type: mySimpleList('model-type', LANG.api_model_type, ['Checkpoint', 'Diffusion'],
+            callback_api_model_type, 5, false, false),
 
         vae_unet: mySimpleList('vae-unet', LANG.api_vae_model, FILES.vaeList,
             (index, value) => { globalThis.globalSettings.vae_unet_model = value; }, 20, true, true),

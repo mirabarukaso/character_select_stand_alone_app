@@ -8,9 +8,11 @@ export const SAMPLER_COMFYUI = ["euler_ancestral", "euler", "euler_cfg_pp", "eul
     "gradient_estimation", "er_sde", "seeds_2", "seeds_3"];
 export const SCHEDULER_COMFYUI = ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform", "beta", "linear_quadratic", "kl_optimal"] ;
 
-export const  SAMPLER_WEBUI = ["Euler a", "Euler", "DPM++ 2M", "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 2M SDE Heun", "DPM++ 2S a", "DPM++ 3M SDE",
-   "LMS", "Heun", "DPM2", "DPM2 a", "DPM fast", "DPM adaptive", "Restart"];
-export const SCHEDULER_WEBUI = ["Automatic", "Uniform", "Karras", "Exponential", "Polyexponential", "SGM Uniform", "KL Optimal", "Align Your Steps", "Simple", "Normal", "DDIM", "Beta"];
+export const  SAMPLER_WEBUI = ["DPM++ 2M", "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 3M SDE", "DPM++ 2s a RF",
+    "Euler a", "Euler", "ER SDE", "LCM", "LMS", "Heun", "DPM2", "Res Multistep", "Kohaku LoNyu Yog", "Restart", "UniPC",
+    "DIMM", "PLMS", "DPM++ 2M CFG++", "Euler a CFG++", "Euler CFG++"];
+export const SCHEDULER_WEBUI = ["Automatic", "Karras", "Exponential", "Polyexponential", "Normal", "Simple", "Uniform", "SGM Uniform",
+    "Linear Quadratic", "KL Optimal", "DDIM", "Align Your Steps", "Beta", "Turbo", "Bong Tangent", "FlowMatchEulerDiscrete"];
 
 function safeCheck(){
     if (!globalThis.cachedFiles.language || !globalThis.globalSettings.language) {

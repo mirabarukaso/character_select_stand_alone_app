@@ -43,7 +43,7 @@ npm start
 ```
 
 > [!TIP]
-> *One-Click package v2.5.0*    
+> *One-Click package v2.5.1*    
 > The full package [embeded_env_for_SAA](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/embeded_env_for_SAA.zip)      
 
 ## Update
@@ -70,11 +70,30 @@ UdinXProgrammer [#62 Missing character](https://github.com/mirabarukaso/characte
      
 ------
 # Highlights
-## UNET (Diffusion Models) Support
-> [!NOTE]
-> Test and Verified Models:
-> Anima / Qwen Image / Z Image / Flux
-> Only for ComfyUI now, Forge neo may support later, NOT support original A1111.
+## Diffusion Models (UNET/CLIP/VAE) Support
+> [!IMPORTANT]
+> These models are significantly difference from SDXL in both prompts and sampling configuration. Please make sure you understand their parameters and settings!        
+> Test and Verified Models: Anima / Qwen Image / Z Image / Flux
+> Supports ComfyUI and Forge neo, NOT support original A1111.         
+
+**For ComfyUI**, check [Comfy-Org@HF](https://huggingface.co/comfy-Org/)      
+`GGUF model` requires custom node [gguf](https://github.com/calcuis/gguf) the small-case one.        
+'''
+|---models
+|   |---checkpoints
+|   |---diffusion_models
+|   |---text_encoders
+|   |---vae
+'''
+
+**For Forge Neo**, check [Download Models@Haoming02](https://github.com/Haoming02/sd-webui-forge-classic/wiki/Download-Models)      
+Forge also supports the `GGUF model`, but the `Diffusion models` use the same `Checkpoint` folder. Therefore, manage those models with correct folder yourself.       
+'''
+|---models
+|   |---Stable-diffusion
+|   |---text_encoder
+|   |---VAE
+'''
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/diffusion_models.png" width=25%>      
 

@@ -1,5 +1,13 @@
+2026.02.15 v2.5.1
+Add `Diffusion Models` support for Forge      
+Add `GGUF` support for ComfyUI and Forge        
+Change `Sampling Method` and `Schedule Type` for `WebUI` update to latest `Forge Neo`     
+Change move `Checkpoint/Diffusion` select to top bar      
+Fix `WebUI` Http 500 when disable `SDXL VAE Override`          
+
+
 2026.02.14 v2.5.0
-Add `UNET (Diffusion Models)` support for `Anima`, `Z Image`, `Qwen Image`, `Flux` and others(need test and verify)        
+Add `UNET (Diffusion Models)` for ComfyUI, supports `Anima`, `Z Image`, `Qwen Image`, `Flux` and others(need test and verify)        
 Add `VAE override` for SDXL          
 Rearrange the UI interface       
 Bugs fix       

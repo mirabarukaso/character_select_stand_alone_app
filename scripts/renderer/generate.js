@@ -784,13 +784,7 @@ export async function generateImage(dataPack){
 
         if(globalThis.generate.skipClicked){
             break;
-        }
-
-        if (SETTINGS.api_model_type !== 'Checkpoint' && apiInterface !== 'ComfyUI') {
-            console.warn('Only SDXL model is supported for non-ComfyUI API interface.');
-            globalThis.overlay.custom.createErrorOverlay(LANG.message_unet_webui , LANG.message_unet_webui);
-            break;
-        }
+        } 
 
         if(!globalThis.inGenerating)
             globalThis.generate.loadingMessage = LANG.generate_warmup.replace('{0}', `${loop+1}`).replace('{1}', loops);

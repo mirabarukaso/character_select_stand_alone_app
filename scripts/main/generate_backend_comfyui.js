@@ -1109,13 +1109,39 @@ class ComfyUI {
     let workflow = structuredClone(WORKFLOW_UNET);
 
      // Set UNET different model
-    workflow["51"].inputs.unet_name = unet.model;
-    workflow["51"].inputs.weight_dtype = unet.dtype;
+    if (unet.model.endsWith('.gguf')) {
+      workflow["51"] = {
+        "inputs": {
+          "gguf_name": unet.model,
+        },
+        "class_type": "LoaderGGUF",
+        "_meta": {
+          "title": "GGUF Loader"
+        }
+      };
+    } else {
+      workflow["51"].inputs.unet_name = unet.model;
+      workflow["51"].inputs.weight_dtype = unet.dtype;
+    }
     
     // Set Text Encoder CLIP model
-    workflow["50"].inputs.clip_name = unet.clip_model;
-    workflow["50"].inputs.type = unet.clip_type;
-    workflow["50"].inputs.device = unet.clip_device;
+    if (unet.clip_model.endsWith('.gguf')) {
+      workflow["50"] = {
+        "inputs": {
+          "clip_name": unet.clip_model,
+          "type": unet.clip_type,
+          "device": unet.clip_device
+        },
+        "class_type": "ClipLoaderGGUF",
+        "_meta": {
+          "title": "GGUF CLIP Loader"
+        }
+      };
+    } else {
+      workflow["50"].inputs.clip_name = unet.clip_model;
+      workflow["50"].inputs.type = unet.clip_type;
+      workflow["50"].inputs.device = unet.clip_device;
+    }
 
     // Set VAE model
     workflow["52"].inputs.vae_name = unet.vae_model;
