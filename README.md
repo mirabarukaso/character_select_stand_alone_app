@@ -23,7 +23,7 @@ This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Web
 | ADetailer | Yes | Yes | Yes |
 | API authentication| No | Yes | Yes |
 | MiraITU | Yes | No | No |
-| UNET Model | Yes | No | YES |
+| UNET Model | Yes | No | Yes |
 | Custom VAE for SDXL | Yes | Yes | Yes |
 
 *Try Online Character Select Simple Advanced App* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
@@ -78,22 +78,22 @@ UdinXProgrammer [#62 Missing character](https://github.com/mirabarukaso/characte
 
 **For ComfyUI**, check [Comfy-Org@HF](https://huggingface.co/comfy-Org/)      
 `GGUF model` requires custom node [gguf](https://github.com/calcuis/gguf) the small-case one.        
-'''
+```
 |---models
 |   |---checkpoints
 |   |---diffusion_models
 |   |---text_encoders
 |   |---vae
-'''
+```
 
 **For Forge Neo**, check [Download Models@Haoming02](https://github.com/Haoming02/sd-webui-forge-classic/wiki/Download-Models)      
 Forge also supports the `GGUF model`, but the `Diffusion models` use the same `Checkpoint` folder. Therefore, manage those models with correct folder yourself.       
-'''
+```
 |---models
 |   |---Stable-diffusion
 |   |---text_encoder
 |   |---VAE
-'''
+```
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/diffusion_models.png" width=25%>      
 
