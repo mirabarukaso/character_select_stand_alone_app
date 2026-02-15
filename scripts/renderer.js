@@ -52,10 +52,10 @@ export async function setupHeader(SETTINGS, FILES, LANG){
         model_type: mySimpleList('model-type', LANG.api_model_type, ['Checkpoint', 'Diffusion'],
             callback_api_model_type, 5, false, false),
 
-        vae_unet: mySimpleList('vae-unet', LANG.api_vae_model, FILES.vaeList,
-            (index, value) => { globalThis.globalSettings.vae_unet_model = value; }, 20, true, true),
-        vae_sdxl: mySimpleList('vae-sdxl', LANG.api_vae_model, FILES.vaeList,
-            (index, value) => { globalThis.globalSettings.vae_sdxl_model = value; }, 20, true, true),
+        vae_unet: mySimpleList('vae-unet', LANG.api_difussion_vae_model, FILES.vaeList,
+            (index, value) => { globalThis.globalSettings.api_vae_unet_model = value; }, 20, true, true),
+        vae_sdxl: mySimpleList('vae-sdxl', LANG.api_ckpt_vae_model, FILES.vaeList,
+            (index, value) => { globalThis.globalSettings.api_vae_sdxl_model = value; }, 20, true, true),
         vae_sdxl_override: setupCheckbox('vae-override', LANG.api_vae_sdxl_override, SETTINGS.api_vae_sdxl_override, true,
             (value) => { globalThis.globalSettings.api_vae_sdxl_override = value; }),
 
@@ -196,7 +196,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hoverColor: 'rgb(63,63,70)',
                 disabledColor: 'rgb(175, 175, 182)',
                 width: '100%',
-                height: '32px',
+                height: '26px',
                 hidden: false,
                 clickable: true              
             }, () =>{
@@ -207,7 +207,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hoverColor: 'rgb(63,63,70)',
                 disabledColor: 'rgb(175, 175, 182)',
                 width: '100%',
-                height: '32px',
+                height: '26px',
                 hidden: false,
                 clickable: true              
             }, () =>{

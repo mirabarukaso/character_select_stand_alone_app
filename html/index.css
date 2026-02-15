@@ -48,7 +48,7 @@ html, body {
 }
 #left, #right {
     overflow-y: auto; 
-    margin-top: 10px;
+    margin-top: 6px;
 }
 #left{
     margin-left: 10px;
@@ -73,7 +73,7 @@ html, body {
 }
 
 #generate-settings-static-left, #generate-settings-static-right {
-    height: 96px;
+    height: 90px;
 }
 
 .model-select{

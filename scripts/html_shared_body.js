@@ -76,6 +76,46 @@ export const sharedBodyHTML = `
             <div class="gallery-main-main"></div>
           </div>
 
+          <div class="system-settings-container">
+            <div class="system-settings-header">
+              <div></div>
+              <div></div>
+              <div class="system-settings-header-span">
+                <span id="system-settings-span"></span>
+                <img id="system-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="system-settings-main">
+              <div class="system-settings-main-1">
+                <div class="system-settings-api-interface"></div>
+                <div class="system-settings-api-refresh-rate"></div>                                
+                <div class="system-settings-api-address"></div>
+                <div class="system-settings-api-subfolder"></div>
+                <div class="system-settings-api-webui-auth"></div>
+                <div class="system-settings-api-webui-auth-enable"></div>
+              </div>
+              <div class="system-settings-main-2">
+                <div class="system-settings-api-fliter"></div>
+                <div class="system-settings-api-fliter-list"></div>
+                <div class="system-settings-api-comfyui"></div>
+                <div class="system-settings-api-webui"></div>                
+              </div>
+              <div class="system-settings-main-1">
+                <div class="system-settings-ai-interface"></div>
+                <div class="system-settings-ai-timeout"></div>
+              </div>
+              <div class="system-settings-main-2">
+                <div class="system-settings-ai-address"></div>
+                <div class="system-settings-ai-modelselect"></div>
+                <div class="system-settings-ai-apikey"></div>
+                <div class="system-settings-ai-local-address"></div>
+                <div class="system-settings-ai-local-temperature"></div>
+                <div class="system-settings-ai-local-npredict"></div>
+                <div class="system-settings-ai-sysprompt"></div>
+              </div>
+            </div>
+          </div>
+
           <div class="highres-fix-container">
             <div class="highres-fix-header">
               <div class="generate-hires-fix"></div>
@@ -137,47 +177,7 @@ export const sharedBodyHTML = `
                 <div class="regional-condition-option-right"></div>
               </div>
             </div>
-          </div>
-
-          <div class="system-settings-container">
-            <div class="system-settings-header">
-              <div></div>
-              <div></div>
-              <div class="system-settings-header-span">
-                <span id="system-settings-span">Settings</span>
-                <img id="system-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>
-            </div>
-            <div class="system-settings-main">
-              <div class="system-settings-main-1">
-                <div class="system-settings-api-interface"></div>
-                <div class="system-settings-api-refresh-rate"></div>                                
-                <div class="system-settings-api-address"></div>
-                <div class="system-settings-api-subfolder"></div>
-                <div class="system-settings-api-webui-auth"></div>
-                <div class="system-settings-api-webui-auth-enable"></div>
-              </div>
-              <div class="system-settings-main-2">
-                <div class="system-settings-api-fliter"></div>
-                <div class="system-settings-api-fliter-list"></div>
-                <div class="system-settings-api-comfyui"></div>
-                <div class="system-settings-api-webui"></div>                
-              </div>
-              <div class="system-settings-main-1">
-                <div class="system-settings-ai-interface"></div>
-                <div class="system-settings-ai-timeout"></div>
-              </div>
-              <div class="system-settings-main-2">
-                <div class="system-settings-ai-address"></div>
-                <div class="system-settings-ai-modelselect"></div>
-                <div class="system-settings-ai-apikey"></div>
-                <div class="system-settings-ai-local-address"></div>
-                <div class="system-settings-ai-local-temperature"></div>
-                <div class="system-settings-ai-local-npredict"></div>
-                <div class="system-settings-ai-sysprompt"></div>
-              </div>
-            </div>
-          </div>
+          </div>          
 
           <div class="image-infobox-container">
             <div class="image-infobox-header">
@@ -223,10 +223,22 @@ export const sharedBodyHTML = `
             <div class="gallery-thumb-main"></div>
           </div>
 
+          <div class="add-lora-container">
+            <div class="add-lora-header">
+              <div class="generate-hires-fix-dummy"></div>
+              <div class="generate-refiner-dummy"></div>
+              <div class="add-lora-span">
+                <span id="add-lora-span">LoRA</span>
+                <img id="add-lora-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
+              </div>
+            </div>
+            <div class="add-lora-main"></div>
+          </div>
+
           <div class="model-settings-container">
-            <div class="model-settings-header">              
-              <div class="vae-override"></div>
+            <div class="model-settings-header">
               <div class="model-vpred"></div>
+              <div class="vae-override"></div>              
               <div class="model-settings-span">
                 <span id="model-settings-span">Model</span>
                 <img id="model-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
@@ -251,18 +263,6 @@ export const sharedBodyHTML = `
                 <div class="vae-sdxl"></div>
               </div>
             </div>
-          </div>
-
-          <div class="add-lora-container">
-            <div class="add-lora-header">
-              <div class="generate-hires-fix-dummy"></div>
-              <div class="generate-refiner-dummy"></div>
-              <div class="add-lora-span">
-                <span id="add-lora-span">LoRA</span>
-                <img id="add-lora-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
-              </div>
-            </div>
-            <div class="add-lora-main"></div>
           </div>
           
           <div id="prompt-text-container">

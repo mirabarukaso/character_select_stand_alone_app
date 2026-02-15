@@ -192,8 +192,8 @@ export async function reloadFiles(){
         globalThis.dropdownList.model.setValue(LANG.api_model_file_select, globalThis.cachedFiles.diffusionList);
         globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_diffusion_select);
     }
-    globalThis.dropdownList.vae_unet.setValue(LANG.api_vae_model, globalThis.cachedFiles.vaeList);
-    globalThis.dropdownList.vae_sdxl.setValue(LANG.api_vae_model, globalThis.cachedFiles.vaeList);
+    globalThis.dropdownList.vae_unet.setValue(LANG.api_difussion_vae_model, globalThis.cachedFiles.vaeList);
+    globalThis.dropdownList.vae_sdxl.setValue(LANG.api_ckpt_vae_model, globalThis.cachedFiles.vaeList);
     globalThis.dropdownList.textencoder.setValue(LANG.api_text_encoder, globalThis.cachedFiles.textEncoderList);
 
     globalThis.dropdownList.settings.setValue('', globalThis.cachedFiles.settingList);

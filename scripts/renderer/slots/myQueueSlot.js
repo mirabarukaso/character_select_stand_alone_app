@@ -299,6 +299,15 @@ class QueueManager {
         }
     }
 
+    removeFollowings() {
+        const slots = this.getSlots();
+        if (slots.length <= 1) return;
+
+        for (let i = 1; i < slots.length; i++) {
+            this.removeAt(1);
+        }
+    }
+
     clear() {
         this.removeAll();
     }

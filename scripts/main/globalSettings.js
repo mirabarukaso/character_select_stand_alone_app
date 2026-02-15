@@ -53,7 +53,7 @@ const defaultSettings = {
     "api_model_scheduler" : "normal",
     "api_model_file_select" : "Default",    
     "api_model_file_vpred" : "Auto",
-    "api_model_type" : "SDXL",
+    "api_model_type" : "Checkpoint",
     "api_vae_unet_model": "None",
     "api_vae_sdxl_model": "None",
     "api_vae_sdxl_override": false,

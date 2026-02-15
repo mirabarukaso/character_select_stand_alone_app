@@ -239,7 +239,10 @@ export function callback_generate_skip() {
     globalThis.generate.generate_skip.setClickable(false);
     globalThis.generate.skipClicked = true;
 
+    const bak_autoStart = globalThis.globalSettings.generate_auto_start;
     setQueueAutoStart(false);
+    globalThis.queueManager.removeFollowings();
+    setQueueAutoStart(bak_autoStart);
 }
 
 export async function callback_generate_cancel() {

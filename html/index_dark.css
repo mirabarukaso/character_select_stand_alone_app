@@ -14,7 +14,7 @@ body {
     border: none;
     position: absolute;
     width: calc(100vw - 100px); 
-    height: calc(100vh - 150px);
+    height: calc(100vh - 122px);
     min-width: 1280px;
     min-height: 720px;
     align-items: center;
@@ -100,7 +100,10 @@ body {
 }
 
 .dropdown-character, .dropdown-character-regional {
-    padding: 6px;
+    padding-top: 2px;
+    padding-bottom: 2px;
+    padding-left: 4px;
+    padding-right: 4px;
     margin-left: 10px;
     margin-right: 10px;    
 }
@@ -138,7 +141,7 @@ body {
 .gallery-main-main {
     transition: max-height 0.3s ease, opacity 0.3s ease;
     overflow: hidden;
-    height: 864px;
+    height: 872px;
 }
 
 /* Thumb Gallery */
@@ -655,7 +658,7 @@ body {
     transition: max-height 0.3s ease, opacity 0.3s ease;
     overflow: hidden;
     height: auto; 
-    margin: 6px;
+    margin: 3px;
     padding: 6px;    
     box-sizing: border-box;
     border: none;

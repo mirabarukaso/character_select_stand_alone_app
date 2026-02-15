@@ -58,8 +58,8 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     }
     globalThis.dropdownList.model_type.setTitle(LANG.api_model_type);
     
-    globalThis.dropdownList.vae_unet.setTitle(LANG.api_vae_model);
-    globalThis.dropdownList.vae_sdxl.setTitle(LANG.api_vae_model);
+    globalThis.dropdownList.vae_unet.setTitle(LANG.api_difussion_vae_model);
+    globalThis.dropdownList.vae_sdxl.setTitle(LANG.api_ckpt_vae_model);
     globalThis.dropdownList.vae_sdxl_override.setTitle(LANG.api_vae_sdxl_override);
 
     globalThis.dropdownList.diffusion_model_weight_dtype.setTitle(LANG.api_diffusion_model_weight_dtype);

@@ -1,4 +1,11 @@
-2026.02.15 v2.5.1
+2026.02.15 v2.5.2       
+Fine-tuned UI details      
+Change `Pause folow-up` to `Cancel follow-up`, if you need a `Pause` simply uncheck `Enable Generate`.          
+Change the name of both `VAE model` lists for easier identification.          
+Bugs fix       
+
+
+2026.02.15 v2.5.1       
 Add `Diffusion Models` support for Forge      
 Add `GGUF` support for ComfyUI and Forge        
 Change `Sampling Method` and `Schedule Type` for `WebUI` update to latest `Forge Neo`     
