@@ -820,7 +820,9 @@ class ComfyUI {
         
         const jsonData = JSON.parse(historyResponse);
         if (!jsonData[prompt_id ||this.prompt_id]?.outputs[index]?.images) {
-          console.error(CAT, `No images found in history for prompt_id: ${prompt_id || this.prompt_id}, index: ${index}`);
+          if(!cancelMark) {
+            console.error(CAT, `No images found in history for prompt_id: ${prompt_id || this.prompt_id}, index: ${index}`);
+          }
           return null;
         }
         
@@ -1685,10 +1687,8 @@ async function runComfyUI(generateData) {
 
   let workflow;
   if (generateData.unet?.enable){
-    console.log(CAT, 'Creating ComfyUI workflow with UNet workflow.');
     workflow = backendComfyUI.createWorkflowUNet(generateData);
   } else {
-    console.log(CAT, 'Creating ComfyUI standard workflow.');
     workflow = backendComfyUI.createWorkflow(generateData);
   }
   

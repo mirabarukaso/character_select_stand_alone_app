@@ -1284,6 +1284,7 @@ export const WORKFLOW_MIRA_ITU = {
       "adaptable_tile_size": true,
       "adaptable_max_deviation_ratio": 0.25,
       "adaptable_max_aspect_ratio": 1.33,
+      "pixel_alignment": 8,
       "image": [
         "2",
         0
