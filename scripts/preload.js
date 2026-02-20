@@ -84,6 +84,10 @@ contextBridge.exposeInMainWorld('api', {
   updateSettingFiles: async () => ipcRenderer.invoke('update-all-setting-files'),
   loadSettingFile: async (fineName) => ipcRenderer.invoke('load-setting-file', fineName),
   saveSettingFile: async (fineName, settings) => ipcRenderer.invoke('save-setting-file', fineName, settings),
+  // MiraITU settings
+  loadMiraITUSettingFile: async (fineName) => ipcRenderer.invoke('load-miraitu-setting-file', fineName),
+  saveMiraITUSettingFile: async (fineName, settings) => ipcRenderer.invoke('save-miraitu-setting-file', fineName, settings),
+  updateMiraITUSettingFiles: async () => ipcRenderer.invoke('update-all-miraitu-setting-files'),
   // cachedFiles
   getCachedFiles: async () => ipcRenderer.invoke('get-cached-files'),
   // downloadFiles

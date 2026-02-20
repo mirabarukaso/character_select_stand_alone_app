@@ -452,6 +452,8 @@ async function init(){
         globalThis.cachedFiles.ocListArray = Object.entries(FILES.ocList);
         globalThis.cachedFiles.imageTaggerModels = await globalThis.api.getImageTaggerModels();
 
+        globalThis.cachedFiles.miraITUSettings = await globalThis.api.updateMiraITUSettingFiles();
+
         // Init Header
         await setupHeader(SETTINGS, FILES, LANG);
 

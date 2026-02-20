@@ -7,11 +7,12 @@ export class TileHelper {
      * @param {number} overlap - Overlap pixels between tiles
      * @param {number} maxDeviation - Maximum allowed deviation from baseTileSize
      * @param {number} maxAspectRatio - Maximum aspect ratio (e.g., 1.33 for 4:3, 1.25 for 5:4, 1.5 for 3:2)
+     * @param {number} pixelAlignment - Pixel alignment value (e.g., 8 for multiples of 8)
      * @returns {{tile_width: number, tile_height: number, tile_count_w: number, tile_count_h: number}} 
      */
-    static _findOptimalTileSize(W, H, baseTileSize, overlap, maxDeviation, maxAspectRatio = 1.33) {
+    static _findOptimalTileSize(W, H, baseTileSize, overlap, maxDeviation, maxAspectRatio = 1.33, pixelAlignment = 8) {
         if (baseTileSize <= overlap) {
-            const aligned = Math.floor(baseTileSize / 8) * 8;
+            const aligned = Math.floor(baseTileSize / pixelAlignment) * pixelAlignment;
             return {
                 tile_width: aligned,
                 tile_height: aligned,
@@ -84,9 +85,9 @@ export class TileHelper {
             }
         }
 
-        // Align to multiples of 8
-        bestWidth = Math.floor(bestWidth / 8) * 8;
-        bestHeight = Math.floor(bestHeight / 8) * 8;
+        // Align to multiples of pixelAlignment
+        bestWidth = Math.floor(bestWidth / pixelAlignment) * pixelAlignment;
+        bestHeight = Math.floor(bestHeight / pixelAlignment) * pixelAlignment;
 
         /**
          * Ensure tiles fully cover the image and calculate tile count
@@ -106,7 +107,7 @@ export class TileHelper {
             let coverage = (nTiles - 1) * step + tileSize;
 
             while (coverage < length) {
-                tileSize += 8;
+                tileSize += pixelAlignment;
                 step = tileSize - overlap;
 
                 if (step <= 0) break;
@@ -140,9 +141,10 @@ export class TileHelper {
      * @param {number} tileWidth - Tile width
      * @param {number} tileHeight - Tile height
      * @param {number} overlap - Overlap pixels
+     * @param {number} pixelAlignment - Pixel alignment value (e.g., 8 for multiples of 8)
      * @returns {Array<{x: number, y: number, w: number, h: number}>} Array of tile coordinates and dimensions
      */
-    static _calculateTiles(width, height, tileWidth, tileHeight, overlap) {
+    static _calculateTiles(width, height, tileWidth, tileHeight, overlap, pixelAlignment = 8) {
         const tiles = [];
         const stepX = tileWidth - overlap;
         const stepY = tileHeight - overlap;
@@ -168,17 +170,17 @@ export class TileHelper {
                 x = Math.max(0, x);
                 y = Math.max(0, y);
 
-                // Align to 8-pixel grid
-                x = Math.floor(x / 8) * 8;
-                y = Math.floor(y / 8) * 8;
+                // Align to pixelAlignment-pixel grid
+                x = Math.floor(x / pixelAlignment) * pixelAlignment;
+                y = Math.floor(y / pixelAlignment) * pixelAlignment;
                 let w = tileWidth;
                 let h = tileHeight;
 
                 // Crop tile size if the image is smaller than the tile
                 w = Math.min(w, width - x);
                 h = Math.min(h, height - y);
-                w = Math.floor(w / 8) * 8;
-                h = Math.floor(h / 8) * 8;
+                w = Math.floor(w / pixelAlignment) * pixelAlignment;
+                h = Math.floor(h / pixelAlignment) * pixelAlignment;
 
                 if (w > 0 && h > 0) {
                     tiles.push({ x, y, w, h });
@@ -417,10 +419,11 @@ export class CropImageHelper {
      * @param {number} overlap - Overlap pixels
      * @param {string} format - Output format
      * @param {number} quality - Image quality
+     * @param {number} pixelAlignment - Pixel alignment value (e.g., 8 for multiples of 8)
      * @returns {Promise<{tiles: Array<{x: number, y: number, w: number, h: number}>, images: Array<Uint8Array>}>}
      */
-    async cropWithCalculation(tileWidth, tileHeight, overlap, format = 'png', quality = 0.95) {
-        const tiles = TileHelper._calculateTiles(this.width, this.height, tileWidth, tileHeight, overlap);
+    async cropWithCalculation(tileWidth, tileHeight, overlap, format = 'png', quality = 0.95, pixelAlignment = 8) {
+        const tiles = TileHelper._calculateTiles(this.width, this.height, tileWidth, tileHeight, overlap, pixelAlignment);
         const images = await this.cropTiles(tiles, format, quality);
 
         return { tiles, images };

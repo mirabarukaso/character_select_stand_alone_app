@@ -101,7 +101,8 @@ Forge also supports the `GGUF model`, but the `Diffusion models` use the same `C
 > [!NOTE]
 > MiraITU
 > A content-aware image super-resolution ComfyUI custom node based on vision models.       
-> Simply drag and drop ANY image into SAA/SAAC to upscale it.   
+> Simply drag and drop ANY image into SAA/SAAC to upscale it.       
+> Now supports Checkpoint and Diffuser models.      
 
 Supports magnification scales from 1.5x to 8x. By adjusting different tile sizes, it can optimize VRAM usage to the maximum, enabling 8GB graphics cards to achieve image upscaling at 1.5x to 3x (or higher) scales, while also unleashing the full potential of high-end graphics cards with 24GB or more VRAM to accomplish 4x to 8x image upscaling.       
 
@@ -110,13 +111,13 @@ Requires [MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack)
 
 And Image Tagger for [Mira](https://github.com/mirabarukaso/ComfyUI_Mira#tagger)         
 
-| Settings | Drag and Drop |
-| --- | --- | 
-| <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU01.png" width=256> | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU02.png" width=256>   |
+| Settings | Drag and Drop | Flux.2 |
+| --- | --- | --- | 
+| <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU01.png" width=256> | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU02.png" width=256>   | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/miraITU03.png" width=256>   |
 
-| Before | 6x After |
-| --- | --- | 
-| <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2025-12-29-031208_1898628601.png" width=256>   |  <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2026-01-01-223655_3487267443.png" width=256> |
+| Before | 6x After (SDXL) | Before | 3x After (Flux.2) |
+| --- | --- | --- | --- | 
+| <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2025-12-29-031208_1898628601.png" width=256>   |  <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2026-01-01-223655_3487267443.png" width=256> | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/MiraITU_FLUX2_sample.png" width=256>   |  <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/MiraITU_FLUX2_sample_upscaled.png" width=256> |
 
 Under normal circumstances, it is sufficient to adjust only the denoising parameter. Common positive and negative prompts are applied to all tiles. The SDXL model uses, by default, the same model currently employed by SAA, without requiring LoRA integration.    
 The difference between the `Image` and `Latent` merging methods lies in the order of operations: whether the VAE encoding/decoding is performed before or after merging. The two methods exhibit slight differences in performance. The Image method is suitable for most scenarios.       

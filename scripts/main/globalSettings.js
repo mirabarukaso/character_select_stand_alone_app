@@ -160,6 +160,18 @@ function setupGlobalSettings() {
     ipcMain.handle('save-setting-file', async (event, fineName, settings) => {
         return saveSettings(fineName, settings);
     });
+
+    ipcMain.handle('update-all-miraitu-setting-files', async () => {
+        return updateMiraITUSettingFiles();
+    });
+
+    ipcMain.handle('load-miraitu-setting-file', async (event, fineName) => {
+        return loadMiraITUSettings(fineName);
+    });
+
+    ipcMain.handle('save-miraitu-setting-file', async (event, fineName, settings) => {
+        return saveMiraITUSettings(fineName, settings);
+    });
     return globalSettings;
 }
 
@@ -251,11 +263,73 @@ function updateSettingFiles() {
     return getSettingFiles();
 }
 
+function updateMiraITUSettingFiles() {
+    const miraSettingsDir = path.join(appPath, 'settings', 'MiraITU');
+    let jsonFiles = [];
+
+    try {
+        if (!fs.existsSync(miraSettingsDir)) {
+            fs.mkdirSync(miraSettingsDir, { recursive: true });
+            console.log(CAT, `Created MiraITU settings directory: ${miraSettingsDir}`);
+        }
+        const files = fs.readdirSync(miraSettingsDir);
+        jsonFiles = files.filter(file => file.toLowerCase().endsWith('.json'));
+    } catch (err) {
+        console.error(CAT, `Failed to enumerate MiraITU settings directory: ${miraSettingsDir}`, err);
+    }
+    return jsonFiles;
+}
+
+function loadMiraITUSettings(fineName) {
+    const miraSettingsDir = path.join(appPath, 'settings', 'MiraITU', fineName);
+    console.log(CAT, `Loading MiraITU settings from ${miraSettingsDir}`);
+    const mySettings = loadJSONFile(miraSettingsDir);
+    if (mySettings) {
+        return mySettings;
+    } 
+    
+    console.error(CAT, `Failed to load MiraITU settings directory: ${miraSettingsDir}`);
+    return null;
+}
+
+function saveMiraITUSettings(fineName, settings) {
+    if (!fineName || typeof fineName !== 'string' || !fineName.toLowerCase().endsWith('.json')) {
+        console.error(CAT, `Invalid filename: "${fineName}". Must be a non-empty string ending with .json`);
+        return false;
+    }
+    if (!settings || typeof settings !== 'object') {
+        console.error(CAT, `Invalid settings: must be a non-null object`);
+        return false;
+    }
+    const miraSettingsDir = path.join(appPath, 'settings', 'MiraITU', fineName.replaceAll(/[/|\\:*?"<>]/g, " "));
+    const miraSettingsParentDir = path.join(appPath, 'settings', 'MiraITU');    
+    try {
+        if (!fs.existsSync(miraSettingsParentDir)) {
+            fs.mkdirSync(miraSettingsParentDir, { recursive: true });
+            console.log(CAT, `Created MiraITU settings directory: ${miraSettingsParentDir}`);
+        }
+        if (fs.existsSync(miraSettingsDir)) {
+            fs.unlinkSync(miraSettingsDir);
+            console.log(CAT, `Deleted existing file: ${miraSettingsDir}`);
+        }
+        const settingsJson = JSON.stringify(settings, null, 2);
+        fs.writeFileSync(miraSettingsDir, settingsJson, 'utf8');
+        console.log(CAT, `Successfully saved MiraITU settings to: ${miraSettingsDir}`);
+        return true;
+    } catch (err) {
+        console.error(CAT, `Failed to save MiraITU settings to ${miraSettingsDir}: ${err.message}`);
+        return false;
+    }   
+}
+
 export {
     setupGlobalSettings,
     getGlobalSettings,
     getSettingFiles,
     updateSettingFiles,
     loadSettings,
-    saveSettings
+    saveSettings,
+    updateMiraITUSettingFiles,
+    loadMiraITUSettings,
+    saveMiraITUSettings,
 };

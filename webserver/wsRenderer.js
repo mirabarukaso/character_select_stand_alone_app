@@ -489,6 +489,8 @@ async function init() {
         globalThis.cachedFiles.ocListArray = Object.entries(FILES.ocList);
         globalThis.cachedFiles.imageTaggerModels = await sendWebSocketMessage({ type: 'API', method: 'getImageTaggerModels' });
 
+        globalThis.cachedFiles.miraITUSettings = await sendWebSocketMessage({ type: 'API', method: 'updateMiraITUSettingFiles' });
+
         // Init Header
         await setupHeader(SETTINGS, FILES, LANG);
 

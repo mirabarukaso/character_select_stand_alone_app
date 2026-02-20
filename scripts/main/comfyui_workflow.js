@@ -489,15 +489,6 @@ export const WORKFLOW = {
     "_meta": {
       "title": "Upscale Latent By"
     }
-  },
-  "47": {
-    "inputs": {
-      "vae_name": "sdxl_vae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
   }
 };
 
@@ -1189,15 +1180,6 @@ export const WORKFLOW_REGIONAL = {
     "_meta": {
       "title": "Upscale Latent By"
     }
-  },
-  "59": {
-    "inputs": {
-      "vae_name": "sdxl_vae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
   }
 };
 
@@ -1251,7 +1233,7 @@ export const WORKFLOW_MIRA_ITU = {
   },
   "2": {
     "inputs": {
-      "resize_scale": 2,
+      "resize_scale": 6,
       "resize_method": "lanczos",
       "upscale_model": [
         "3",
@@ -1275,26 +1257,7 @@ export const WORKFLOW_MIRA_ITU = {
     "_meta": {
       "title": "Load Upscale Model"
     }
-  },
-  "4": {
-    "inputs": {
-      "tile_size": 1536,
-      "overlap": 64,
-      "overlap_feather_rate": 1,
-      "adaptable_tile_size": true,
-      "adaptable_max_deviation_ratio": 0.25,
-      "adaptable_max_aspect_ratio": 1.33,
-      "pixel_alignment": 8,
-      "image": [
-        "2",
-        0
-      ]
-    },
-    "class_type": "ImageCropTiles_MiraSubPack",
-    "_meta": {
-      "title": "Image Crop to Tiles"
-    }
-  },
+  },  
   "5": {
     "inputs": {
       "model_name": "cl_tagger/cl_tagger_1_02.onnx",
@@ -1305,7 +1268,7 @@ export const WORKFLOW_MIRA_ITU = {
       "exclude_tags": "",
       "session_method": "GPU",
       "image": [
-        "4",
+        "20",
         0
       ]
     },
@@ -1323,60 +1286,6 @@ export const WORKFLOW_MIRA_ITU = {
       "title": "Checkpoint Loader with Name"
     }
   },
-  "7": {
-    "inputs": {
-      "pixels": [
-        "4",
-        0
-      ],
-      "vae": [
-        "6",
-        2
-      ]
-    },
-    "class_type": "VAEEncode",
-    "_meta": {
-      "title": "VAE Encode"
-    }
-  },
-  "8": {
-    "inputs": {
-      "common_positive": [
-        "9",
-        0
-      ],
-      "common_negative": [
-        "10",
-        0
-      ],
-      "tagger_text": [
-        "5",
-        0
-      ],
-      "seed": 413820312837004,
-      "steps": 14,
-      "cfg": 7,
-      "sampler_name": "euler_ancestral",
-      "scheduler": "beta",
-      "denoise": 0.4,
-      "model": [
-        "17",
-        0
-      ],
-      "clip": [
-        "6",
-        1
-      ],
-      "tiled_samples": [
-        "7",
-        0
-      ]
-    },
-    "class_type": "ImageTiledKSamplerWithTagger_MiraSubPack",
-    "_meta": {
-      "title": "Tiled Image KSampler with Tagger"
-    }
-  },
   "9": {
     "inputs": {
       "text": "masterpiece, best quality, amazing quality"
@@ -1388,44 +1297,11 @@ export const WORKFLOW_MIRA_ITU = {
   },
   "10": {
     "inputs": {
-      "text": "bad quality,worst quality,worst detail,sketch,censor,3d"
+      "text": "bad quality,worst quality,worst detail,sketch"
     },
     "class_type": "TextBoxMira",
     "_meta": {
       "title": "Text Box"
-    }
-  },
-  "11": {
-    "inputs": {
-      "samples": [
-        "8",
-        0
-      ],
-      "vae": [
-        "6",
-        2
-      ]
-    },
-    "class_type": "VAEDecode",
-    "_meta": {
-      "title": "VAE Decode"
-    }
-  },
-  "12": {
-    "inputs": {
-      "feather_rate_override": 0,
-      "tiled_images": [
-        "11",
-        0
-      ],
-      "mira_itu_pipeline": [
-        "4",
-        1
-      ]
-    },
-    "class_type": "OverlappedImageMerge_MiraSubPack",
-    "_meta": {
-      "title": "Overlapped Image Merge"
     }
   },
   "14": {
@@ -1433,7 +1309,7 @@ export const WORKFLOW_MIRA_ITU = {
       "filename": "%time_%seed",
       "path": "%date",
       "extension": "png",
-      "steps": 14,
+      "steps": 16,
       "cfg": 7,
       "modelname": [
         "6",
@@ -1449,21 +1325,21 @@ export const WORKFLOW_MIRA_ITU = {
         "10",
         0
       ],
-      "seed_value": 3737927281,
-      "width": 512,
-      "height": 512,
+      "seed_value": 3487267443,
+      "width": 6144,
+      "height": 8160,
       "lossless_webp": true,
       "quality_jpeg_or_webp": 100,
       "optimize_png": false,
       "counter": 0,
-      "denoise": 1,
+      "denoise": 0.4,
       "clip_skip": -2,
       "time_format": "%Y-%m-%d-%H%M%S",
       "save_workflow_as_json": false,
       "embed_workflow": true,
       "additional_hashes": "",
       "images": [
-        "12",
+        "19",
         0
       ]
     },
@@ -1500,6 +1376,135 @@ export const WORKFLOW_MIRA_ITU = {
     "class_type": "ModelSamplingDiscrete",
     "_meta": {
       "title": "ModelSamplingDiscrete"
+    }
+  },
+  "18": {
+    "inputs": {
+      "common_positive": [
+        "9",
+        0
+      ],
+      "common_negative": [
+        "10",
+        0
+      ],
+      "tagger_text": [
+        "5",
+        0
+      ],
+      "seed": 0,
+      "steps": 16,
+      "cfg": 7,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "beta",
+      "denoise": 0.35,
+      "mode": "Normal",
+      "noise_boost": 0,
+      "noise_injection_method": "adaptive",
+      "model": [
+        "17",
+        0
+      ],
+      "clip": [
+        "6",
+        1
+      ],
+      "tiled_samples": [
+        "21",
+        0
+      ]
+    },
+    "class_type": "ImageTiledKSamplerWithTagger_MiraSubPack",
+    "_meta": {
+      "title": "Tiled Image KSampler with Tagger"
+    }
+  },
+  "19": {
+    "inputs": {
+      "feather_rate_override": 0,
+      "tiled_images": [
+        "23",
+        0
+      ],
+      "mira_itu_pipeline": [
+        "20",
+        1
+      ]
+    },
+    "class_type": "OverlappedImageMerge_MiraSubPack",
+    "_meta": {
+      "title": "Overlapped Image Merge"
+    }
+  },
+  "20": {
+    "inputs": {
+      "tile_size": 1024,
+      "overlap": 128,
+      "overlap_feather_rate": 2,
+      "adaptable_tile_size": true,
+      "adaptable_max_deviation_ratio": 0.25,
+      "adaptable_max_aspect_ratio": 1.33,
+      "pixel_alignment": 8,
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "ImageCropTiles_MiraSubPack",
+    "_meta": {
+      "title": "Image Crop to Tiles"
+    }
+  },
+  "21": {
+    "inputs": {
+      "pixels": [
+        "20",
+        0
+      ],
+      "vae": [
+        "6",
+        2
+      ]
+    },
+    "class_type": "VAEEncode_MiraSubPack",
+    "_meta": {
+      "title": "VAE Encode (Mira SubPack)"
+    }
+  },
+  "22": {
+    "inputs": {
+      "samples": [
+        "18",
+        0
+      ],
+      "vae": [
+        "6",
+        2
+      ]
+    },
+    "class_type": "VAEDecode_MiraSubPack",
+    "_meta": {
+      "title": "VAE Decode (Mira SubPack)"
+    }
+  },
+  "23": {
+    "inputs": {
+      "color_correction_method": "color_transfer",
+      "color_correction_strength": 1,
+      "luminance_correction_strength": 1,
+      "edge_preserving_smooth": 0.1,
+      "tiled_images": [
+        "22",
+        0
+      ],
+      "reference_tiles": [
+        "20",
+        0
+      ]
+    },
+    "class_type": "TiledImageColorCorrection_MiraSubPack",
+    "_meta": {
+      "title": "Tiled Image Color Correction"
     }
   }
 };
@@ -1753,5 +1758,264 @@ export const WORKFLOW_UNET =
     "_meta": {
       "title": "Load VAE"
     }
+  }
+};
+
+export const WORKFLOW_MIRA_ITU_UNET = {
+  "1": {
+    "inputs": {
+      "base64text": ""
+    },
+    "class_type": "GzippedBase64ToImage",
+    "_meta": {
+      "title": "Gzipped Base64 To Image"
+    }
+  },
+  "2": {
+    "inputs": {
+      "upscale_method": "lanczos",
+      "scale_by": 2,
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "ImageScaleBy",
+    "_meta": {
+      "title": "Upscale Image By"
+    }
+  },
+  "9": {
+    "inputs": {
+      "text": ""
+    },
+    "class_type": "TextBoxMira",
+    "_meta": {
+      "title": "Text Box"
+    }
+  },
+  "10": {
+    "inputs": {
+      "text": ""
+    },
+    "class_type": "TextBoxMira",
+    "_meta": {
+      "title": "Text Box"
+    }
+  },
+  "14": {
+    "inputs": {
+      "filename": "%time_%seed",
+      "path": "%date",
+      "extension": "png",
+      "steps": 16,
+      "cfg": 7,
+      "modelname": "",
+      "sampler_name": "euler_ancestral",
+      "scheduler": "beta",
+      "positive": [
+        "9",
+        0
+      ],
+      "negative": [
+        "10",
+        0
+      ],
+      "seed_value": 2475755140,
+      "width": 1024,
+      "height": 1024,
+      "lossless_webp": true,
+      "quality_jpeg_or_webp": 100,
+      "optimize_png": false,
+      "counter": 0,
+      "denoise": 0.4,
+      "clip_skip": -2,
+      "time_format": "%Y-%m-%d-%H%M%S",
+      "save_workflow_as_json": false,
+      "embed_workflow": true,
+      "additional_hashes": "",
+      "images": [
+        "19",
+        0
+      ]
+    },
+    "class_type": "ImageSaverMira",
+    "_meta": {
+      "title": "Image Saver"
+    }
+  },
+  "18": {
+    "inputs": {
+      "common_positive": [
+        "9",
+        0
+      ],
+      "common_negative": [
+        "10",
+        0
+      ],
+      "tagger_text": "",
+      "seed": 819857320375056,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "er_sde",
+      "scheduler": "simple",
+      "denoise": 1,
+      "mode": "Reference",
+      "noise_boost": 0.3,
+      "noise_injection_method": "adaptive",
+      "model": [
+        "24",
+        0
+      ],
+      "clip": [
+        "25",
+        0
+      ],
+      "tiled_samples": [
+        "21",
+        0
+      ],
+      "clip_negative": [
+        "25",
+        0
+      ],
+      "ref_latents": [
+        "21",
+        0
+      ]
+    },
+    "class_type": "ImageTiledKSamplerWithTagger_MiraSubPack",
+    "_meta": {
+      "title": "Tiled Image KSampler with Tagger"
+    }
+  },
+  "19": {
+    "inputs": {
+      "feather_rate_override": 0,
+      "tiled_images": [
+        "23",
+        0
+      ],
+      "mira_itu_pipeline": [
+        "20",
+        1
+      ]
+    },
+    "class_type": "OverlappedImageMerge_MiraSubPack",
+    "_meta": {
+      "title": "Overlapped Image Merge"
+    }
+  },
+  "20": {
+    "inputs": {
+      "tile_size": 2048,
+      "overlap": 128,
+      "overlap_feather_rate": 2,
+      "adaptable_tile_size": true,
+      "adaptable_max_deviation_ratio": 0.25,
+      "adaptable_max_aspect_ratio": 1.33,
+      "pixel_alignment": 16,
+      "image": [
+        "2",
+        0
+      ]
+    },
+    "class_type": "ImageCropTiles_MiraSubPack",
+    "_meta": {
+      "title": "Image Crop to Tiles"
+    }
+  },
+  "21": {
+    "inputs": {
+      "pixels": [
+        "20",
+        0
+      ],
+      "vae": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "VAEEncode_MiraSubPack",
+    "_meta": {
+      "title": "VAE Encode (Mira SubPack)"
+    }
+  },
+  "22": {
+    "inputs": {
+      "samples": [
+        "18",
+        0
+      ],
+      "vae": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "VAEDecode_MiraSubPack",
+    "_meta": {
+      "title": "VAE Decode (Mira SubPack)"
+    }
+  },
+  "23": {
+    "inputs": {
+      "color_correction_method": "color_transfer",
+      "color_correction_strength": 1,
+      "luminance_correction_strength": 1,
+      "edge_preserving_smooth": 0.1,
+      "tiled_images": [
+        "22",
+        0
+      ],
+      "reference_tiles": [
+        "20",
+        0
+      ]
+    },
+    "class_type": "TiledImageColorCorrection_MiraSubPack",
+    "_meta": {
+      "title": "Tiled Image Color Correction"
+    }
+  },
+  "24": {
+    "inputs": {
+      "unet_name": "model",
+      "weight_dtype": "default"
+    },
+    "class_type": "UNETLoader",
+    "_meta": {
+      "title": "Load Diffusion Model"
+    }
+  },
+  "25": {
+    "inputs": {
+      "clip_name": "clip",
+      "type": "flux2",
+      "device": "default"
+    },
+    "class_type": "CLIPLoader",
+    "_meta": {
+      "title": "Load CLIP"
+    }
+  },
+  "26": {
+    "inputs": {
+      "vae_name": "vae"
+    },
+    "class_type": "VAELoader",
+    "_meta": {
+      "title": "Load VAE"
+    }
+  }
+};
+
+export const VAE_LOADER = {  
+  "inputs": {
+    "vae_name": "vae"
+  },
+  "class_type": "VAELoader",
+  "_meta": {
+    "title": "Load VAE"
   }
 };

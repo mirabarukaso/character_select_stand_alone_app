@@ -1,3 +1,9 @@
+2026.02.21 v2.6.0       
+Add `MiraITU` now supports `Diffusion Models`       
+Add `Save/Load Settings` for `MiraITU`         
+Fix `ComfyUI VAE not in list error` when not override VAE              
+ 
+
 2026.02.15 v2.5.2       
 Fine-tuned UI details      
 Change `Pause folow-up` to `Cancel follow-up`, if you need a `Pause` simply uncheck `Enable Generate`.          

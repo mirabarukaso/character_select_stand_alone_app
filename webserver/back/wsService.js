@@ -11,7 +11,9 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { WebSocketServer } from 'ws';
-import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings } from '../../scripts/main/globalSettings.js';
+import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings,
+    updateMiraITUSettingFiles, loadMiraITUSettings, saveMiraITUSettings
+ } from '../../scripts/main/globalSettings.js';
 import { getCachedFilesWithoutThumb, getCharacterThumb } from '../../scripts/main/cachedFiles.js';
 import { getModelList, getModelListAll, getVAEList, getDiffusionModelList, getTextEncoderList,
     getLoRAList, getImageTaggerModels, updateModelAndLoRAList, getControlNetList,
@@ -392,6 +394,10 @@ const methodHandlers = {
   'saveSettingFile': (params)=> saveSettings(...params),
   'getSettingFiles': ()=> getSettingFiles(),
   'updateSettingFiles': ()=> updateSettingFiles(),
+
+  'updateMiraITUSettingFiles': ()=> updateMiraITUSettingFiles(),
+  'loadMiraITUSettingFile': (params)=> loadMiraITUSettings(...params),
+  'saveMiraITUSettingFile': (params)=> saveMiraITUSettings(...params),
 
   // file lists
   'getModelList': (params)=> getModelList(...params),

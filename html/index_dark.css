@@ -623,7 +623,7 @@ body {
     border: none;
 }
 
-[class^="myTextbox-"][class*="-textarea "]{
+[class^="myTextbox-"][class*="-textarea"]{
     flex: 1;
     box-sizing: border-box;
     resize: none; 

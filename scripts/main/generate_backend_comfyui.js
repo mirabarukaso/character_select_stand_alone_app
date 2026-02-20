@@ -2,7 +2,7 @@ import { ipcMain, BrowserWindow, net } from 'electron';
 import { WebSocket } from 'ws';
 import * as wsService from '../../webserver/back/wsService.js';
 import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
-import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, WORKFLOW_MIRA_ITU, WORKFLOW_UNET} from './comfyui_workflow.js';
+import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_MIRA_ITU_UNET, VAE_LOADER} from './comfyui_workflow.js';
 
 const CAT = '[ComfyUI]';
 let backendComfyUI = null;
@@ -1070,6 +1070,9 @@ class ComfyUI {
     }
 
     if (vae.vae_override && vae.vae !== 'None') {
+      // Create VAE Loader node
+      workflow["47"] = structuredClone(VAE_LOADER);
+
       // Override VAE settings
       workflow["47"].inputs.vae_name = vae.vae;
       workflow["6"].inputs.vae = ["47", 0];
@@ -1079,7 +1082,7 @@ class ComfyUI {
 
     // default pos and neg to ksampler
     let workflowInfo = {
-      startIndex: 47,
+      startIndex: (vae.vae_override && vae.vae !== 'None')?47:46,
       now_pos:    2,
       now_neg:    3,
       refiner:    refiner.enable,
@@ -1330,6 +1333,9 @@ class ComfyUI {
     }
 
     if (vae.vae_override && vae.vae !== 'None') {
+      // Create VAE Loader node
+      workflow["59"] = structuredClone(VAE_LOADER);
+      
       // Override VAE settings
       workflow["59"].inputs.vae_name = vae.vae;
       workflow["6"].inputs.vae = ["59", 0];
@@ -1339,7 +1345,7 @@ class ComfyUI {
 
     // default pos and neg to ksampler
     let workflowInfo = {
-      startIndex: 59,
+      startIndex: (vae.vae_override && vae.vae !== 'None')?59:58,
       now_pos:    53,
       now_neg:    3,
       refiner:    refiner.enable,
@@ -1372,7 +1378,7 @@ class ComfyUI {
   }
 
   // eslint-disable-next-line sonarjs/cognitive-complexity
-  createWorkflowMiraITU(generateData) {
+  createWorkflowMiraITU_Normal(generateData) {
     const {addr, auth, uuid, model, vpred, seed, exclude, refresh, imageData, taggerOptions} = generateData;
     this.addr = addr;
     this.refresh = refresh;
@@ -1384,13 +1390,33 @@ class ComfyUI {
     workflow["1"].inputs.base64text = imageData;
 
     // model upscale
-    workflow["2"].inputs.resize_scale = taggerOptions.upscaleRatio;
-    workflow["3"].inputs.model_name = taggerOptions.upscaleModels;
+    if(taggerOptions.upscaleModels === 'None') {
+      workflow["2"] = {
+        "inputs": {
+          "upscale_method": "lanczos",
+          "scale_by": taggerOptions.upscaleRatio,
+          "image": [
+            "1",
+            0
+          ]
+        },
+        "class_type": "ImageScaleBy",
+        "_meta": {
+          "title": "Upscale Image By"
+        }
+      };
+
+      delete workflow["3"];
+    } else {
+      workflow["2"].inputs.resize_scale = taggerOptions.upscaleRatio;
+      workflow["3"].inputs.model_name = taggerOptions.upscaleModels;
+    }
 
     // crop to tile
-    workflow["4"].inputs.tile_size = taggerOptions.ituTileSize;
-    workflow["4"].inputs.overlap = taggerOptions.ituOverlap;
-    workflow["4"].inputs.overlap_feather_rate = taggerOptions.ituFeather;
+    workflow["20"].inputs.tile_size = taggerOptions.ituTileSize;
+    workflow["20"].inputs.overlap = taggerOptions.ituOverlap;
+    workflow["20"].inputs.overlap_feather_rate = taggerOptions.ituFeather;
+    workflow["20"].inputs.pixel_alignment = taggerOptions.pixelAlignment;  //SDXL 8, Flux2 16, QwenImage 32
 
     // tagger model (Default CL Tagger)
     if (taggerOptions.localTaggerMethod === 'SAA' && taggerOptions.localTagsText !== '') {
@@ -1405,6 +1431,10 @@ class ComfyUI {
           "title": "Text Box"
         }
       };
+    } else if (taggerOptions.localTaggerMethod === 'None') {
+      delete workflow["5"];
+      workflow["15"].inputs.text2 = "";
+      workflow["18"].inputs.tagger_text = "";
     } else {
       console.log(CAT, 'Using ', taggerOptions.imageTaggerModels);
       if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('wd')) {
@@ -1421,7 +1451,7 @@ class ComfyUI {
             "exclude_tags": exclude,
             "session_method": "GPU",
             "image": [
-              "4",
+              "20",
               0
             ]
           },
@@ -1442,7 +1472,7 @@ class ComfyUI {
             "exclude_tags": exclude,
             "session_method": "GPU",
             "image": [
-              "4",
+              "20",
               0
             ]
           },
@@ -1468,14 +1498,14 @@ class ComfyUI {
     // Change to tiled VAE if Tiled is set (Slow)
     if (taggerOptions.upscaleVAEmethod === 'Tiled') {
       // Endoce
-      workflow["7"] = {
+      workflow["21"] = {
         "inputs": {
           "tile_size": 1024,
           "overlap": 64,
           "temporal_size": 64,
           "temporal_overlap": 8,
           "pixels": [
-            "4",
+            "20",
             0
           ],
           "vae": [
@@ -1490,14 +1520,14 @@ class ComfyUI {
       };
 
       // Decode
-      workflow["11"] = {
+      workflow["22"] = {
         "inputs": {
           "tile_size": 1024,
           "overlap": 64,
           "temporal_size": 64,
           "temporal_overlap": 8,
           "samples": [
-            "8",
+            "18",
             0
           ],
           "vae": [
@@ -1513,12 +1543,12 @@ class ComfyUI {
     }
 
     // Tiled Sampler
-    workflow["8"].inputs.seed = seed;
-    workflow["8"].inputs.steps = taggerOptions.steps;
-    workflow["8"].inputs.cfg = taggerOptions.cfg;
-    workflow["8"].inputs.sampler_name = taggerOptions.samplerSelect;
-    workflow["8"].inputs.scheduler = taggerOptions.schedulerSelect;
-    workflow["8"].inputs.denoise = taggerOptions.denoise;
+    workflow["18"].inputs.seed = seed;
+    workflow["18"].inputs.steps = taggerOptions.steps;
+    workflow["18"].inputs.cfg = taggerOptions.cfg;
+    workflow["18"].inputs.sampler_name = taggerOptions.samplerSelect;
+    workflow["18"].inputs.scheduler = taggerOptions.schedulerSelect;
+    workflow["18"].inputs.denoise = taggerOptions.denoise;
 
     // common positive
     workflow["9"].inputs.text = taggerOptions.positiveText;
@@ -1526,49 +1556,10 @@ class ComfyUI {
     // common negative
     workflow["10"].inputs.text = taggerOptions.negativeText;
 
-    // Change
-    if (taggerOptions.mergeMethod === 'Latent') {
-      // VAE to Latent Merge
-      workflow["11"] = {
-        "inputs": {
-          "feather_rate_override": 0,
-          "tiled_latents": [
-            "8",
-            0
-          ],
-          "mira_itu_pipeline": [
-            "4",
-            1
-          ]
-        },
-        "class_type": "OverlappedLatentMerge_MiraSubPack",
-        "_meta": {
-          "title": "Overlapped Latent Merge"
-        }
-      };
-
-      // Image Merge to VAE Tiled (For large latent)
-      workflow["12"] = {
-        "inputs": {
-          "tile_size": 1024,
-          "overlap": 64,
-          "temporal_size": 64,
-          "temporal_overlap": 8,
-          "samples": [
-            "11",
-            0
-          ],
-          "vae": [
-            "6",
-            2
-          ]
-        },
-        "class_type": "VAEDecodeTiled",
-        "_meta": {
-          "title": "VAE Decode (Tiled)"
-        }
-      };
-    }
+    // Color Transfer
+    workflow["23"].inputs.color_correction_strength = taggerOptions.colorCorrection;
+    workflow["23"].inputs.luminance_correction_strength = taggerOptions.luminanceCorrection;
+    workflow["23"].inputs.edge_preserving_smooth = taggerOptions.edgeSmoothing;
 
     // Image Saver
     const tgtWidth = generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio;
@@ -1581,6 +1572,272 @@ class ComfyUI {
     workflow["14"].inputs.denoise = taggerOptions.denoise;
     workflow["14"].inputs.width = tgtWidth;
     workflow["14"].inputs.height = tgtHeight;
+
+    // VAE override
+    if (taggerOptions.sdxlVAE !== 'Auto') {
+      // Create VAE Loader node
+      workflow["4"] = structuredClone(VAE_LOADER);
+
+      // Override VAE settings
+      workflow["4"].inputs.vae_name = taggerOptions.sdxlVAE;
+      workflow["21"].inputs.vae = ["4", 0];
+      workflow["22"].inputs.vae = ["4", 0];
+    }
+
+    return workflow;
+  }
+
+  createWorkflowMiraITU_Unet(generateData) {
+    const {addr, auth, uuid, seed, exclude, refresh, imageData, taggerOptions} = generateData;
+    this.addr = addr;
+    this.refresh = refresh;
+    this.auth = auth;
+    this.uuid = uuid;
+
+    let workflow = structuredClone(WORKFLOW_MIRA_ITU_UNET);
+
+    // Set UNET different model
+    workflow["24"].inputs.unet_name = taggerOptions.unetModels;
+    workflow["25"].inputs.clip_name = taggerOptions.unetClipModels;
+    workflow["25"].inputs.type = taggerOptions.unetClipType;
+    workflow["26"].inputs.vae_name = taggerOptions.unetVAE;
+    
+    // image input
+    workflow["1"].inputs.base64text = imageData;
+
+    // model upscale
+    if(taggerOptions.upscaleModels !== 'None') {
+      workflow["2"] = {
+        "inputs": {
+          "resize_scale": taggerOptions.upscaleModels,
+          "resize_method": "lanczos",
+          "upscale_model": [
+            "3",
+            0
+          ],
+          "image": [
+            "1",
+            0
+          ]
+        },
+        "class_type": "UpscaleImageByModelThenResize",
+        "_meta": {
+          "title": "Upscale Image By Model Then Resize"
+        }
+      };
+
+      workflow["3"] ={
+        "inputs": {
+          "model_name": taggerOptions.upscaleModels
+        },
+        "class_type": "UpscaleModelLoader",
+        "_meta": {
+          "title": "Load Upscale Model"
+        }
+      };
+    }
+
+    // crop to tile
+    workflow["20"].inputs.tile_size = taggerOptions.ituTileSize;
+    workflow["20"].inputs.overlap = taggerOptions.ituOverlap;
+    workflow["20"].inputs.overlap_feather_rate = taggerOptions.ituFeather;
+    workflow["20"].inputs.pixel_alignment = taggerOptions.pixelAlignment;  //SDXL 8, Flux2 16, QwenImage 32
+
+    // tagger model (Default CL Tagger)
+    if (taggerOptions.localTaggerMethod === 'SAA' && taggerOptions.localTagsText !== '') {
+      console.log(CAT,'Put tagger text to Ksampler.');
+      console.log(taggerOptions.localTagsText);
+      workflow["18"].inputs.tagger_text = taggerOptions.localTagsText;
+
+      // Combined text to Image Saver positive
+      workflow["14"].inputs.positive = `${taggerOptions.positiveText}\n${taggerOptions.localTagsText}`;
+    } else if (taggerOptions.localTaggerMethod !== 'None') {
+      console.log(CAT, 'Using ', taggerOptions.imageTaggerModels);
+      if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('wd')) {
+        // WD
+        workflow["5"] = {
+          "inputs": {
+            "model_name": taggerOptions.imageTaggerModels,
+            "general_threshold": taggerOptions.imageTaggerGenThreshold,
+            "character_threshold": 0.85,
+            "general_mcut": false,
+            "character_mcut": false,
+            "replace_space": true,
+            "categories": "general",
+            "exclude_tags": exclude,
+            "session_method": "GPU",
+            "image": [
+              "20",
+              0
+            ]
+          },
+          "class_type": "wd_tagger_mira",
+          "_meta": {
+            "title": "WD Tagger"
+          }
+        };
+      } else if (taggerOptions.imageTaggerModels.toLowerCase().startsWith('camie')) {
+        // Camie
+        workflow["5"] ={
+          "inputs": {
+            "model_name": taggerOptions.imageTaggerModels,
+            "general": taggerOptions.imageTaggerGenThreshold,
+            "min_confidence": 0.01,
+            "replace_space": true,
+            "categories": "general",
+            "exclude_tags": exclude,
+            "session_method": "GPU",
+            "image": [
+              "20",
+              0
+            ]
+          },
+          "class_type": "camie_tagger_mira",
+          "_meta": {
+            "title": "Camie Tagger"
+          }
+        };
+      } else {
+        // CL
+        workflow["5"] = {
+          "inputs": {
+            "model_name": taggerOptions.imageTaggerModels,
+            "general": taggerOptions.imageTaggerGenThreshold,
+            "character": 0.6,
+            "replace_space": true,
+            "categories": "general",
+            "exclude_tags": exclude,
+            "session_method": "GPU",
+            "image": [
+              "20",
+              0
+            ]
+          },
+          "class_type": "cl_tagger_mira",
+          "_meta": {
+            "title": "CL Tagger"
+          }
+        };
+      }
+
+      // Text combine node
+      workflow["6"] = {
+        "inputs": {
+          "text1": [
+            "9",
+            0
+          ],
+          "text2": [
+            "5",
+            0
+          ]
+        },
+        "class_type": "TextCombinerTwo",
+        "_meta": {
+          "title": "Text Combiner 2"
+        }
+      };
+
+      // Connect combined text to Image Saver positive
+      workflow["14"].inputs.positive = ["6", 0];
+
+      // Connect tagger text to Ksampler
+      workflow["18"].inputs.tagger_text =  ["5", 0];
+    }
+
+    // Change to tiled VAE if Tiled is set (Slow)
+    if (taggerOptions.upscaleVAEmethod === 'Tiled') {
+      // Endoce
+      workflow["21"] = {
+        "inputs": {
+          "tile_size": 1024,
+          "overlap": 64,
+          "temporal_size": 64,
+          "temporal_overlap": 8,
+          "pixels": [
+            "20",
+            0
+          ],
+          "vae": [
+            "26",
+            0
+          ]
+        },
+        "class_type": "VAEEncodeTiled",
+        "_meta": {
+          "title": "VAE Encode (Tiled)"
+        }
+      };
+
+      // Decode
+      workflow["22"] = {
+        "inputs": {
+          "tile_size": 1024,
+          "overlap": 64,
+          "temporal_size": 64,
+          "temporal_overlap": 8,
+          "samples": [
+            "18",
+            0
+          ],
+          "vae": [
+            "26",
+            0
+          ]
+        },
+        "class_type": "VAEDecodeTiled",
+        "_meta": {
+          "title": "VAE Decode (Tiled)"
+        }
+      };
+    }
+
+    // Tiled Sampler
+    workflow["18"].inputs.seed = seed;
+    workflow["18"].inputs.steps = taggerOptions.steps;
+    workflow["18"].inputs.cfg = taggerOptions.cfg;
+    workflow["18"].inputs.sampler_name = taggerOptions.samplerSelect;
+    workflow["18"].inputs.scheduler = taggerOptions.schedulerSelect;
+    workflow["18"].inputs.denoise = taggerOptions.denoise;
+
+    workflow["18"].inputs.mode = taggerOptions.referenceMode;
+    workflow["18"].inputs.noise_boost = taggerOptions.noiseBoost;
+    workflow["18"].inputs.noise_injection_method = taggerOptions.noiseInjectionMethod;
+
+    // common positive
+    workflow["9"].inputs.text = taggerOptions.positiveText;
+
+    // common negative
+    workflow["10"].inputs.text = taggerOptions.negativeText;
+
+    // Color Transfer
+    workflow["23"].inputs.color_correction_strength = taggerOptions.colorCorrection;
+    workflow["23"].inputs.luminance_correction_strength = taggerOptions.luminanceCorrection;
+    workflow["23"].inputs.edge_preserving_smooth = taggerOptions.edgeSmoothing;
+
+    // Image Saver
+    const tgtWidth = generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio;
+    const tgtHeight = generateData.taggerOptions.imageHeight*generateData.taggerOptions.upscaleRatio;
+    workflow["14"].inputs.modelname = taggerOptions.unetModels;
+    workflow["14"].inputs.seed_value = seed;
+    workflow["14"].inputs.steps = taggerOptions.steps;
+    workflow["14"].inputs.cfg = taggerOptions.cfg;
+    workflow["14"].inputs.sampler_name = taggerOptions.samplerSelect;
+    workflow["14"].inputs.scheduler = taggerOptions.schedulerSelect;
+    workflow["14"].inputs.denoise = taggerOptions.denoise;
+    workflow["14"].inputs.width = tgtWidth;
+    workflow["14"].inputs.height = tgtHeight;
+
+    // VAE override
+    if (taggerOptions.sdxlVAE !== 'Auto') {
+      // Create VAE Loader node
+      workflow["4"] = structuredClone(VAE_LOADER);
+
+      // Override VAE settings
+      workflow["4"].inputs.vae_name = taggerOptions.sdxlVAE;
+      workflow["21"].inputs.vae = ["4", 0];
+      workflow["22"].inputs.vae = ["4", 0];
+    }
 
     return workflow;
   }
@@ -1724,7 +1981,15 @@ async function runComfyUI_MiraITU(generateData){
   setMutexBackendBusy(true); // Acquire the mutex lock
   cancelMark = false;
 
-  const workflow = backendComfyUI.createWorkflowMiraITU(generateData)
+  let workflow;
+  if (generateData.taggerOptions.method === 'Checkpoint') {
+    console.log(CAT, 'Using MiraITU with Checkpoint method');
+    workflow = backendComfyUI.createWorkflowMiraITU_Normal(generateData);
+  } else {  // Diffusion
+    console.log(CAT, 'Using MiraITU with UNet method');
+    workflow = backendComfyUI.createWorkflowMiraITU_Unet(generateData);
+  }
+
   if(backendComfyUI.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI MiraITU with uuid:', backendComfyUI.uuid);
   const result = await backendComfyUI.run(workflow);   
