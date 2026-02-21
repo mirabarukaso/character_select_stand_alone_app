@@ -119,9 +119,7 @@ And Image Tagger for [Mira](https://github.com/mirabarukaso/ComfyUI_Mira#tagger)
 | --- | --- | --- | --- | 
 | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2025-12-29-031208_1898628601.png" width=256>   |  <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/2026-01-01-223655_3487267443.png" width=256> | <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/MiraITU_FLUX2_sample.png" width=256>   |  <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/MiraITU_FLUX2_sample_upscaled.png" width=256> |
 
-Under normal circumstances, it is sufficient to adjust only the denoising parameter. Common positive and negative prompts are applied to all tiles. The SDXL model uses, by default, the same model currently employed by SAA, without requiring LoRA integration.    
-The difference between the `Image` and `Latent` merging methods lies in the order of operations: whether the VAE encoding/decoding is performed before or after merging. The two methods exhibit slight differences in performance. The Image method is suitable for most scenarios.       
-Note: If the Latent method is used, the final VAE decoding will automatically operate in tiled mode (which is slower).        
+The generated results will be affected by different models. The `SDXL` model requires a `tagger` to provide more precise content descriptions, and using an `upscale model` is recommended. Models such as `Flux2`, which allow a `reference latent` to connected, can skip the upscale model and stretch the original image directly. Then, simply use the `Positive Prompt` to configure all tiles consistently.        
 
 | Upscale Ratio 1024x1360(1536) | Tile Size | VAE 8G | VAE 24G~ |
 | --- | --- | --- | --- | 
