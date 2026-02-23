@@ -2010,6 +2010,123 @@ export const WORKFLOW_MIRA_ITU_UNET = {
   }
 };
 
+export const WORKFLOW_MIRA_ITU_UNET_PREBAKE = {
+  "27": {
+    "inputs": {
+      "target_upscale_factor": 2,
+      "limit_megapixels": 4,
+      "pixel_alignment": 16,
+      "downscale_method": "bicubic",
+      "image": [
+        "1",
+        0
+      ]
+    },
+    "class_type": "MiraImageUpscaleCalculator_MiraSubPack",
+    "_meta": {
+      "title": "Mira Image Upscale Calculator"
+    }
+  },
+  "28": {
+    "inputs": {
+      "common_positive": [
+        "9",
+        0
+      ],
+      "common_negative": [
+        "10",
+        0
+      ],
+      "tagger_text": "",
+      "seed": 3164404182,
+      "steps": 4,
+      "cfg": 1,
+      "sampler_name": "er_sde",
+      "scheduler": "beta",
+      "denoise": 1,
+      "mode": "Reference",
+      "noise_boost": 0.3,
+      "noise_injection_method": "adaptive",
+      "model": [
+        "24",
+        0
+      ],
+      "clip": [
+        "25",
+        0
+      ],
+      "tiled_samples": [
+        "29",
+        0
+      ],
+      "clip_negative": [
+        "25",
+        0
+      ],
+      "ref_latents": [
+        "29",
+        0
+      ]
+    },
+    "class_type": "ImageTiledKSamplerWithTagger_MiraSubPack",
+    "_meta": {
+      "title": "Tiled Image KSampler with Tagger"
+    }
+  },
+  "29": {
+    "inputs": {
+      "pixels": [
+        "27",
+        0
+      ],
+      "vae": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "VAEEncode_MiraSubPack",
+    "_meta": {
+      "title": "VAE Encode (Mira SubPack)"
+    }
+  },
+  "30": {
+    "inputs": {
+      "samples": [
+        "28",
+        0
+      ],
+      "vae": [
+        "26",
+        0
+      ]
+    },
+    "class_type": "VAEDecode_MiraSubPack",
+    "_meta": {
+      "title": "VAE Decode (Mira SubPack)"
+    }
+  },
+  "31": {
+    "inputs": {
+      "color_correction_method": "color_transfer",
+      "color_correction_strength": 1,
+      "luminance_correction_strength": 1,
+      "edge_preserving_smooth": 0.1,
+      "tiled_images": [
+        "30",
+        0
+      ],
+      "reference_tiles": [
+        "27",
+        0
+      ]
+    },
+    "class_type": "TiledImageColorCorrection_MiraSubPack",
+    "_meta": {
+      "title": "Tiled Image Color Correction"
+    }
+  }
+};
+
 export const VAE_LOADER = {  
   "inputs": {
     "vae_name": "vae"

@@ -63,6 +63,10 @@ export function importMiraITUData(data) {
         noiseInjectionMethod: data?.noiseInjectionMethod ?? 'adaptive',
         noiseBoost: data?.noiseBoost ?? 0.3,
 
+        prebakeDenoise: data?.prebakeDenoise ?? 1,
+        prebakeResolutionLimit: data?.prebakeResolutionLimit ?? '4.0',
+        prebakeDryRun: data?.prebakeDryRun ?? false,
+
         colorCorrection: data?.colorCorrection ?? 1,
         luminanceCorrection: data?.luminanceCorrection ?? 1,
         edgeSmoothing: data?.edgeSmoothing ?? 0.1,
@@ -134,6 +138,10 @@ async function loadMiraITUData() {
             referenceMode: 'Normal',        // Normal, Reference
             noiseInjectionMethod: 'adaptive',    //uniform, high_frequency, adaptive
             noiseBoost: 0.3,
+            
+            prebakeDenoise: 1,
+            prebakeResolutionLimit: '4.0',
+            prebakeDryRun: false,
 
             colorCorrection: 1,          
             luminanceCorrection: 1,      
@@ -645,7 +653,7 @@ function createModelConfig() {
         const validCharsRegex = /^[0-9.]*$/;
         if (validCharsRegex.test(this.value)) {
             if (Number(this.value) > 1) this.value = '1';
-            if (Number(this.value) < 0.01) this.value = '0.01';
+            if (Number(this.value) < 0) this.value = '0';
             lastTaggerOptions.denoise = Number(this.value);
         } else {
             this.value = this.value.replaceAll(/[^0-9.]/g, '');
@@ -921,7 +929,60 @@ function createExtraConfig() {
     dummy2.innerHTML = LANG.image_info_mira_itu_noiseInjectionMethod;
     dummy3.innerHTML = LANG.image_info_mira_itu_noiseBoost;
     extraContainer.appendChild(dummy1);
-    extraContainer.appendChild(referenceMode);    
+    extraContainer.appendChild(referenceMode);
+
+    // Prebake for reference mode
+    const prebake_dummy1 = document.createElement('div');
+    prebake_dummy1.innerHTML = LANG.image_info_mira_itu_prebakeDenoise;
+
+    const prebakeDenoise = document.createElement('textarea');
+    prebakeDenoise.id = 'mira-itu-textarea';
+    prebakeDenoise.className = 'myTextbox-prompt-common-textarea';
+    prebakeDenoise.rows = 1;
+    prebakeDenoise.placeholder = '1';
+    prebakeDenoise.style.resize = 'none';
+    prebakeDenoise.style.boxSizing = 'border-box';
+    prebakeDenoise.style.minHeight = '32px';
+    prebakeDenoise.style.maxHeight = '32px';
+    prebakeDenoise.value = lastTaggerOptions?.prebakeDenoise || '1';
+    prebakeDenoise.addEventListener('input', handlePrebakeDenoiseInput);
+    function handlePrebakeDenoiseInput() {
+        const validCharsRegex = /^[0-9.]*$/;
+        if (validCharsRegex.test(this.value)) {
+            if (Number(this.value) > 1) this.value = '1';
+            if (Number(this.value) < 0) this.value = '0';
+            lastTaggerOptions.prebakeDenoise = Number(this.value);
+        } else {
+            this.value = this.value.replaceAll(/[^0-9.]/g, '');
+        }
+    }
+
+    const prebake_dummy2 = document.createElement('div');
+    prebake_dummy2.innerHTML = LANG.image_info_mira_itu_prebakeResolutionLimit;
+
+    const prebakeResolutionLimit = document.createElement('select');
+    prebakeResolutionLimit.className = 'controlnet-select';
+    prebakeResolutionLimit.innerHTML = createHtmlOptions(['1.0M', '1.5M', '2.0M', '2.5M', '3.0M', '4.0M']);
+    prebakeResolutionLimit.value = (lastTaggerOptions?.prebakeResolutionLimit ? lastTaggerOptions.prebakeResolutionLimit + 'M' : '4.0M');
+    prebakeResolutionLimit.addEventListener('change', handlePrebakeResolutionLimitChange);
+    function handlePrebakeResolutionLimitChange() {
+        lastTaggerOptions.prebakeResolutionLimit = Number.parseFloat(prebakeResolutionLimit.value);
+    }
+
+    const prebakeDryRunButton = document.createElement('button');
+    prebakeDryRunButton.className = 'mira-itu-tagger';
+    prebakeDryRunButton.textContent = LANG.image_info_mira_itu_prebakeDryRunButton;
+    prebakeDryRunButton.style.alignSelf = 'center';
+    prebakeDryRunButton.style.minHeight = '32px';
+    prebakeDryRunButton.style.maxHeight = '32px';
+    prebakeDryRunButton.style.width = '100%';
+    prebakeDryRunButton.addEventListener('click', handlePreBakeDryRunClick);
+    async function handlePreBakeDryRunClick() {
+        if (isProcessing) return;
+
+        lastTaggerOptions.prebakeDryRun = true;
+        await runMiraITU();
+    }
 
     function handlereferenceMode() {
         if (lastTaggerOptions.method === 'Checkpoint' && referenceMode.value === 'Reference') {
@@ -937,11 +998,23 @@ function createExtraConfig() {
             noiseInjectionMethod.remove();
             dummy3.remove();
             noiseBoost.remove();
+
+            prebake_dummy1.remove();
+            prebakeDenoise.remove();
+            prebake_dummy2.remove();
+            prebakeResolutionLimit.remove();
+            prebakeDryRunButton.remove();
         } else {
             extraContainer.appendChild(dummy2);
             extraContainer.appendChild(noiseInjectionMethod);
             extraContainer.appendChild(dummy3);
             extraContainer.appendChild(noiseBoost);
+
+            extraContainer.appendChild(prebake_dummy1);
+            extraContainer.appendChild(prebakeDenoise);
+            extraContainer.appendChild(prebake_dummy2);
+            extraContainer.appendChild(prebakeResolutionLimit);
+            extraContainer.appendChild(prebakeDryRunButton);
         }        
     }
 
@@ -953,6 +1026,10 @@ function createExtraConfig() {
             referenceMode.removeEventListener('change', handlereferenceMode);
             noiseInjectionMethod.removeEventListener('change', handlenoiseInjectionMethod);
             noiseBoost.removeEventListener('input', handlenoiseBoostInput);
+
+            prebakeDenoise.removeEventListener('input', handlePrebakeDenoiseInput);
+            prebakeResolutionLimit.removeEventListener('change', handlePrebakeResolutionLimitChange);
+            prebakeDryRunButton.removeEventListener('click', handlePreBakeDryRunClick);
         }
     };
 }
@@ -961,6 +1038,7 @@ let isProcessing = false;
 async function handleMiraITUClick() {
     if (isProcessing) return;
 
+    lastTaggerOptions.prebakeDryRun = false;
     await runMiraITU();
 }
 

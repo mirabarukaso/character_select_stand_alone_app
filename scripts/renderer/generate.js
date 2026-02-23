@@ -970,7 +970,11 @@ export async function startQueue(){
             from_renderer_generate_updatePreview(`data:image/png;base64,${generateData.preview}`);
             const ogResolution = `${generateData.taggerOptions.imageWidth}x${generateData.taggerOptions.imageHeight}`;
             const tgtResolution = `${generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio}x${generateData.taggerOptions.imageHeight*generateData.taggerOptions.upscaleRatio}`;
-            globalThis.generate.loadingMessage = `MiraITU: ${generateData.seed}\n${ogResolution} -> ${tgtResolution}\n`;
+            if(generateData.taggerOptions.prebakeDryRun) {
+                globalThis.generate.loadingMessage = `MiraITU: ${generateData.seed}\n(Dry Run)\n`;
+            } else {
+                globalThis.generate.loadingMessage = `MiraITU: ${generateData.seed}\n${ogResolution} -> ${tgtResolution}\n`;
+            }
             result = await startGenerateMiraITU(queueManager.apiInterface, generateData);
         }        
 

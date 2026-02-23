@@ -235,7 +235,7 @@ Also support check LoRA info by click the 'i' button in LoRA Slot. And, if there
 
 *For ComfyUI*      
 `ADetailer` requires [Impact Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) and [Impact Subpack](https://github.com/ltdrdata/ComfyUI-Impact-Subpack)      
-Put your `ADetailer` models in `ComfyUI\\models\\\ultralytics\\\bbox`      
+Put your `ADetailer` models in `ComfyUI\\models\\ultralytics\\bbox`      
 Put your `SAM` models in `ComfyUI\\models\\sams`      
 
 *For A1111/Forge Neo*      

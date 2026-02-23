@@ -59,7 +59,11 @@ export async function generateMiraITU(dataPack){
 
     const ogResolution = `${generateData.taggerOptions.imageWidth}x${generateData.taggerOptions.imageHeight}`;
     const tgtResolution = `${generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio}x${generateData.taggerOptions.imageHeight*generateData.taggerOptions.upscaleRatio}`;
-    const bannerInfo = [`MiraITU: ${generateData.seed} |  ${ogResolution} -> ${tgtResolution}`, `${generateData.seed} |  ${ogResolution} -> ${tgtResolution}`];    
+
+    let bannerInfo = [`MiraITU: ${generateData.seed} |  ${ogResolution} -> ${tgtResolution}`, `${generateData.seed} |  ${ogResolution} -> ${tgtResolution}`];    
+    if(generateData.taggerOptions.prebakeDryRun) {
+        bannerInfo = [`MiraITU(Dry Run): ${generateData.seed}`, `${generateData.seed}`];
+    }
     globalThis.queueManager.attach(bannerInfo, generateData);
 
     globalThis.generate.generate_single.setClickable(true);
@@ -105,7 +109,10 @@ async function runComfyUI(apiInterface, generateData){
 
         const ogResolution = `${generateData.taggerOptions.imageWidth}x${generateData.taggerOptions.imageHeight}`;
         const tgtResolution = `${generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio}x${generateData.taggerOptions.imageHeight*generateData.taggerOptions.upscaleRatio}`;
-        const tag = `by MiraITU: ${generateData.seed}\n${ogResolution} -> ${tgtResolution}\n`;
+        let tag = `by MiraITU: ${generateData.seed}\n${ogResolution} -> ${tgtResolution}\n`;
+        if(generateData.taggerOptions.prebakeDryRun) {
+            tag = `by MiraITU: ${generateData.seed}\n`;
+        }
         globalThis.mainGallery.appendImageData(image, `${generateData.seed}`, tag, keepGallery, globalThis.globalSettings.scroll_to_last);
     }
 

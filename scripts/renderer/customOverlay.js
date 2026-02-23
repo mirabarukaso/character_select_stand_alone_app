@@ -25,6 +25,7 @@ export function setupButtonOverlay() {
     const buttonOverlay = document.createElement('div');
     buttonOverlay.id = 'cg-button-overlay';
     buttonOverlay.className = 'cg-overlay cg-button-overlay';
+    buttonOverlay.style.zIndex = '9999';
 
     const buttonContainer = document.createElement('div');
     buttonContainer.className = 'cg-button-container';

@@ -2,9 +2,12 @@ import { ipcMain, BrowserWindow, net } from 'electron';
 import { WebSocket } from 'ws';
 import * as wsService from '../../webserver/back/wsService.js';
 import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
-import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_MIRA_ITU_UNET, VAE_LOADER} from './comfyui_workflow.js';
+import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, 
+  WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, VAE_LOADER} from './comfyui_workflow.js';
 
 const CAT = '[ComfyUI]';
+const TIMEOUT = 5000; // 5 seconds timeout for backend response
+
 let backendComfyUI = null;
 let cancelMark = false;
 
@@ -535,7 +538,7 @@ function applyADetailer(workflow, adetailers, workflowInfo){
 }
 
 // HTTP quick health check: return true if HTTP responds
-function checkHttpAlive(addr, timeout = 5000) {
+function checkHttpAlive(addr, timeout = TIMEOUT) {
   return new Promise((res) => {
     try {
       const apiUrl = /^https?:\/\//i.test(addr) ? `${addr}/` : `http://${addr}/`;
@@ -575,7 +578,7 @@ class ComfyUI {
     this.webSocket = null;
     this.preview = 0;
     this.refresh = 0;
-    this.timeout = 5000;
+    this.timeout = TIMEOUT;
     this.urlPrefix = '';
     this.step = 0;
     this.firstValidPreview = false;
@@ -1587,6 +1590,7 @@ class ComfyUI {
     return workflow;
   }
 
+  // eslint-disable-next-line sonarjs/cognitive-complexity
   createWorkflowMiraITU_Unet(generateData) {
     const {addr, auth, uuid, seed, exclude, refresh, imageData, taggerOptions} = generateData;
     this.addr = addr;
@@ -1839,6 +1843,101 @@ class ComfyUI {
       workflow["22"].inputs.vae = ["4", 0];
     }
 
+    if(taggerOptions.prebakeDenoise !== 0) {
+      console.log(CAT, 'Pre-bake enabled with denoise:', taggerOptions.prebakeDenoise, 'and overall denoise:', taggerOptions.denoise);
+
+      // Pre-bake Denoise Node
+      const preBakeNode = structuredClone(WORKFLOW_MIRA_ITU_UNET_PREBAKE);
+      workflow = {...workflow, ...preBakeNode};
+
+      // Mira Image Upscale Calculator
+      workflow["27"].inputs.target_upscale_factor = taggerOptions.upscaleRatio;
+      workflow["27"].inputs.limit_megapixels = taggerOptions.prebakeResolutionLimit;
+      workflow["27"].inputs.pixel_alignment = taggerOptions.pixelAlignment;
+
+      // Tiled KSampler for pre-bake
+      workflow["28"].inputs.common_positive = taggerOptions.positiveText;
+      workflow["28"].inputs.common_negative = taggerOptions.negativeText;
+      workflow["28"].inputs.tagger_text = "";
+      workflow["28"].inputs.seed = seed;
+      workflow["28"].inputs.steps = taggerOptions.steps;
+      workflow["28"].inputs.cfg = taggerOptions.cfg;
+      workflow["28"].inputs.sampler_name = taggerOptions.samplerSelect;
+      workflow["28"].inputs.scheduler = taggerOptions.schedulerSelect;
+      workflow["28"].inputs.denoise = taggerOptions.prebakeDenoise;
+      workflow["28"].inputs.mode = taggerOptions.referenceMode;
+      workflow["28"].inputs.noise_boost = taggerOptions.noiseBoost;
+      workflow["28"].inputs.noise_injection_method = taggerOptions.noiseInjectionMethod;
+
+      //VAE
+      if (taggerOptions.upscaleVAEmethod === 'Tiled') {
+        // Endoce
+        workflow["29"] = {
+          "inputs": {
+            "tile_size": 1024,
+            "overlap": 64,
+            "temporal_size": 64,
+            "temporal_overlap": 8,
+            "pixels": [
+              "27",
+              0
+            ],
+            "vae": [
+              "26",
+              0
+            ]
+          },
+          "class_type": "VAEEncodeTiled",
+          "_meta": {
+            "title": "VAE Encode (Tiled)"
+          }
+        };
+
+        // Decode
+        workflow["30"] = {
+          "inputs": {
+            "tile_size": 1024,
+            "overlap": 64,
+            "temporal_size": 64,
+            "temporal_overlap": 8,
+            "samples": [
+              "28",
+              0
+            ],
+            "vae": [
+              "26",
+              0
+            ]
+          },
+          "class_type": "VAEDecodeTiled",
+          "_meta": {
+            "title": "VAE Decode (Tiled)"
+          }
+        };
+      }
+
+      // Color Correction
+      workflow["31"].inputs.color_correction_strength = taggerOptions.colorCorrection;
+      workflow["31"].inputs.luminance_correction_strength = taggerOptions.luminanceCorrection;
+      workflow["31"].inputs.edge_preserving_smooth = taggerOptions.edgeSmoothing;
+
+      if (taggerOptions.prebakeDryRun === true) {
+        console.log(CAT, 'Pre-bake dry run enabled, skip tiled upscale.');
+        // Connect pre-bake to Image Save
+        workflow["14"].inputs.images = ["31", 0];
+
+        // Reset width and height to original image size for Image Save
+        workflow["14"].inputs.width = taggerOptions.imageWidth;
+        workflow["14"].inputs.height = taggerOptions.imageHeight;
+
+        // Disconnect upscale and delete nodes
+        delete workflow["2"];
+      } else {
+        // Connect pre-bake to Upscale
+        workflow["2"].inputs.image = ["31", 0];
+      }      
+    }
+
     return workflow;
   }
 
@@ -1945,14 +2044,16 @@ async function runComfyUI(generateData) {
   let workflow;
   if (generateData.unet?.enable){
     workflow = backendComfyUI.createWorkflowUNet(generateData);
+    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow    
   } else {
     workflow = backendComfyUI.createWorkflow(generateData);
+    backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
   }
   
   if(backendComfyUI.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI with uuid:', backendComfyUI.uuid);
 
-  const result = await backendComfyUI.run(workflow);            
+  const result = await backendComfyUI.run(workflow);  
   return result;
 }
 
@@ -1966,6 +2067,7 @@ async function runComfyUI_Regional(generateData) {
   cancelMark = false;
 
   const workflow = backendComfyUI.createWorkflowRegional(generateData)
+  backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
   if(backendComfyUI.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI Regional with uuid:', backendComfyUI.uuid);
   const result = await backendComfyUI.run(workflow);
@@ -1985,14 +2087,16 @@ async function runComfyUI_MiraITU(generateData){
   if (generateData.taggerOptions.method === 'Checkpoint') {
     console.log(CAT, 'Using MiraITU with Checkpoint method');
     workflow = backendComfyUI.createWorkflowMiraITU_Normal(generateData);
+    backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
   } else {  // Diffusion
     console.log(CAT, 'Using MiraITU with UNet method');
-    workflow = backendComfyUI.createWorkflowMiraITU_Unet(generateData);
+    workflow = backendComfyUI.createWorkflowMiraITU_Unet(generateData);    
+    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow    
   }
 
   if(backendComfyUI.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI MiraITU with uuid:', backendComfyUI.uuid);
-  const result = await backendComfyUI.run(workflow);   
+  const result = await backendComfyUI.run(workflow);
   return result;
 }
 
@@ -2006,6 +2110,7 @@ async function runComfyUI_ControlNet(generateData){
   cancelMark = false;
 
   const workflow = backendComfyUI.createWorkflowControlnet(generateData)
+  backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow
   console.log(CAT, 'Running ComfyUI ControlNet with uuid:', backendComfyUI.uuid);
   const result = await backendComfyUI.run(workflow);
 
@@ -2055,6 +2160,7 @@ async function python_runComfyUI(generateData, isRegional=false, skeletonKey=fal
   }
 
   const workflow = isRegional ? backendComfyUI.createWorkflowRegional(generateData) : backendComfyUI.createWorkflow(generateData);  
+  backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
   const result = await backendComfyUI.run(workflow, true);
 
   if(result.startsWith('Error')){
