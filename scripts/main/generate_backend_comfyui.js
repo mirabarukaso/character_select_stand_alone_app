@@ -1613,7 +1613,7 @@ class ComfyUI {
     if(taggerOptions.upscaleModels !== 'None') {
       workflow["2"] = {
         "inputs": {
-          "resize_scale": taggerOptions.upscaleModels,
+          "resize_scale": taggerOptions.upscaleRatio,
           "resize_method": "lanczos",
           "upscale_model": [
             "3",
@@ -1935,6 +1935,11 @@ class ComfyUI {
       } else {
         // Connect pre-bake to Upscale
         workflow["2"].inputs.image = ["31", 0];
+        if(taggerOptions.upscaleModels === 'None') {
+          workflow["2"].inputs.scale_by = ["27", 1];
+        } else {
+          workflow["2"].inputs.resize_scale = ["27", 1];
+        }
       }      
     }
 
