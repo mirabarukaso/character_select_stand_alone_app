@@ -779,7 +779,7 @@ function createCustomOverlay(
     className = null,
     group = 'default'
 ) {
-    const displayMessage = (typeof message === 'string' && message.trim()) ? message : '\nNo content provided';
+    const displayMessage = (typeof message === 'string' && message.trim()) ? message : `\nNo content provided to ${group}`;
     
     let images = [];
     if (image && image !== 'none') {

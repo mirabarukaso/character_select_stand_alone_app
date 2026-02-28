@@ -1,3 +1,8 @@
+2026.02.28 v2.6.2       
+Add `Empty Info` when AI prompt returns empty #71      
+Bugfix, `A1111/Forge` trigger will only check once in first generate #71       
+
+
 2026.02.21 v2.6.1       
 Add `Pre-bake` for `MiraITU Reference Mode`          
 Change set `ComfyUI` backend timeout to 15s(normal 5s) for `Diffusion Model`         

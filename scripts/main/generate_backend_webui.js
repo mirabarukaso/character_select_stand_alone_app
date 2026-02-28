@@ -178,6 +178,7 @@ class WebUI {
         
         if (this.isForge === null) {
             this.isForge = await this.detectBackendType(addr, auth);
+            if (this.isForge === null) this.isForge = false; // Fallback just in case
         }
 
         if (!this.isForge && unet?.enable) {
@@ -193,19 +194,15 @@ class WebUI {
                 if(model !== 'Default')
                     optionPayload["sd_model_checkpoint"] = model;
             }
-
-            if (this.isForge) {
-                if (vae?.vae_override)
-                    optionPayload["forge_additional_modules"] = vae.vae;
-
-                if(unet?.enable) {
-                    optionPayload["sd_model_checkpoint"] = unet.model; 
-                    optionPayload["forge_additional_modules"] = [unet.clip_model, unet.vae_model];
-                }
-            } else { // A1111
-                if (vae?.vae_override)
-                    optionPayload["sd_vae"] = vae.vae; 
+            
+            if (this.isForge && unet?.enable) {
+                optionPayload["sd_model_checkpoint"] = unet.model; 
+                optionPayload["forge_additional_modules"] = [unet.clip_model, unet.vae_model];
             }
+
+            const vae_key = this.isForge ? "forge_additional_modules" : "sd_vae";
+            if (vae?.vae_override)
+                optionPayload[vae_key] = vae.vae;
 
             const body = JSON.stringify(optionPayload);
             const apiUrl = `http://${this.addr}/sdapi/v1/options`;
@@ -910,7 +907,8 @@ async function updateUpscalerModelList(generateData) {
 }
 
 async function refreshModelLists(generateData) {
-    backendWebUI.isForge = await backendWebUI.detectBackendType(generateData.addr, generateData.auth);
+    if (backendWebUI.isForge === null)
+        backendWebUI.isForge = await backendWebUI.detectBackendType(generateData.addr, generateData.auth);
 
     if (contronNetModelHashList === 'none') {
         console.log(CAT, "Refresh controlNet model hash list:");
@@ -970,6 +968,7 @@ async function runWebUI(generateData){
             sendToRenderer(backendWebUI.uuid, `updateProgress`, `100`, '100%');
             const image = jsonData.images[0];
             // parameters info
+            console.log(CAT, 'Image retrieved from WebUI run, sending to renderer');
             return `data:image/png;base64,${image}`;
         } catch (error) {            
             console.error(CAT, 'Image not found or invalid:', error);
@@ -1015,6 +1014,7 @@ async function runWebUI_Regional(generateData){
             sendToRenderer(backendWebUI.uuid, `updateProgress`, `100`, '100%');
             const image = jsonData.images[0];
             // parameters info
+            console.log(CAT, 'Image retrieved from WebUI Regional run, sending to renderer');
             return `data:image/png;base64,${image}`;
         } catch (error) {            
             console.error(CAT, 'Image not found or invalid:', error);

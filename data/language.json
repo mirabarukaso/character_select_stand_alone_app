@@ -80,6 +80,7 @@
         "ai_local_addr": "Local Llama.cpp server",
         "ai_local_temp": "Local AI Temperature",
         "ai_local_n_predict": "Local AI n_predict",
+        "ai_no_prompt_generate": "No AI prompt generated",
         "api_interface": "Image API Interface",
         "api_preview_refresh_time": "Generate preview interval (0=OFF)",
         "api_addr": "Image Interface IP Address:Port",
@@ -357,6 +358,7 @@
         "ai_local_addr": "本地 Llama.cpp 服务地址",
         "ai_local_temp": "本地AI温度（Temperature）",
         "ai_local_n_predict": "本地AI回复长度（n_predict）",
+        "ai_no_prompt_generate": "没有可用的AI提示词生成",
         "api_interface": "接口API选择",
         "api_preview_refresh_time": "预览图刷新间隔（0为关闭预览）",
         "api_addr": "接口API地址（IP Address:Port）",
@@ -374,7 +376,6 @@
         "image_info_to_generate": "传输图片数据到生成器",
         "scroll_to_last": "分割模式自动选择最新",
         "keep_gallery": "保留图库",
-        
         "model_path_comfyui": "ComfyUI模型路径",
         "model_path_webui": "WebUI模型路径",
         "webui_auth": "WebUI API认证 (用户名:密码)",

@@ -950,8 +950,13 @@ export async function startQueue(){
             const aiPrompt = await getAiPrompt(queueManager.loop, LANG.generate_ai, queueManager.aiInterface, queueManager.aiRole, queueManager.aiOptions);            
             if (globalThis.globalSettings.ai_prompt_preview && globalThis.globalSettings.ai_prompt_role !== 0) {
                 globalThis.overlay.custom.closeCustomOverlaysByGroup('aiText'); // close exist
-                globalThis.overlay.custom.createCustomOverlay('none', `\n\n\n${aiPrompt}`,
+                if(aiPrompt === '') {
+                    globalThis.overlay.custom.createCustomOverlay('none', `\n\n[color=gray]${LANG.ai_no_prompt_generate}[/color]`,
                                                         384, 'center', 'left', null, 'aiText');
+                } else {
+                    globalThis.overlay.custom.createCustomOverlay('none', `\n\n${aiPrompt}`,
+                                                        384, 'center', 'left', null, 'aiText');
+                }
             }
 
             const finalInfo = String(queueManager.finalInfo).replaceAll(REPLACE_AI_MARK, aiPrompt);
