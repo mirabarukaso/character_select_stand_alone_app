@@ -225,18 +225,16 @@ The tool returns standard exit codes:
   `ipndm`, `ipndm_v`, `deis`, `res_multistep`, `res_multistep_cfg_pp`, `res_multistep_ancestral`, 
   `res_multistep_ancestral_cfg_pp`, `gradient_estimation`, `er_sde`, `seeds_2`, `seeds_3`
 
-
-### WebUI Samplers
+### ComfyUI Schedulers
   `normal`, `karras`, `exponential`, `sgm_uniform`, `simple`, `ddim_uniform`, 
   `beta`, `linear_quadratic`, `kl_optimal`
 
-### Schedulers
-**ComfyUI:** 
+### WebUI Samplers
   `Euler a`, `Euler`, `DPM++ 2M`, `DPM++ SDE`, `DPM++ 2M SDE`, `DPM++ 2M SDE Heun`, 
   `DPM++ 2S a`, `DPM++ 3M SDE`, `LMS`, `Heun`, `DPM2`, `DPM2 a`, `DPM fast`, 
   `DPM adaptive`, `Restart`    
 
-**WebUI:** 
+### WebUI Schedulers
   `Automatic`, `Uniform`, `Karras`, `Exponential`, `Polyexponential`, `SGM Uniform`, 
   `KL Optimal`, `Align Your Steps`, `Simple`, `Normal`, `DDIM`, `Beta`
 

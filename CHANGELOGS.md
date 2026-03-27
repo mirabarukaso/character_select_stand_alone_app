@@ -1,3 +1,6 @@
+2025.03.27 v2.6.3        
+Add `SAA Thumb Generator`        
+
 2026.02.28 v2.6.2       
 Add `Empty Info` when AI prompt returns empty #71      
 Bugfix, `A1111/Forge` trigger will only check once in first generate #71       
