@@ -367,8 +367,20 @@ From Left to right: Save Settings, Reload Model List, Refresh page, Right to Lef
 ------
 # AI prompt
 Remote   
-1. Follow the setup guide to setup your `Remote AI url` , `Remote AI model` and `API Key`     
-2. Put something in `AI Prompt` e.g. `make character furry, and I want a detailed portrait`        
+1. Select a `Remote AI Provider` preset (MiniMax, OpenAI, Groq) to auto-fill the URL and model, or choose `Custom` to enter manually     
+2. Enter your `API Key`     
+3. Put something in `AI Prompt` e.g. `make character furry, and I want a detailed portrait`        
+
+Supported remote AI providers (OpenAI-compatible):
+
+| Provider | URL | Recommended Model |
+| --- | --- | --- |
+| [MiniMax](https://www.minimax.io) | `https://api.minimax.io/v1/chat/completions` | `MiniMax-M2.7` |
+| [OpenAI](https://platform.openai.com) | `https://api.openai.com/v1/chat/completions` | `gpt-4o-mini` |
+| [Groq](https://console.groq.com) | `https://api.groq.com/openai/v1/chat/completions` | `meta-llama/llama-4-maverick-17b-128e-instruct` |
+
+> [!TIP]
+> Any OpenAI-compatible API endpoint can be used with `Custom` preset by filling in the URL, model, and API Key manually.
 
 Local    
 1. Make sure you know how to build [Llama.cpp](https://github.com/ggml-org/llama.cpp) yourself, or download them from trusted source   

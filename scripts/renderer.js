@@ -362,10 +362,26 @@ export async function createAI(SETTINGS, FILES, LANG) {
         ai_prompt_preview: setupCheckbox('system-settings-ai-preview', LANG.ai_prompt_preview, SETTINGS.ai_prompt_preview, true,
             (value) => { globalThis.globalSettings.ai_prompt_preview = value; }),
 
-        interface: mySimpleList('system-settings-ai-interface', LANG.ai_interface, ['None', 'Remote', 'Local'], 
+        interface: mySimpleList('system-settings-ai-interface', LANG.ai_interface, ['None', 'Remote', 'Local'],
             (index, value) => {globalThis.globalSettings.ai_interface = value;}, 5, false, true),
-        remote_timeout: setupSlider('system-settings-ai-timeout', LANG.remote_ai_timeout, 2, 60, 1, SETTINGS.remote_ai_timeout, 
+        remote_timeout: setupSlider('system-settings-ai-timeout', LANG.remote_ai_timeout, 2, 60, 1, SETTINGS.remote_ai_timeout,
             (value) => { globalThis.globalSettings.remote_ai_timeout = value; }),
+        provider_preset: mySimpleList('system-settings-ai-provider-preset', LANG.ai_provider_preset,
+            ['Custom', 'MiniMax', 'OpenAI', 'Groq'],
+            (index, value) => {
+                const presets = {
+                    'MiniMax': { url: 'https://api.minimax.io/v1/chat/completions', model: 'MiniMax-M2.7' },
+                    'OpenAI':  { url: 'https://api.openai.com/v1/chat/completions',  model: 'gpt-4o-mini' },
+                    'Groq':    { url: 'https://api.groq.com/openai/v1/chat/completions', model: 'meta-llama/llama-4-maverick-17b-128e-instruct' },
+                };
+                const preset = presets[value];
+                if (preset) {
+                    globalThis.ai.remote_address.setValue(preset.url);
+                    globalThis.globalSettings.remote_ai_base_url = preset.url;
+                    globalThis.ai.remote_model_select.setValue(preset.model);
+                    globalThis.globalSettings.remote_ai_model = preset.model;
+                }
+            }, 5, false, true),
         remote_address: setupTextbox('system-settings-ai-address', LANG.remote_ai_base_url, {
             value: SETTINGS.remote_ai_base_url,
             maxLines: 1

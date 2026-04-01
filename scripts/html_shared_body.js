@@ -105,6 +105,7 @@ export const sharedBodyHTML = `
                 <div class="system-settings-ai-timeout"></div>
               </div>
               <div class="system-settings-main-2">
+                <div class="system-settings-ai-provider-preset"></div>
                 <div class="system-settings-ai-address"></div>
                 <div class="system-settings-ai-modelselect"></div>
                 <div class="system-settings-ai-apikey"></div>
