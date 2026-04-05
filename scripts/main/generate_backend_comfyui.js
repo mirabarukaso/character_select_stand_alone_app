@@ -964,16 +964,24 @@ class ComfyUI {
     }
 
     // vPred
-    if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1) {            
+    console.log(CAT, 'vPred value:', vpred, 'model name:', model);
+    if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1 || vpred === 2) {            
       workflow["35"].inputs.sampling = "v_prediction";
       workflow["44"].inputs.sampling = "v_prediction";
+      if(vpred === 2) {
+        workflow["35"].inputs.zsnr = true;
+        workflow["44"].inputs.zsnr = true;
+      }
     }
 
     if (refiner.enable && model !== refiner.model) {
       // Set refiner model name
       workflow["43"].inputs.ckpt_name = refiner.model;
-      if((refiner.vpred === 0 && (refiner.model.includes('vPred') || refiner.model.includes('VPR'))) || refiner.vpred === 1) {
+      if((refiner.vpred === 0 && (refiner.model.includes('vPred') || refiner.model.includes('VPR'))) || refiner.vpred === 1 || refiner.vpred === 2) {
         workflow["44"].inputs.sampling = "v_prediction";
+        if(refiner.vpred === 2) {
+          workflow["44"].inputs.zsnr = true;
+        }
       } else {
         workflow["44"].inputs.sampling = "eps";
       }
@@ -1209,16 +1217,23 @@ class ComfyUI {
     }
 
     // vPred
-    if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1) {
+    if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1 || vpred === 2) {
         workflow["35"].inputs.sampling = "v_prediction";
         workflow["44"].inputs.sampling = "v_prediction";
+        if(vpred === 2) {
+          workflow["35"].inputs.zsnr = true;
+          workflow["44"].inputs.zsnr = true;
+        }
     }
 
     if (refiner.enable && model !== refiner.model) {
         // Set refiner model name
         workflow["43"].inputs.ckpt_name = refiner.model;
-        if((refiner.vpred === 0 && (refiner.model.includes('vPred') || refiner.model.includes('VPR'))) || refiner.vpred === 1) {
+        if((refiner.vpred === 0 && (refiner.model.includes('vPred') || refiner.model.includes('VPR'))) || refiner.vpred === 1 || refiner.vpred === 2) {
           workflow["44"].inputs.sampling = "v_prediction";
+          if(refiner.vpred === 2) {
+            workflow["44"].inputs.zsnr = true;
+          }
         } else {
           workflow["44"].inputs.sampling = "eps";
         }
@@ -1494,8 +1509,11 @@ class ComfyUI {
 
     // VPRED
     workflow["6"].inputs.ckpt_name = model;
-    if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1) {
+    if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1 || vpred === 2) {
         workflow["17"].inputs.sampling = "v_prediction";
+        if(vpred === 2) {
+          workflow["17"].inputs.zsnr = true;
+        }
     }
 
     // Change to tiled VAE if Tiled is set (Slow)

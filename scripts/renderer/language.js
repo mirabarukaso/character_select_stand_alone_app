@@ -68,7 +68,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.dropdownList.textencoder_device.setTitle(LANG.api_text_encoder_device);
 
     globalThis.dropdownList.vpred.setTitle(LANG.vpred);
-    globalThis.dropdownList.vpred.setValue(LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_off]);
+    globalThis.dropdownList.vpred.setValue(LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr,LANG.vpred_off]);
     globalThis.dropdownList.settings.setTitle(LANG.title_settings_load);
     globalThis.headerIcon.save.title = LANG.title_settings_save;
     globalThis.headerIcon.reload.title = LANG.title_model_reload;
@@ -169,7 +169,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.refiner.addnoise.setTitle(LANG.api_refiner_add_noise);
     globalThis.refiner.ratio.setTitle(LANG.api_refiner_ratio);
     globalThis.refiner.vpred.setTitle(LANG.vpred);
-    globalThis.refiner.vpred.setValue(LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_off]);
+    globalThis.refiner.vpred.setValue(LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr, LANG.vpred_off]);
 
     globalThis.ai.interface.setTitle(LANG.ai_interface);
     globalThis.ai.remote_timeout.setTitle(LANG.remote_ai_timeout);

@@ -1,5 +1,10 @@
+2025.04.05 v2.6.4        
+Add `Vpred ZSNR support` for `ComfyUI`        
+
+
 2025.03.27 v2.6.3        
 Add `SAA Thumb Generator`        
+
 
 2026.02.28 v2.6.2       
 Add `Empty Info` when AI prompt returns empty #71      

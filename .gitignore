@@ -12,3 +12,5 @@ scripts/python/saa-agent/*.png
 *.pem
 *.log
 *.DS_Store
+/scripts/python/thumb-generator/__pycache__
+/scripts/python/thumb-generator/output

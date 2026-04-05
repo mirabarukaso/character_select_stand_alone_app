@@ -88,7 +88,7 @@ export async function setupHeader(SETTINGS, FILES, LANG){
             ['default', 'cpu'],
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder_device = value; }, 5, false, true),
 
-        vpred:  mySimpleList('model-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_off], 
+        vpred:  mySimpleList('model-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr, LANG.vpred_off], 
             (index, value) => { globalThis.globalSettings.api_model_file_vpred = value; }, 5, false, true),        
         settings: mySimpleList('settings-select', LANG.title_settings_load, FILES.settingList, callback_mySettingList)
     }
@@ -341,7 +341,7 @@ export async function createHifixRefiner(SETTINGS, FILES, LANG) {
     globalThis.refiner = {
         model: mySimpleList('refiner-model', LANG.api_refiner_model, FILES.modelListAll, 
             (index, value) => { globalThis.globalSettings.api_refiner_model = value; }, 15, true, true),
-        vpred: mySimpleList('refiner-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_off], 
+        vpred: mySimpleList('refiner-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr, LANG.vpred_off], 
             (index, value) => { globalThis.globalSettings.api_refiner_model_vpred = value; }, 5, false, false),
         addnoise: setupCheckbox('refiner-addnoise', LANG.api_refiner_add_noise, SETTINGS.api_refiner_add_noise, true,
             (value) => { globalThis.globalSettings.api_refiner_add_noise = value; }),

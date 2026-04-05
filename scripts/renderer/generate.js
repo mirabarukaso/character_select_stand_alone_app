@@ -504,8 +504,10 @@ export function checkVpred(){
     const modelVpred = globalThis.dropdownList.vpred.getValue();
     if(modelVpred === globalThis.cachedFiles.language[globalThis.globalSettings.language].vpred_on)
         vPred = 1;
-    else if(modelVpred === globalThis.cachedFiles.language[globalThis.globalSettings.language].vpred_off)
+    if(modelVpred === globalThis.cachedFiles.language[globalThis.globalSettings.language].vpred_on_zsnr)
         vPred = 2;
+    else if(modelVpred === globalThis.cachedFiles.language[globalThis.globalSettings.language].vpred_off)
+        vPred = 3;
 
     return vPred;
 }
