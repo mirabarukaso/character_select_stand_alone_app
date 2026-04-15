@@ -1,5 +1,6 @@
 2025.04.15 v2.6.5     
 Add `Diffusion` support for `SAA Thumb Generator`     
+Add `Artist Search` for `Anima`, use `@` symbol to active it       
 
 
 2025.04.05 v2.6.4        

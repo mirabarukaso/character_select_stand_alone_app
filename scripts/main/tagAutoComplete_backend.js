@@ -148,7 +148,7 @@ class PromptManager {
         this.prompts.sort((a, b) => b.heat - a.heat);
     }
 
-    getSuggestions(text) {
+    getSuggestions(text, limit = 50, group = null) {
         if (!text) return [];
 
         const parts = text.split(',');
@@ -158,16 +158,21 @@ class PromptManager {
 
         const matches = {};
         for (const promptInfo of this.prompts) {
+            // If group filter is specified, only include matching groups
+            if (group !== null && Array.isArray(group) && !group.includes(promptInfo.group)) {
+                continue;
+            }
+
             const prompt = promptInfo.prompt.toLowerCase();
             const aliases = promptInfo.aliases ? promptInfo.aliases.toLowerCase().split(',') : [];
 
             const matchedAlias = this.matchPrompt(lastWord, prompt, aliases);
-
-            if (this.shouldAddMatch(matchedAlias, lastWord, prompt)) {
+            
+            if (this.shouldAddMatch(matchedAlias, lastWord, prompt)) {                
                 this.addMatch(matches, promptInfo, matchedAlias, prompt);
             }
 
-            if (Object.keys(matches).length >= 50) break;
+            if (Object.keys(matches).length >= limit) break;
         }
 
         return Object.values(matches).sort((a, b) => b.heat - a.heat);
@@ -271,8 +276,27 @@ class PromptManager {
 
         let matches = [];
         if (modifiedIndex >= 0 && modifiedIndex < currentParts.length) {
-            const targetWord = currentParts[modifiedIndex].trim();
-            matches = this.getSuggestions(targetWord);
+            let targetWord = currentParts[modifiedIndex].trim();
+            let artistOnly = false;
+            
+            // Special case: @ prefix handling
+            // Search artist tags for Anima Model
+            if (targetWord.startsWith('@')) {
+                const atCount = (targetWord.match(/@/g) || []).length;
+                if (atCount === 1) {
+                    // Remove the single @ at the beginning and mark as artist-only search
+                    targetWord = targetWord.substring(1) + '*'; // add wildcard to match any artist tag starting with the given text
+                    artistOnly = true;
+                }
+                // if there are multiple @, treat it as normal search (e.g., for tags @_@ or @@@)
+            }                    
+            
+            if (artistOnly) {
+                matches = this.getSuggestions(targetWord, 50, [1, 8]);
+                matches = matches.filter(match => Number.parseInt(match.group) === 1 || Number.parseInt(match.group) === 8);
+            } else {
+                matches = this.getSuggestions(targetWord);
+            }
         }
 
         for (const match of matches) {

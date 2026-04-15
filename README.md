@@ -308,6 +308,10 @@ Use `mouse` to select the prompt word, but you can also use the `keyboard up and
 Supports English and Chinese(translate file required) tag search.     
 **Special thanks to Kiratian(天痕) for helping to translate the tags into Chinese version.**
 
+*Artist Search for Anima and others*
+Activate it using the `@` symbol. The result will be filtered by groups `1` and `8`.       
+To apply the `Artist` tag in `Anima Model`, you need to add an `@` symbol at the start of the tag. E.g. `mira` -> `@mira`         
+
 | Mark | ID | Category | Group |
 | --- | --- | --- |  --- | 
 | `[G]` | 0 | General | Danbooru |
