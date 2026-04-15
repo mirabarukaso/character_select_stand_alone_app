@@ -14,3 +14,4 @@ scripts/python/saa-agent/*.png
 *.DS_Store
 /scripts/python/thumb-generator/__pycache__
 /scripts/python/thumb-generator/output
+/scripts/python/thumb-generator/output_thumb

@@ -1,3 +1,7 @@
+2025.04.15 v2.6.5     
+Add `Diffusion` support for `SAA Thumb Generator`     
+
+
 2025.04.05 v2.6.4        
 Add `Vpred ZSNR support` for `ComfyUI`        
 

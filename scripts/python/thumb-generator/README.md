@@ -17,3 +17,5 @@ app.bat
 3. Setart your ComfyUI, setup the correct `Server Address`       
 4. Modify `./data/recreate_chatacters.txt` to re-create incorrect thumbs, you may need to adjust `Prompts` or `Seed`      
 
+## Checkpoint / Diffusion 
+Like SAA use `Checkpoint` for `SD15/SDXL` and `Diffusion` for `Anima/Flux2/Qwen/ZI...`        

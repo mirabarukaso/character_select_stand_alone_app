@@ -136,6 +136,8 @@ def comfyui_generate(
     *,
     server: str,
     workflow_path: str,
+    model_type: str = "checkpoint",
+    diffusion_model_type: str = "stable_diffusion",
     model: str,
     sampler: str,
     scheduler: str,
@@ -146,6 +148,8 @@ def comfyui_generate(
     height: int,
     positive_prompt: str,
     negative_prompt: str,
+    text_encoder: str = "Anima/qwen_3_06b_base.safetensors",
+    vae: str = "qwen_image_vae.safetensors",
 ) -> Optional[bytes]:
     """Single image generation call. Returns raw PNG/image bytes or None."""
     client_id = str(uuid.uuid4())
@@ -154,17 +158,31 @@ def comfyui_generate(
     try:
         gen = ComfyGenerator(server, client_id, workflow_path)
 
-        if model and model.lower() != "default":
-            gen.set("45", "ckpt_name", model)
-            gen.set("29", "modelname", model)
+        if model_type == "checkpoint":
+            # ── Checkpoint workflow (classic all-in-one .safetensors) ──────────
+            if model and model.lower() != "default":
+                gen.set("45", "ckpt_name", model)
+                gen.set("29", "modelname", model)
 
-        for nid in ("36", "20", "37"):
-            gen.set(nid, "sampler_name", sampler)
-            gen.set(nid, "scheduler", scheduler)
+            for nid in ("36", "37", "20", "29"):
+                gen.set(nid, "sampler_name", sampler)
+                gen.set(nid, "scheduler", scheduler)
 
-        gen.set("29", "sampler_name", sampler)
-        gen.set("29", "scheduler", scheduler)
+        elif model_type == "diffusion":
+            # ── Diffusion workflow (Flux/SD3-style, separate encoder & VAE) ───
+            gen.set("50", "clip_name", text_encoder)
+            gen.set("50", "type", diffusion_model_type)
+            gen.set("51", "unet_name", model)
+            gen.set("52", "vae_name", vae)
+            
+            for nid in ("36", "29"):
+                gen.set(nid, "sampler_name", sampler)
+                gen.set(nid, "scheduler", scheduler)
 
+        else:
+            raise ValueError(f"Unknown model_type: {model_type!r}")
+
+        # Common parameters for both workflows
         gen.set("13", "steps", steps)
         gen.set("13", "cfg", cfg)
         gen.set("17", "Width", width)
@@ -173,13 +191,13 @@ def comfyui_generate(
         gen.set("29", "seed_value", seed)
         gen.set("32", "text", positive_prompt)
         gen.set("33", "text", negative_prompt)
-
+            
         # Bypass Refiner
         gen.set("6", "samples", ["36", 0])
-        
+
         # No hires fix: wire Image Saver directly to first VAE Decode output
         gen.set("29", "images", ["6", 0])
-
+            
         return gen.run(ws_conn)
     finally:
         ws_conn.close()
@@ -290,6 +308,8 @@ def _generation_loop(
                 img_bytes = comfyui_generate(
                     server=comfyui_cfg["server"],
                     workflow_path=comfyui_cfg["workflow_path"],
+                    model_type=comfyui_cfg.get("model_type", "checkpoint"),
+                    diffusion_model_type=comfyui_cfg.get("diffusion_model_type", "stable_diffusion"),
                     model=comfyui_cfg["model"],
                     sampler=comfyui_cfg["sampler"],
                     scheduler=comfyui_cfg["scheduler"],
@@ -299,7 +319,9 @@ def _generation_loop(
                     width=comfyui_cfg["width"],
                     height=comfyui_cfg["height"],
                     positive_prompt=full_prompt,
-                    negative_prompt=comfyui_cfg["negative"]
+                    negative_prompt=comfyui_cfg["negative"],
+                    text_encoder=comfyui_cfg.get("text_encoder", ""),
+                    vae=comfyui_cfg.get("vae", ""),
                 )
                 if img_bytes:
                     img = Image.open(BytesIO(bytes(img_bytes)))
@@ -427,9 +449,13 @@ def _default(key, val):
 
 # ComfyUI settings
 _default("server", "127.0.0.1:8188")
-_default("workflow_path", "./workflow_api.json")
+_default("model_type", "checkpoint")  # "checkpoint" or "diffusion"
+_default("workflow_path", "./workflow_diffusion_api.json")
 _default("sleep_time", 0)  # Seconds to sleep after each generation (to reduce GPU load)
 _default("model", "waiIllustriousSDXL_v160.safetensors")
+_default("diffusion_model_type", "stable_diffusion")  # Model type for diffusion mode
+_default("text_encoder", "textencoder")
+_default("vae", "vae")
 _default("sampler", "euler_ancestral")
 _default("scheduler", "beta")
 _default("steps", 22)
@@ -445,7 +471,6 @@ _default(
 _default("negative", "bad quality,worst quality,worst detail,sketch,nsfw,explicit")
 
 # Path defaults
-_default("workflow_path", "./workflow_api.json")
 _default("char_list_path", "./data/character_list.txt")
 _default("output_folder", "./output/")
 _default("thumb_folder", "./output_thumb/")
@@ -479,12 +504,32 @@ with st.sidebar:
             "Server Address", st.session_state.server,
             disabled=st.session_state.gen_running
         )
+
+        MODEL_TYPES = ["diffusion", "checkpoint"]
+        prev_model_type = st.session_state.model_type
+        st.session_state.model_type = st.selectbox(
+            "Model Type",
+            MODEL_TYPES,
+            index=MODEL_TYPES.index(st.session_state.model_type)
+            if st.session_state.model_type in MODEL_TYPES else 0,
+            disabled=st.session_state.gen_running,
+            help="diffusion = Flux/SD3-style separate text encoder & VAE; checkpoint = classic all-in-one .safetensors"
+        )
+
+        # Auto-update workflow path default when model type changes
+        _WORKFLOW_DEFAULTS = {
+            "checkpoint": "./workflow_api.json",
+            "diffusion":  "./workflow_diffusion_api.json",
+        }
+        if st.session_state.model_type != prev_model_type:
+            st.session_state.workflow_path = _WORKFLOW_DEFAULTS[st.session_state.model_type]
+
         st.session_state.workflow_path = st.text_input(
             "Workflow JSON Path",
             st.session_state.workflow_path,
-            placeholder="./workflow_api.json",
+            placeholder=_WORKFLOW_DEFAULTS[st.session_state.model_type],
             disabled=st.session_state.gen_running
-        )        
+        )
         st.session_state.sleep_time = st.number_input(
             "Seconds to sleep after each generation", 0.0, 30.0, float(st.session_state.sleep_time), step=0.5,
             disabled=st.session_state.gen_running
@@ -547,6 +592,27 @@ with st.sidebar:
             disabled=st.session_state.gen_running
         )
 
+        if st.session_state.model_type == "diffusion":
+            DIFFUSION_MODEL_TYPES = ["stable_diffusion", "sd3", "cosmos", "lumia2", "chroma", "qwen_image", "hunyuan_image", "flux2"]
+            st.session_state.diffusion_model_type = st.selectbox(
+                "Diffusion Model Type",
+                DIFFUSION_MODEL_TYPES,
+                index=DIFFUSION_MODEL_TYPES.index(st.session_state.diffusion_model_type)
+                if st.session_state.diffusion_model_type in DIFFUSION_MODEL_TYPES else 0,
+                disabled=st.session_state.gen_running,
+                help="Model type for diffusion-based generation (Flux, SD3, Cosmos, etc.)"
+            )
+            st.session_state.text_encoder = st.text_input(
+                "Text Encoder", st.session_state.text_encoder,
+                placeholder="textencoder",
+                disabled=st.session_state.gen_running
+            )
+            st.session_state.vae = st.text_input(
+                "VAE", st.session_state.vae,
+                placeholder="vae",
+                disabled=st.session_state.gen_running
+            )
+
     with st.expander("📝 Prompts", expanded=False):
         st.session_state.positive_suffix = st.text_area(
             "Positive Prompt",
@@ -577,9 +643,10 @@ with st.sidebar:
 # ── Helper: build cfg dict ────────────────────────────────────────────────────
 
 def get_comfyui_cfg() -> dict:
-    return {
+    cfg = {
         "server": st.session_state.server,
         "workflow_path": st.session_state.workflow_path,
+        "model_type": st.session_state.model_type,
         "model": st.session_state.model,
         "sampler": st.session_state.sampler,
         "scheduler": st.session_state.scheduler,
@@ -590,6 +657,11 @@ def get_comfyui_cfg() -> dict:
         "height": int(st.session_state.height),
         "negative": st.session_state.negative,
     }
+    if st.session_state.model_type == "diffusion":
+        cfg["diffusion_model_type"] = st.session_state.diffusion_model_type
+        cfg["text_encoder"] = st.session_state.text_encoder
+        cfg["vae"] = st.session_state.vae
+    return cfg
 
 
 def validate_comfyui_cfg() -> list[str]:
