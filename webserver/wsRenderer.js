@@ -288,12 +288,12 @@ export async function createPrompt(SETTINGS, FILES, LANG) {
         common: setupTextbox('prompt-common', LANG.custom_prompt, {
             value: SETTINGS.custom_prompt,
             defaultTextColor: 'darkorange',
-            maxLines: 5                
+            maxLines: 20
             }, false, (value) => { globalThis.globalSettings.custom_prompt = value; }),
         positive: setupTextbox('prompt-positive', LANG.api_prompt, {
             value: SETTINGS.api_prompt,
             defaultTextColor: 'LawnGreen',
-            maxLines: 5
+            maxLines: 20
             }, false, (value) => { globalThis.globalSettings.api_prompt = value; }),
         positive_right: setupTextbox('prompt-positive-right', LANG.api_prompt, {    //Regional Condition
             value: SETTINGS.api_prompt_right,
