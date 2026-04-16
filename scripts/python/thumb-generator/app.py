@@ -450,7 +450,7 @@ def _default(key, val):
 # ComfyUI settings
 _default("server", "127.0.0.1:8188")
 _default("model_type", "checkpoint")  # "checkpoint" or "diffusion"
-_default("workflow_path", "./workflow_diffusion_api.json")
+_default("workflow_path", "./workflow_api.json")
 _default("sleep_time", 0)  # Seconds to sleep after each generation (to reduce GPU load)
 _default("model", "waiIllustriousSDXL_v160.safetensors")
 _default("diffusion_model_type", "stable_diffusion")  # Model type for diffusion mode
