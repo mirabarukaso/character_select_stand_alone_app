@@ -46,7 +46,7 @@ npm start
 ```
 
 > [!TIP]
-> *One-Click package v2.6.2*    
+> *One-Click package v2.6.5*    
 > The full package [embeded_env_for_SAA](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/embeded_env_for_SAA.zip)      
 
 ## Update
@@ -65,12 +65,13 @@ npm install
 Many thanks to the following people for their selfless contributions, who gave up their valuable time to provide Chinese translation and character data verification. They are listed in no particular order.   
 **Silence, 燦夜, 镜流の粉丝, 樱小路朝日, 满开之萤, and two more who wish to remain anonymous.**   
 
-Special thanks    
+Character List Special thanks    
 lanner0403 [WAI-NSFW-illustrious-character-select](https://github.com/lanner0403/WAI-NSFW-illustrious-character-select) 2000+  Verified Character List.       
 Cell1310  [Illustrious XL (v0.1) Recognized Characters List](https://civitai.com/articles/10242/illustrious-xl-v01-recognized-characters-list) more than 100+ Verified Character List.     
 mobedoor [#23](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/23)       
 UdinXProgrammer [#62](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/62)       
 Nurimtod [#75](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/75) [#83](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/83)      
+atmogenic [#84](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/84)      
      
 ------
 # Highlights
