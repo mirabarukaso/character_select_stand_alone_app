@@ -6,7 +6,7 @@ This is a Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Web
 
 > [!TIP]
 > If you find a character that isn't show on the list but can be generated correctly, please don't hesitate to let me know.     
-> The default list `v160 Remove invalid and duplicate (5149)` is based on `waiIllustriousSDXL_v160`.    
+> The default list `v160 Remove invalid and duplicate (5150)` is based on `waiIllustriousSDXL_v160`.    
 > If you are interested in the `v120 (5327)` list, navigate to [HF](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app) download `v120` files and replace `data/wai_characters.csv` `data/wai_character_thumbs.json`     
 >
 > For browser based SAAC information, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)
@@ -465,12 +465,13 @@ Many thanks to the following people for their selfless contributions, who gave u
 **Silence, 燦夜, 镜流の粉丝, 樱小路朝日, 满开之萤, and two more who wish to remain anonymous.**   
 
 # Character List Special thanks    
-lanner0403 [WAI-NSFW-illustrious-character-select](https://github.com/lanner0403/WAI-NSFW-illustrious-character-select) 2000+  Verified Character List.       
-Cell1310  [Illustrious XL (v0.1) Recognized Characters List](https://civitai.com/articles/10242/illustrious-xl-v01-recognized-characters-list) more than 100+ Verified Character List.     
+lanner0403 [WAI-NSFW-illustrious-character-select](https://github.com/lanner0403/WAI-NSFW-illustrious-character-select) 
+Cell1310  [Illustrious XL (v0.1) Recognized Characters List](https://civitai.com/articles/10242/illustrious-xl-v01-recognized-characters-list) 
 mobedoor [#23](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/23)       
 UdinXProgrammer [#62](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/62)       
 Nurimtod [#75](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/75) [#83](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/83)      
 atmogenic [#84](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/84) [#85](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/85)       
+funnygeeker [#87](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/87)
           
 ------
 # FAQ
