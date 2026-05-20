@@ -46,7 +46,7 @@ npm start
 ```
 
 > [!TIP]
-> *One-Click package v2.6.5*    
+> *One-Click package v2.7.0*    
 > The full package [embeded_env_for_SAA](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/embeded_env_for_SAA.zip)      
 
 ## Update
