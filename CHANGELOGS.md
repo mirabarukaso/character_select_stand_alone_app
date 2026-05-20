@@ -1,3 +1,7 @@
+2025.05.20 v2.7.0     
+Add `Hires fix` now support `Diffusion` models (verified with Anima 1024x1360x1.6)       
+
+
 2025.04.15 v2.6.5     
 Add `Diffusion` support for `SAA Thumb Generator`     
 Add `Artist Search` for `Anima`, use `@` symbol to active it       

@@ -1115,7 +1115,7 @@ class ComfyUI {
   createWorkflowUNet(generateData) {
     const {addr, auth, uuid, refresh, positive, negative, 
       width, height, cfg, step, seed, sampler, scheduler,  
-      unet} = generateData;
+      unet, hifix} = generateData;
 
     this.addr = addr;
     this.refresh = refresh;
@@ -1189,6 +1189,46 @@ class ComfyUI {
     workflow["32"].inputs.text = positive;        
     // Set Negative prompt
     workflow["33"].inputs.text = negative;    
+
+    if (hifix.enable) {
+      // Upscale
+      workflow["17"].inputs.HiResMultiplier = hifix.scale;
+      workflow["54"].inputs.resize_scale = hifix.scale;
+
+      // Upscale Model
+      workflow["55"].inputs.model_name = `${hifix.model}`;
+
+      // Ksampler HiFix
+      workflow["61"].inputs.seed = hifix.seed;
+      workflow["61"].inputs.denoise = hifix.denoise;
+      workflow["61"].inputs.steps = hifix.steps;
+      workflow["61"].inputs.sampler_name = sampler;
+      workflow["61"].inputs.scheduler = scheduler;
+
+      // Coloe Transfer method
+      workflow["62"].inputs.method = hifix.colorTransfer;
+
+      // Image Save set new width and height
+      workflow["29"].inputs.width = ["17", 3];
+      workflow["29"].inputs.height = ["17", 4];
+    } else {
+      // Image Save set to First VAE Decode
+      workflow["29"].inputs.images = ["6", 0];
+
+      // Remove Hires fix nodes
+      // Upscale Image By Model Then Resize
+      delete workflow["54"];
+      // Load Upscale Model
+      delete workflow["55"];
+      // Vae Encode
+      delete workflow["56"];
+      // Vae Decode
+      delete workflow["58"];
+      // Ksampler HiFix
+      delete workflow["61"];
+      // Color Transfer
+      delete workflow["62"];
+    }
 
     return workflow;
   }

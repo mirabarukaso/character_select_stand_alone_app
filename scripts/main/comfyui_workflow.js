@@ -1578,8 +1578,8 @@ export const WORKFLOW_UNET =
   },
   "13": {
     "inputs": {
-      "steps": 11,
-      "cfg": 1
+      "steps": 40,
+      "cfg": 5
     },
     "class_type": "StepsAndCfg",
     "_meta": {
@@ -1612,9 +1612,9 @@ export const WORKFLOW_UNET =
         "13",
         1
       ],
-      "modelname": "anima-preview.safetensors",
-      "sampler_name": "euler_ancestral",
-      "scheduler": "simple",
+      "modelname": "waiANIMA_v10.safetensors",
+      "sampler_name": "er_sde",
+      "scheduler": "normal",
       "positive": [
         "32",
         0
@@ -1623,7 +1623,7 @@ export const WORKFLOW_UNET =
         "33",
         0
       ],
-      "seed_value": 1775747588,
+      "seed_value": 1716173204,
       "width": [
         "17",
         0
@@ -1643,7 +1643,7 @@ export const WORKFLOW_UNET =
       "embed_workflow": true,
       "additional_hashes": "",
       "images": [
-        "6",
+        "62",
         0
       ]
     },
@@ -1693,7 +1693,7 @@ export const WORKFLOW_UNET =
   "36": {
     "inputs": {
       "add_noise": "enable",
-      "noise_seed": 153956129556641,
+      "noise_seed": 1716173204,
       "steps": [
         "13",
         0
@@ -1703,7 +1703,7 @@ export const WORKFLOW_UNET =
         1
       ],
       "sampler_name": "er_sde",
-      "scheduler": "simple",
+      "scheduler": "normal",
       "start_at_step": 0,
       "end_at_step": 1000,
       "return_with_leftover_noise": "disable",
@@ -1731,7 +1731,7 @@ export const WORKFLOW_UNET =
   },
   "50": {
     "inputs": {
-      "clip_name": "model",
+      "clip_name": "qwen_3_06b_base.safetensors",
       "type": "stable_diffusion",
       "device": "default"
     },
@@ -1742,7 +1742,7 @@ export const WORKFLOW_UNET =
   },
   "51": {
     "inputs": {
-      "unet_name": "clip",
+      "unet_name": "waiANIMA_v10.safetensors",
       "weight_dtype": "default"
     },
     "class_type": "UNETLoader",
@@ -1752,11 +1752,117 @@ export const WORKFLOW_UNET =
   },
   "52": {
     "inputs": {
-      "vae_name": "vae"
+      "vae_name": "qwen_image_vae.safetensors"
     },
     "class_type": "VAELoader",
     "_meta": {
       "title": "Load VAE"
+    }
+  },
+  "54": {
+    "inputs": {
+      "resize_scale": 1.5,
+      "resize_method": "lanczos",
+      "upscale_model": [
+        "55",
+        0
+      ],
+      "image": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "UpscaleImageByModelThenResize",
+    "_meta": {
+      "title": "Upscale Image By Model Then Resize"
+    }
+  },
+  "55": {
+    "inputs": {
+      "model_name": "RealESRGAN_x4plus_anime_6B.pth"
+    },
+    "class_type": "UpscaleModelLoader",
+    "_meta": {
+      "title": "Load Upscale Model"
+    }
+  },
+  "56": {
+    "inputs": {
+      "pixels": [
+        "54",
+        0
+      ],
+      "vae": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "VAEEncode",
+    "_meta": {
+      "title": "VAE Encode"
+    }
+  },
+  "58": {
+    "inputs": {
+      "samples": [
+        "61",
+        0
+      ],
+      "vae": [
+        "52",
+        0
+      ]
+    },
+    "class_type": "VAEDecode",
+    "_meta": {
+      "title": "VAE Decode"
+    }
+  },
+  "61": {
+    "inputs": {
+      "seed": 1716173204,
+      "steps": 20,
+      "cfg": 5,
+      "sampler_name": "er_sde",
+      "scheduler": "normal",
+      "denoise": 0.4,
+      "model": [
+        "51",
+        0
+      ],
+      "positive": [
+        "2",
+        0
+      ],
+      "negative": [
+        "3",
+        0
+      ],
+      "latent_image": [
+        "56",
+        0
+      ]
+    },
+    "class_type": "KSampler",
+    "_meta": {
+      "title": "KSampler"
+    }
+  },
+  "62": {
+    "inputs": {
+      "method": "Mean",
+      "src_image": [
+        "58",
+        0
+      ],
+      "ref_image": [
+        "6",
+        0
+      ]
+    },
+    "class_type": "ImageColorTransferMira",
+    "_meta": {
+      "title": "Color Transfer"
     }
   }
 };

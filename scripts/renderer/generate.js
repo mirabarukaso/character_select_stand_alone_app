@@ -875,6 +875,7 @@ export async function generateImage(dataPack){
                     clip_type: globalThis.dropdownList.textencoder_type.getValue(),
                     clip_device: globalThis.dropdownList.textencoder_device.getValue(),
                 },
+                hifix: hifix,
             })
         };        
 

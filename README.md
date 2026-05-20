@@ -465,13 +465,13 @@ Many thanks to the following people for their selfless contributions, who gave u
 **Silence, 燦夜, 镜流の粉丝, 樱小路朝日, 满开之萤, and two more who wish to remain anonymous.**   
 
 # Character List Special thanks    
-lanner0403 [WAI-NSFW-illustrious-character-select](https://github.com/lanner0403/WAI-NSFW-illustrious-character-select) 
-Cell1310  [Illustrious XL (v0.1) Recognized Characters List](https://civitai.com/articles/10242/illustrious-xl-v01-recognized-characters-list) 
+lanner0403 [WAI-NSFW-illustrious-character-select](https://github.com/lanner0403/WAI-NSFW-illustrious-character-select)     
+Cell1310  [Illustrious XL (v0.1) Recognized Characters List](https://civitai.com/articles/10242/illustrious-xl-v01-recognized-characters-list)     
 mobedoor [#23](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/23)       
 UdinXProgrammer [#62](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/62)       
 Nurimtod [#75](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/75) [#83](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/83)      
 atmogenic [#84](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/84) [#85](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/85)       
-funnygeeker [#87](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/87)
+funnygeeker [#87](https://github.com/mirabarukaso/character_select_stand_alone_app/issues/87)    
           
 ------
 # FAQ

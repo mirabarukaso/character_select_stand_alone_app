@@ -74,9 +74,6 @@ export async function callback_api_model_type(index, selectedValue) {
         globalThis.generate.regionalCondition.setEnable(true);
         globalThis.generate.regionalCondition_dummy.setEnable(true);
 
-        globalThis.generate.hifix.setEnable(true);
-        globalThis.generate.hifix_dummy.setEnable(true);
-
         globalThis.generate.refiner.setEnable(true);
         globalThis.generate.refiner_dummy.setEnable(true);
 
@@ -93,11 +90,6 @@ export async function callback_api_model_type(index, selectedValue) {
         globalThis.generate.regionalCondition_dummy.setValue(false);
         globalThis.generate.regionalCondition.setEnable(false);
         globalThis.generate.regionalCondition_dummy.setEnable(false);
-
-        globalThis.generate.hifix.setValue(false);
-        globalThis.generate.hifix_dummy.setValue(false);
-        globalThis.generate.hifix.setEnable(false);
-        globalThis.generate.hifix_dummy.setEnable(false);
 
         globalThis.generate.refiner.setValue(false);
         globalThis.generate.refiner_dummy.setValue(false);
