@@ -1,17 +1,23 @@
-2025.05.20 v2.7.0     
+2026.06.25 v2.7.1
+Clarify `ComfyUI model folder` #89      
+Fix date(year) in CHANGELOGS      
+Bump dependencies version        
+
+
+2026.05.20 v2.7.0     
 Add `Hires fix` now support `Diffusion` models (verified with Anima 1024x1360x1.6)       
 
 
-2025.04.15 v2.6.5     
+20256.04.15 v2.6.5     
 Add `Diffusion` support for `SAA Thumb Generator`     
 Add `Artist Search` for `Anima`, use `@` symbol to active it       
 
 
-2025.04.05 v2.6.4        
+2026.04.05 v2.6.4        
 Add `Vpred ZSNR support` for `ComfyUI`        
 
 
-2025.03.27 v2.6.3        
+2026.03.27 v2.6.3        
 Add `SAA Thumb Generator`        
 
 
