@@ -157,7 +157,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         keepGallery: setupCheckbox('gallery-main-keep', LANG.keep_gallery, SETTINGS.keep_gallery, true, callback_keep_gallery),
 
         seed: setupSlider('generate-random-seed', LANG.random_seed, -1, 4294967295, 1, SETTINGS.random_seed, (value) =>{globalThis.globalSettings.random_seed = value;}),
-        cfg: setupSlider('generate-cfg', LANG.cfg, 1, 20, 0.01, SETTINGS.cfg, (value) =>{globalThis.globalSettings.cfg = value;}),
+        cfg: setupSlider('generate-cfg', LANG.cfg, 0, 20, 0.01, SETTINGS.cfg, (value) =>{globalThis.globalSettings.cfg = value;}),
         step: setupSlider('generate-step', LANG.step, 1, 100, 1, SETTINGS.step, (value) =>{globalThis.globalSettings.step = value;}),
         width: setupSlider('generate-width', LANG.width, 512, 2048, 8, SETTINGS.width, (value) =>{globalThis.globalSettings.width = value;}),
         height: setupSlider('generate-height', LANG.height, 512, 2048, 8, SETTINGS.height, (value) =>{globalThis.globalSettings.height = value;}),
