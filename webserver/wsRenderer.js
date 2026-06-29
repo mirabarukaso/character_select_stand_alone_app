@@ -25,6 +25,7 @@ import { setupImageUploadOverlay } from '../scripts/renderer/imageInfo.js';
 import { setupThemeToggle } from '../scripts/renderer/theme.js';
 import { setupRightClickMenu } from '../scripts/renderer/components/myRightClickMenu.js';
 import { initWebSocket, isSecuredConnection, sendWebSocketMessage, registerCallback } from './front/wsRequest.js';
+import {CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE} from '../scripts/types.js';
 
 // Run the init function when the DOM is fully loaded
 function afterDOMinit() {
@@ -76,16 +77,16 @@ export async function setupHeader(SETTINGS, FILES, LANG){
             (value) => { globalThis.globalSettings.api_vae_sdxl_override = value; }),
 
         diffusion_model_weight_dtype: mySimpleList('diffusion-model-weight-dtype', LANG.api_diffusion_model_weight_dtype,
-            ['default', 'fp8_e4m3fn', 'fp8_e4m3fn_fast', 'fp8_e5m2'],
+            DIFFUSION_DTYPE,
             (index, value) => { globalThis.globalSettings.diffusion_model_weight_dtype = value; }, 5, false, true),
 
         textencoder: mySimpleList('text-encoder', LANG.api_text_encoder, FILES.textEncoderList,
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder = value; }, 20, true, true),
         textencoder_type: mySimpleList('text-encoder-type', LANG.api_text_encoder_type,
-            ["stable_diffusion", "stable_cascade", "sd3", "stable_audio", "mochi", "ltxv", "pixart", "cosmos", "lumina2", "wan", "hidream", "chroma", "ace", "omnigen2", "qwen_image", "hunyuan_image", "flux2", "ovis"],
+            CLIP_TYPE,
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder_type = value; }, 10, false, true),
         textencoder_device: mySimpleList('text-encoder-device', LANG.api_text_encoder_device,
-            ['default', 'cpu'],
+            CLIP_DEVICE,
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder_device = value; }, 5, false, true),
 
         vpred:  mySimpleList('model-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr, LANG.vpred_off], 

@@ -1,3 +1,7 @@
+2026.06.29 v2.7.2     
+Add `krea2` support for Diffusion CLIP       
+
+
 2026.06.25 v2.7.1
 Clarify `ComfyUI model folder` #89      
 Fix date(year) in CHANGELOGS      
