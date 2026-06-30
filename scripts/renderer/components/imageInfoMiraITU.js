@@ -6,6 +6,7 @@ import { SAMPLER_COMFYUI, SCHEDULER_COMFYUI } from '../language.js';
 import { fileToBase64 } from '../generate.js';
 import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
 import { setBlur, setNormal, showDialog } from './myDialog.js';
+import { CLIP_TYPE } from '../../types.js';
 
 let settingsFileName = 'settings.json';
 let lastTaggerOptions = null;
@@ -534,7 +535,7 @@ function createModelConfig() {
 
     const unetClipType = document.createElement('select');
     unetClipType.className = 'controlnet-select';
-    unetClipType.innerHTML = createHtmlOptions(["stable_diffusion", "stable_cascade", "sd3", "stable_audio", "mochi", "ltxv", "pixart", "cosmos", "lumina2", "wan", "hidream", "chroma", "ace", "omnigen2", "qwen_image", "hunyuan_image", "flux2", "ovis"]);
+    unetClipType.innerHTML = createHtmlOptions(CLIP_TYPE);
     unetClipType.value = lastTaggerOptions?.unetClipType || 'stable_diffusion';
     unetClipType.addEventListener('change', handleUNETClipType);
     function handleUNETClipType() {
