@@ -31,7 +31,8 @@ let EXTRA_MODELS = {
     checkpoints: [],
     loras: [],
     controlnet: [],
-    upscale: []
+    upscale: [],
+    vae: []
 };
 let IMAGE_TAGGER = ['none'];
 
@@ -536,7 +537,7 @@ function readExtraModelPaths(model_path_comfyui) {
         return false;
     }
 
-    //function readDirectory(directory='', basePath = '', search_subfolder = false, maxDepth = Infinity, currentDepth = 0, extName = '.safetensors')
+    //function readDirectory(directory='', basePath = '', search_subfolder = true, maxDepth = Infinity, currentDepth = 0, extName = '.safetensors')
     function collectFromRelativeList(relList, targetArray, ext) {
         for (const rel of relList) {
             const absPath = path.isAbsolute(rel) ? rel : path.join(a111Base, rel);
@@ -561,17 +562,21 @@ function readExtraModelPaths(model_path_comfyui) {
     collectFromRelativeList(collectRelativePaths('controlnet'), EXTRA_MODELS.controlnet, '.safetensors');
     // upscale_models
     collectFromRelativeList(collectRelativePaths('upscale_models'), EXTRA_MODELS.upscale, '.pth');
+    // vae
+    collectFromRelativeList(collectRelativePaths('vae'), EXTRA_MODELS.vae, '.safetensors');
 
     EXTRA_MODELS.checkpoints = Array.from(new Set(EXTRA_MODELS.checkpoints));
     EXTRA_MODELS.loras = Array.from(new Set(EXTRA_MODELS.loras));
     EXTRA_MODELS.controlnet = Array.from(new Set(EXTRA_MODELS.controlnet));
     EXTRA_MODELS.upscale = Array.from(new Set(EXTRA_MODELS.upscale));
+    EXTRA_MODELS.vae = Array.from(new Set(EXTRA_MODELS.vae));
 
     console.log(CAT, 'readExtraModelPaths: found extra models:', {
         checkpoints: EXTRA_MODELS.checkpoints.length,
         loras: EXTRA_MODELS.loras.length,
         controlnet: EXTRA_MODELS.controlnet.length,
-        upscale: EXTRA_MODELS.upscale.length
+        upscale: EXTRA_MODELS.upscale.length,
+        vae: EXTRA_MODELS.vae.length
     });
 
     return true;

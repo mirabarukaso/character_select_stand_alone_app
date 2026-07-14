@@ -1,3 +1,7 @@
+2026.07.15 v2.7.3
+Add custom patch support for `vae`       
+
+
 2026.06.29 v2.7.2     
 Add `krea2` support for Diffusion CLIP       
 
