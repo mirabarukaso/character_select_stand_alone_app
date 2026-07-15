@@ -543,7 +543,7 @@ function readExtraModelPaths(model_path_comfyui) {
             const absPath = path.isAbsolute(rel) ? rel : path.join(a111Base, rel);
             if (fs.existsSync(absPath) && fs.statSync(absPath).isDirectory()) {
                 try {
-                    const items = readDirectory(absPath, '', true, Infinity, ext);
+                    const items = readDirectory(absPath, '', true, Infinity, 0, ext);
                     if (items?.length) {
                         targetArray.push(...items);
                     }
