@@ -1,5 +1,10 @@
+2026.07.15 v2.7.4
+Add check port availability before creating the SAAC service       
+Bugfix, `EXTRA_MODELS` is not reading subfolder        
+
+
 2026.07.15 v2.7.3
-Add custom patch support for `vae`       
+Add `vae` for `EXTRA_MODELS`               
 
 
 2026.06.29 v2.7.2     

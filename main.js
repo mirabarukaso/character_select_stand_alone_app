@@ -116,8 +116,8 @@ async function initializeApp() {
   setupIPCs();
 
   // Start the HTTP server
-  if(SETTINGS.ws_service) {
-    setupHttpServer(path.join(__dirname), SETTINGS.ws_addr, SETTINGS.ws_port);
+  if (SETTINGS.ws_service) {
+    await setupHttpServer(path.join(__dirname), SETTINGS.ws_addr, SETTINGS.ws_port);
   }
 }
 

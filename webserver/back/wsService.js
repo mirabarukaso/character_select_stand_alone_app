@@ -6,6 +6,7 @@ import * as fs from 'node:fs';
 import { appendFileSync, existsSync, mkdirSync } from 'node:fs';
 import http from 'node:http';
 import https from 'node:https';
+import net from 'node:net';
 import express from 'express';
 import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
@@ -64,8 +65,52 @@ function writeLog(message) {
   }
 }
 
+const MIN_WS_PORT = 10001;
+const DEFAULT_WS_PORT = 51028;
+
+function normalizeWsPort(wsPort) {
+  const port = Number(wsPort);
+  if (!Number.isInteger(port) || port <= 0 || port > 65535) {
+    const message = `${CAT} Invalid wsPort value "${wsPort}" configured; falling back to default port ${DEFAULT_WS_PORT}.`;
+    console.warn(message);
+    writeLog(message);
+    return DEFAULT_WS_PORT;
+  }
+
+  if (port < MIN_WS_PORT) {
+    const message = `${CAT} Configured wsPort ${port} is below ${MIN_WS_PORT}; using ${MIN_WS_PORT} instead.`;
+    console.warn(message);
+    writeLog(message);
+    return MIN_WS_PORT;
+  }
+
+  return port;
+}
+
+function isPortAvailable(port, host) {
+  return new Promise((resolve) => {
+    const tester = net.createServer();
+    tester.once('error', (error) => {
+      tester.close();
+      resolve(false);
+    });
+    tester.once('listening', () => {
+      tester.close(() => resolve(true));
+    });
+    tester.listen(port, host);
+  });
+}
+
 // Function to set up the HTTP or HTTPS server based on certificate availability
-function setupHttpServer(basePatch, wsAddr, wsPort) {
+async function setupHttpServer(basePatch, wsAddr, wsPort) {
+    wsPort = normalizeWsPort(wsPort);
+    const portAvailable = await isPortAvailable(wsPort, wsAddr);
+    if (!portAvailable) {
+      const warning = `${CAT} Port ${wsPort} is already in use or unavailable; aborting HTTP server startup.`;
+      console.warn(warning);
+      writeLog(warning);
+      return false;
+    }
     // Check for certificate files
     const certPath = process.env.SSL_CERT_PATH || path.join(__dirname, '../../html/ca/cert.pem');
     const keyPath = process.env.SSL_KEY_PATH || path.join(__dirname, '../../html/ca/key.pem');
@@ -432,7 +477,7 @@ const methodHandlers = {
   // md5 hash
   'md5Hash': (params) => {
     const input = params[0];
-    const hash = createHash('md5');
+    const hash = createHash('md5'); // warning disable S4790
     hash.update(input);
     return hash.digest('hex');
   },
