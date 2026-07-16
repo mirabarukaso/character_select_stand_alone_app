@@ -7,6 +7,8 @@ assignees: ''
 
 ---
 
+Switch to preview, READ BEFORE your next step.
+
 > [!IMPORTANT]
 > Only `waiIllustriousSDXL_v160` and `waiANIMA_v10Base10` model characters accept for now.      
 >
