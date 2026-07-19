@@ -7,7 +7,7 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/WebUI(A1111
 > The default thumbList is based on `waiIllustriousSDXL_v160`. There are two alternative thumbList: `waiANIMA_v10Base10` and `waiNSFWIllustrious_v120`. Will download automatically from `HuggingFace` once you have selected it. 
 > Create your own thumbList with [SAA Thumb Generator](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/thumb-generator/README.md)
 
-<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%>   
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=75%>   
 
 | Verified | [ComfyUI](https://github.com/comfyanonymous/ComfyUI)  | [A1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) |
 | --- | --- | --- | --- |
