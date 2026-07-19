@@ -455,22 +455,59 @@ def _default(key, val):
         st.session_state[key] = val
 
 
+_WORKFLOW_DEFAULTS = {
+    "checkpoint": "./workflow_api.json",
+    "diffusion":  "./workflow_diffusion_api.json",
+}
+
+_MODEL_TYPE_DEFAULTS = {
+    "checkpoint": {
+        "workflow_path": "./workflow_api.json",
+        "model": "waiIllustriousSDXL_v160.safetensors",
+        "diffusion_model_type": "stable_diffusion",
+        "text_encoder": "textencoder",
+        "vae": "vae",
+        "sampler": "euler_ancestral",
+        "scheduler": "beta",
+        "steps": 22,
+        "cfg": 7.0,
+        "seed": 42,
+        "width": 768,
+        "height": 1152,
+        "positive_suffix": "masterpiece, best quality, amazing quality, solo, simple background, white background, straight-on, upper body",
+        "negative": "bad quality, worst quality, worst detail, sketch, nsfw, explicit",
+    },
+    "diffusion": {
+        "workflow_path": "./workflow_diffusion_api.json",
+        "model": "Anima\\waiANIMA_v10Base10.safetensors",
+        "diffusion_model_type": "stable_diffusion",
+        "text_encoder": "Anima\\qwen_3_06b_base.safetensors",
+        "vae": "qwen_image_vae.safetensors",
+        "sampler": "er_sde",
+        "scheduler": "normal",
+        "steps": 32,
+        "cfg": 5.0,
+        "seed": 42,
+        "width": 768,
+        "height": 1152,
+        "positive_suffix": "masterpiece, best quality, safe, score_7, white background, straight-on, upper body",
+        "negative": "worst quality, low quality, blurry, jpeg artifacts, lowres, artist name, sketch, sensitive, nsfw, explicit, score_1, score_2, score_3",
+    },
+}
+
+
+def _apply_model_type_defaults(model_type: str, override: bool = False):
+    defaults = _MODEL_TYPE_DEFAULTS.get(model_type, _MODEL_TYPE_DEFAULTS["checkpoint"])
+    for key, value in defaults.items():
+        if override or key not in st.session_state:
+            st.session_state[key] = value
+
+
 # ComfyUI settings
 _default("server", "127.0.0.1:8188")
 _default("model_type", "checkpoint")  # "checkpoint" or "diffusion"
-_default("workflow_path", "./workflow_api.json")
+_apply_model_type_defaults(st.session_state.model_type)
 _default("sleep_time", 0)  # Seconds to sleep after each generation (to reduce GPU load)
-_default("model", "waiIllustriousSDXL_v160.safetensors")
-_default("diffusion_model_type", "stable_diffusion")  # Model type for diffusion mode
-_default("text_encoder", "textencoder")
-_default("vae", "vae")
-_default("sampler", "euler_ancestral")
-_default("scheduler", "beta")
-_default("steps", 22)
-_default("cfg", 7.0)
-_default("seed", 42)
-_default("width", 768)
-_default("height", 1152)
 _default(
     "positive_suffix",
     "solo, simple background, white background, straight-on, upper body, "
@@ -524,13 +561,8 @@ with st.sidebar:
             help="diffusion = Flux/SD3-style separate text encoder & VAE; checkpoint = classic all-in-one .safetensors"
         )
 
-        # Auto-update workflow path default when model type changes
-        _WORKFLOW_DEFAULTS = {
-            "checkpoint": "./workflow_api.json",
-            "diffusion":  "./workflow_diffusion_api.json",
-        }
         if st.session_state.model_type != prev_model_type:
-            st.session_state.workflow_path = _WORKFLOW_DEFAULTS[st.session_state.model_type]
+            _apply_model_type_defaults(st.session_state.model_type, override=True)
 
         st.session_state.workflow_path = st.text_input(
             "Workflow JSON Path",
@@ -786,7 +818,6 @@ def start_generation(
     
     st.info(f"Load tag_assist from {tag_assist_path}")
     tag_assist = load_tag_assist(tag_assist_path)
-    print(tag_assist)
     cfg = get_comfyui_cfg()
     suffix = st.session_state.positive_suffix
     
