@@ -63,7 +63,7 @@ function setupIPCs() {
     return null;
     }
     try {
-    const hash = createHash('md5');
+    const hash = createHash('md5'); //NOSONAR S4790
     hash.update(input);
     return hash.digest('hex');
     } catch (error) {

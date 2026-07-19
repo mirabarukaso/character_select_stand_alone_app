@@ -6,13 +6,14 @@ import { setupButtonOverlay, customCommonOverlay } from './renderer/customOverla
 import { myCharacterList, myRegionalCharacterList, myViewsList, myLanguageList, mySimpleList } from './renderer/components/myDropdown.js';
 import { callback_mySettingList, callback_api_model_select, callback_api_model_type, callback_api_interface, 
     callback_generate_start, callback_generate_skip, callback_generate_cancel,callback_keep_gallery,
-    callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart
+    callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart,
+    callback_thumb_select
  } from './renderer/callbacks.js';
 import { setupSlider } from './renderer/components/mySlider.js';
 import { setupCheckbox, setupRadiobox } from './renderer/components/myCheckbox.js';
 import { setupButtons, toggleButtons, showCancelButtons } from './renderer/components/myButtons.js';
-import { setupCollapsed, setupSaveSettingsToggle, setupModelReloadToggle, 
-    setupRefreshToggle, setupSwapToggle, doSwap, reloadFiles } from './renderer/components/myCollapsed.js';
+import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, setupModelReloadToggle, 
+    setupRefreshToggle, setupSwapToggle, reloadFiles, doSwap } from './renderer/components/myCollapsed.js';
 import { setupTextbox, setupInfoBox } from './renderer/components/myTextbox.js';
 import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from './renderer/generate_backend.js';
 import { setupLoRA } from './renderer/slots/myLoRASlot.js';
@@ -31,7 +32,7 @@ function afterDOMinit() {
     console.log("Script loaded, attempting initial setup");
     (async () => {
         const version = await globalThis.api.getAppVersion();
-        document.title = `Wai Character Select SAA ${version}`;
+        document.title = `Character Select SAA ${version}`;
 
         setBlur();
         await init();
@@ -74,15 +75,19 @@ export async function setupHeader(SETTINGS, FILES, LANG){
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder_device = value; }, 5, false, true),
 
         vpred:  mySimpleList('model-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr, LANG.vpred_off], 
-            (index, value) => { globalThis.globalSettings.api_model_file_vpred = value; }, 5, false, true),        
-        settings: mySimpleList('settings-select', LANG.title_settings_load, FILES.settingList, callback_mySettingList)
+            (index, value) => { globalThis.globalSettings.api_model_file_vpred = value; }, 5, false, true),
+        settings: mySimpleList('settings-select', LANG.title_settings_load, FILES.settingList, callback_mySettingList),
+
+        thumb_select: mySimpleList('thumb-select', LANG.thumb_select, SETTINGS.thumb_select_list,
+            callback_thumb_select, 5, false, true)
     }
     globalThis.dropdownList.languageList.updateDefaults(LANG.language);
     globalThis.dropdownList.vpred.updateDefaults(SETTINGS.api_model_file_vpred);
 
     // Setup Header button
     globalThis.headerIcon = {
-        save: setupSaveSettingsToggle(),
+        save: await setupSaveSettingsToggle(),
+        delete: await setupDeleteSettingsToggle(),
         reload: await setupModelReloadToggle(),
         refresh: setupRefreshToggle(),
         swap: setupSwapToggle(),
@@ -91,7 +96,8 @@ export async function setupHeader(SETTINGS, FILES, LANG){
 
     // Character and OC List
     globalThis.characterList = myCharacterList('dropdown-character', FILES.characterList, FILES.ocList);
-    globalThis.characterListRegional = myRegionalCharacterList('dropdown-character-regional', FILES.characterList, FILES.ocList);
+    globalThis.characterListRegional = myRegionalCharacterList('dropdown-character-regional', FILES.characterList, FILES.ocList);    
+    console.log('Thumbnail files loaded successfully.', FILES.characterListArray.length, 'characters available.');
 }
 
 export async function setupLeftRight(SETTINGS, FILES, LANG) {
@@ -232,6 +238,12 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
             maxLines: 1
             }, true, (value) => {
             globalThis.globalSettings.model_filter_keyword = value;
+        }),
+        model_filter_keyword_diffusion:setupTextbox('system-settings-api-fliter-diffusion-list', LANG.model_filter_keyword_diffusion, {
+            value: SETTINGS.model_filter_keyword_diffusion,
+            maxLines: 1
+            }, true, (value) => {
+            globalThis.globalSettings.model_filter_keyword_diffusion = value;
         }),
         search_modelinsubfolder:setupCheckbox('system-settings-api-subfolder', LANG.search_modelinsubfolder, SETTINGS.search_modelinsubfolder,
             false, (value) => {
@@ -421,11 +433,13 @@ async function init(){
         const cachedFiles = await globalThis.api.getCachedFiles();
         globalThis.cachedFiles = {
             language: cachedFiles.languages,
+            
             characterThumb: cachedFiles.characterThumb,
             characterList: cachedFiles.characters,
+            tagAssist: cachedFiles.tagAssist,
+
             ocList: cachedFiles.ocCharacters,
-            viewTags: cachedFiles.viewTags,
-            tagAssist: cachedFiles.tagAssist,            
+            viewTags: cachedFiles.viewTags,            
             settingList: await globalThis.api.getSettingFiles(),
             loadingWait:`data:image/webp;base64,${cachedFiles.loadingWait.data}`,
             loadingFailed:`data:image/webp;base64,${cachedFiles.loadingFailed.data}`,
@@ -505,16 +519,31 @@ async function init(){
         setupRightClickMenu();
 
         // Done
-        globalThis.initialized = true;        
+        globalThis.initialized = true;
+        
         if(SETTINGS.setup_wizard) {
             globalThis.globalSettings.setup_wizard = false;
             await setupWizard();
             await setupModelReloadToggle();
+
+            callback_mySettingList(0, `settings.json`);  // Reload default settings
+        } else {
+            doSwap(globalThis.globalSettings.rightToleft);   //default is right to left
+
+            // Update language and settings
+            updateLanguage(true, globalThis.inBrowser); 
+            updateSettings();
+            
+            // Load LoRA slots and update the collapsed state of the LoRA tab
+            globalThis.lora.flush();
+            if(globalThis.lora.getSlots().length > 0 ) {
+                globalThis.collapsedTabs.lora.setCollapsed(false);
+            } else if(globalThis.collapsedTabs.lora.getCollapsed() === false) {
+                globalThis.collapsedTabs.lora.setCollapsed(true);
+            }
+
+            globalThis.globalSettings.lastLoadedSettings = `settings`;
         }
-        doSwap(globalThis.globalSettings.rightToleft);   //default is right to left        
-        updateLanguage(false, globalThis.inBrowser);
-        updateSettings();
-        globalThis.globalSettings.lastLoadedSettings = 'settings';
     } catch (error) {
         console.error('Error:', error);
     }
@@ -589,13 +618,24 @@ async function setupWizard(){
             noText: LANG.setup_no
         });
 
-        globalThis.globalSettings.model_filter_keyword = await showDialog('input', { 
-            message: LANG.setup_model_filter_keyword,
-            placeholder: SETTINGS.model_filter_keyword, 
-            defaultValue: SETTINGS.model_filter_keyword,
-            showCancel: false,
-            buttonText: LANG.setup_ok
-        });
+        if (globalThis.globalSettings.model_filter) {
+            globalThis.globalSettings.model_filter_keyword = await showDialog('input', { 
+                message: LANG.setup_model_filter_keyword,
+                placeholder: SETTINGS.model_filter_keyword, 
+                defaultValue: SETTINGS.model_filter_keyword,
+                showCancel: false,
+                buttonText: LANG.setup_ok
+            });
+
+            globalThis.globalSettings.model_filter_keyword_diffusion = await showDialog('input', { 
+                message: LANG.setup_model_filter_keyword_diffusion,
+                placeholder: SETTINGS.model_filter_keyword_diffusion, 
+                defaultValue: SETTINGS.model_filter_keyword_diffusion,
+                showCancel: false,
+                buttonText: LANG.setup_ok
+            });
+        }
+
 
         globalThis.globalSettings.search_modelinsubfolder = await showDialog('confirm', { 
             message: LANG.setup_search_modelinsubfolder,
@@ -647,12 +687,61 @@ async function setupWizard(){
         });
     }
 
+    // SAAC
+    globalThis.globalSettings.ws_service = await await showDialog('confirm', { 
+        message: LANG.setup_enable_saac,
+        yesText: LANG.setup_yes,
+        noText: LANG.setup_no
+    });
+    if(globalThis.globalSettings.ws_service) {
+        globalThis.globalSettings.ws_addr = await showDialog('input', { 
+            message: LANG.setup_saac_addr,
+            placeholder: SETTINGS.ws_addr, 
+            defaultValue: SETTINGS.ws_addr, 
+            showCancel: false,
+            buttonText: LANG.setup_ok
+        });
+        globalThis.globalSettings.ws_addr = normalizeWsAddr(globalThis.globalSettings.ws_addr);
+
+        globalThis.globalSettings.ws_port = await showDialog('input', { 
+            message: LANG.setup_saac_port,
+            placeholder: SETTINGS.ws_port, 
+            defaultValue: SETTINGS.ws_port, 
+            showCancel: false,
+            buttonText: LANG.setup_ok
+        });
+        globalThis.globalSettings.ws_port = normalizeWsPort(globalThis.globalSettings.ws_port);
+
+         await showDialog('info', { 
+            message: LANG.setup_saac_start.replace('{0}', globalThis.globalSettings.ws_addr).replace('{1}', globalThis.globalSettings.ws_port),
+            buttonText: LANG.setup_ok
+        });
+    }
+
     await globalThis.api.saveSettingFile('settings.json', globalThis.globalSettings);
     globalThis.cachedFiles.settingList = await globalThis.api.updateSettingFiles();
     globalThis.dropdownList.settings.setOptions(globalThis.cachedFiles.settingList);
     globalThis.dropdownList.settings.updateDefaults(`settings.json`);
     await reloadFiles();
     await showDialog('info', { message: LANG.setup_done, buttonText:SETTINGS.setup_ok});
+}
+
+function normalizeWsAddr(wsAddr) {
+    if (typeof wsAddr !== 'string') {
+        return '0.0.0.0';
+    }
+
+    const candidate = wsAddr.trim();
+    const ipv4Regex = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+    return ipv4Regex.test(candidate) ? candidate : '0.0.0.0';
+}
+
+function normalizeWsPort(wsPort) {
+    const port = Number(wsPort);
+    if (!Number.isInteger(port) || port <= 10000 || port > 65535) {
+        return 51028;
+    }
+    return port;
 }
 
 // Run the init function when the DOM is fully loaded

@@ -6,12 +6,13 @@ import { setupButtonOverlay, customCommonOverlay } from '../scripts/renderer/cus
 import { myCharacterList, myRegionalCharacterList, myViewsList, myLanguageList, mySimpleList } from '../scripts/renderer/components/myDropdown.js';
 import { callback_mySettingList, callback_api_model_select, callback_api_model_type, callback_api_interface, 
     callback_generate_start, callback_generate_skip, callback_generate_cancel,callback_keep_gallery,
-    callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart
+    callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart,
+    callback_thumb_select
  } from '../scripts/renderer/callbacks.js';
 import { setupSlider } from '../scripts/renderer/components/mySlider.js';
 import { setupCheckbox, setupRadiobox } from '../scripts/renderer/components/myCheckbox.js';
 import { setupButtons, toggleButtons, showCancelButtons } from '../scripts/renderer/components/myButtons.js';
-import { setupCollapsed, setupSaveSettingsToggle, setupModelReloadToggle, 
+import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, setupModelReloadToggle, 
     setupRefreshToggle, setupSwapToggle, doSwap } from '../scripts/renderer/components/myCollapsed.js';
 import { setupTextbox, setupInfoBox } from '../scripts/renderer/components/myTextbox.js';
 import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from '../scripts/renderer/generate_backend.js';
@@ -90,15 +91,19 @@ export async function setupHeader(SETTINGS, FILES, LANG){
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder_device = value; }, 5, false, true),
 
         vpred:  mySimpleList('model-vpred', LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr, LANG.vpred_off], 
-            (index, value) => { globalThis.globalSettings.api_model_file_vpred = value; }, 5, false, true),        
-        settings: mySimpleList('settings-select', LANG.title_settings_load, FILES.settingList, callback_mySettingList)
+            (index, value) => { globalThis.globalSettings.api_model_file_vpred = value; }, 5, false, true),                
+        settings: mySimpleList('settings-select', LANG.title_settings_load, FILES.settingList, callback_mySettingList),
+
+        thumb_select: mySimpleList('thumb-select', LANG.thumb_select, SETTINGS.thumb_select_list,
+            callback_thumb_select, 5, false, true)
     }
     globalThis.dropdownList.languageList.updateDefaults(LANG.language);
     globalThis.dropdownList.vpred.updateDefaults(SETTINGS.api_model_file_vpred);
 
     // Setup Header button
     globalThis.headerIcon = {
-        save: setupSaveSettingsToggle(),
+        save: await setupSaveSettingsToggle(),
+        delete: await setupDeleteSettingsToggle(),
         reload: await setupModelReloadToggle(),
         refresh: setupRefreshToggle(),
         swap: setupSwapToggle(),
@@ -248,6 +253,12 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
             maxLines: 1
             }, true, (value) => {
             globalThis.globalSettings.model_filter_keyword = value;
+        }),
+        model_filter_keyword_diffusion:setupTextbox('system-settings-api-fliter-diffusion-list', LANG.model_filter_keyword_diffusion, {
+            value: SETTINGS.model_filter_keyword_diffusion,
+            maxLines: 1
+            }, true, (value) => {
+            globalThis.globalSettings.model_filter_keyword_diffusion = value;
         }),
         search_modelinsubfolder:setupCheckbox('system-settings-api-subfolder', LANG.search_modelinsubfolder, SETTINGS.search_modelinsubfolder,
             false, (value) => {
@@ -542,12 +553,23 @@ async function init() {
         setupRightClickMenu();
 
         // Done
-        globalThis.initialized = true;        
+        globalThis.initialized = true;
         
-        doSwap(globalThis.globalSettings.rightToleft);   //default is right to left        
-        updateLanguage(false, globalThis.inBrowser); 
+        doSwap(globalThis.globalSettings.rightToleft);   //default is right to left
+
+        // Update language and settings
+        updateLanguage(true, globalThis.inBrowser); 
         updateSettings();
-        globalThis.globalSettings.lastLoadedSettings = 'settings';
+        
+        // Load LoRA slots and update the collapsed state of the LoRA tab
+        globalThis.lora.flush();
+        if(globalThis.lora.getSlots().length > 0 ) {
+            globalThis.collapsedTabs.lora.setCollapsed(false);
+        } else if(globalThis.collapsedTabs.lora.getCollapsed() === false) {
+            globalThis.collapsedTabs.lora.setCollapsed(true);
+        }
+
+        globalThis.globalSettings.lastLoadedSettings = `settings`;
     } catch (error) {
         console.error('Error during initialization:', error);
     }

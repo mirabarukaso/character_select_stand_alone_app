@@ -42,12 +42,17 @@ export function setupCollapsed(containerId, collapsed = false) {
         }
     }
 
+    function getCollapsed() {
+        return container.classList.contains('collapsed');
+    }
+
     return {
-        setCollapsed
+        setCollapsed,
+        getCollapsed
     };
 }
 
-export async function setupSaveSettingsToggle(){
+export async function setupSaveSettingsToggle() {
     const saveSettingsButton = document.getElementById('settings-save-toggle');
     if (!saveSettingsButton) {
         console.error(CAT, '[setupSaveSettingsToggle] Save button not found');
@@ -109,6 +114,52 @@ export async function setupSaveSettingsToggle(){
     return saveSettingsButton;
 }
 
+export async function setupDeleteSettingsToggle() {
+    const deleteSettingsButton = document.getElementById('settings-delete-toggle');
+    if (!deleteSettingsButton) {
+        console.error(CAT, '[setupDeleteSettingsToggle] Delete button not found');
+        return null;
+    }
+
+    deleteSettingsButton.addEventListener('click', async () => {
+        const SETTINGS = globalThis.globalSettings;
+        const FILES = globalThis.cachedFiles;
+        const LANG = FILES.language[SETTINGS.language];
+
+        setBlur();
+        const inputResult = await showDialog('confirm', { 
+            message: LANG.delete_settings_title.replace('{0}', globalThis.globalSettings.lastLoadedSettings),
+            yesText: LANG.setup_yes,
+            noText: LANG.setup_no
+        });
+        if(inputResult) {
+            let result;
+            if (globalThis.inBrowser) {
+                result = await sendWebSocketMessage({ type: 'API', method: 'deleteSettingFile', params: [`${globalThis.globalSettings.lastLoadedSettings}.json`, globalSettings] });
+            } else {
+                result = await globalThis.api.deleteSettingFile(`${globalThis.globalSettings.lastLoadedSettings}.json`, globalSettings);
+            }
+
+            if (result === true) {
+                await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].delete_settings_success.replace('{0}', globalThis.globalSettings.lastLoadedSettings) }); 
+
+                if (globalThis.inBrowser) {
+                    globalThis.cachedFiles.settingList = await sendWebSocketMessage({ type: 'API', method: 'updateSettingFiles' });
+                } else {
+                    globalThis.cachedFiles.settingList = await globalThis.api.updateSettingFiles();
+                }
+                globalThis.dropdownList.settings.setOptions(globalThis.cachedFiles.settingList);
+                globalThis.dropdownList.settings.updateDefaults(``);
+            } else {
+                await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].delete_settings_failed.replace('{0}', globalThis.globalSettings.lastLoadedSettings) });
+            }
+        }
+        setNormal();
+    });
+    console.log(CAT, '[setupDeleteSettingsToggle] Delete button setup complete', deleteSettingsButton);
+    return deleteSettingsButton;
+}
+
 export async function setupModelReloadToggle() {
     const refreshButton = document.getElementById('model-refresh-toggle');
     if (!refreshButton) {
@@ -131,11 +182,14 @@ export async function setupModelReloadToggle() {
 export async function reloadFiles(){
     const SETTINGS = globalThis.globalSettings;
     const LANG = globalThis.cachedFiles.language[SETTINGS.language];
-    const args = [globalThis.globalSettings.model_path_comfyui,
-                globalThis.globalSettings.model_path_webui,
-                globalThis.globalSettings.model_filter_keyword,
-                globalThis.globalSettings.model_filter,
-                globalThis.globalSettings.search_modelinsubfolder];
+    const args = [
+        globalThis.globalSettings.model_path_comfyui,               // 0
+        globalThis.globalSettings.model_path_webui,                 // 1
+        globalThis.globalSettings.model_filter_keyword,             // 2
+        globalThis.globalSettings.model_filter,                     // 3
+        globalThis.globalSettings.search_modelinsubfolder,          // 4
+        globalThis.globalSettings.model_filter_keyword_diffusion    // 5   
+    ];
 
     if (globalThis.inBrowser) {
         await sendWebSocketMessage({ type: 'API', method: 'updateModelList', params: [args] });

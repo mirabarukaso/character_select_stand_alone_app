@@ -10,6 +10,7 @@
 }
 
 html, body {
+    width: 100%;
     height: 100%;
     margin: 0;
     overflow: hidden; 
@@ -33,7 +34,7 @@ html, body {
     justify-content: flex-end; 
     align-items: center;
 }
-.settings-save, .model-select,
+.settings-save, .settings-delete,.model-select,
 .global-refresh, .global-settings-right-to-left, .global-settings-language, .global-settings-themes {
     margin-top: 8px;
     margin-bottom: 8px;
@@ -114,6 +115,13 @@ html, body {
 #settings-save-icon {
     -webkit-mask: url('../scripts/svg/save.svg') no-repeat center;
     mask: url('../scripts/svg/save.svg') no-repeat center;
+    -webkit-mask-size: contain;
+    mask-size: contain;
+}
+
+#settings-delete-icon {
+    -webkit-mask: url('../scripts/svg/delete.svg') no-repeat center;
+    mask: url('../scripts/svg/delete.svg') no-repeat center;
     -webkit-mask-size: contain;
     mask-size: contain;
 }

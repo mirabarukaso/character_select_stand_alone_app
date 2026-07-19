@@ -11,7 +11,12 @@ export const sharedBodyHTML = `
               <img id="settings-save-icon" src="scripts/svg/save.svg" alt="settings-save" fill="currentColor">
             </button>
           </div>
-          <div class="settings-select"></div>          
+          <div class="settings-select"></div>
+          <div class="settings-delete">
+            <button id="settings-delete-toggle" title="Delete Settings">
+              <img id="settings-delete-icon" src="scripts/svg/delete.svg" alt="settings-delete" fill="currentColor">
+            </button>
+          </div>
         </div>
 
         <div id="global-settings-middle">
@@ -97,6 +102,7 @@ export const sharedBodyHTML = `
               <div class="system-settings-main-2">
                 <div class="system-settings-api-fliter"></div>
                 <div class="system-settings-api-fliter-list"></div>
+                <div class="system-settings-api-fliter-diffusion-list"></div>
                 <div class="system-settings-api-comfyui"></div>
                 <div class="system-settings-api-webui"></div>                
               </div>
@@ -238,7 +244,8 @@ export const sharedBodyHTML = `
           <div class="model-settings-container">
             <div class="model-settings-header">
               <div class="model-vpred"></div>
-              <div class="vae-override"></div>              
+              <div></div>
+              <div class="thumb-select"></div>
               <div class="model-settings-span">
                 <span id="model-settings-span">Model</span>
                 <img id="model-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
@@ -256,11 +263,13 @@ export const sharedBodyHTML = `
               <div class="system-settings-main-1">
                 <div></div>
                 <div class="text-encoder-type"></div>
-                <div><p>Checkpoint: SDXL/Noob/IL/Pony/SD15</p></div>
+                <div></div>
                 <div class="text-encoder-device"></div>
+                <div><p>Checkpoint: SDXL/Noob/IL/Pony/SD15</p></div>
+                <div class="vae-override"></div>
               </div>              
               <div class="system-settings-main-2">
-                <div class="vae-sdxl"></div>
+                <div class="vae-sdxl"></div>                
               </div>
             </div>
           </div>

@@ -12,7 +12,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { WebSocketServer } from 'ws';
-import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings,
+import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings, deleteSettings,
     updateMiraITUSettingFiles, loadMiraITUSettings, saveMiraITUSettings
  } from '../../scripts/main/globalSettings.js';
 import { getCachedFilesWithoutThumb, getCharacterThumb } from '../../scripts/main/cachedFiles.js';
@@ -437,6 +437,7 @@ const methodHandlers = {
   'getGlobalSettings': ()=> getGlobalSettings(),
   'loadSettingFile': (params)=> loadSettings(...params),
   'saveSettingFile': (params)=> saveSettings(...params),
+  'deleteSettingFile': (params)=> deleteSettings(...params),
   'getSettingFiles': ()=> getSettingFiles(),
   'updateSettingFiles': ()=> updateSettingFiles(),
 
@@ -477,7 +478,7 @@ const methodHandlers = {
   // md5 hash
   'md5Hash': (params) => {
     const input = params[0];
-    const hash = createHash('md5'); // warning disable S4790
+    const hash = createHash('md5'); // NOSONAR S4790
     hash.update(input);
     return hash.digest('hex');
   },

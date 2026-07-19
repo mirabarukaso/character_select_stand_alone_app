@@ -368,7 +368,7 @@ function updateModelList(model_path_comfyui, model_path_webui, model_filter, ena
     }
 
     // Apply filter
-    if (enable_filter && model_filter) {
+    if (enable_filter && model_filter && model_filter !== `*`) {
         const filters = model_filter.split(',').map(f => f.trim().toLowerCase());
         MODELLIST_COMFYUI = MODELLIST_ALL_COMFYUI.filter(fileName =>
             filters.some(filter => fileName.toLowerCase().includes(filter))
@@ -423,7 +423,7 @@ function updateVAEList(model_path_comfyui, model_path_webui, search_subfolder) {
     }
 }
 
-function updateDiffusionModelList(model_path_comfyui, search_subfolder) {
+function updateDiffusionModelList(model_path_comfyui, search_subfolder, model_filter, enable_filter) {
     // --- ComfyUI ---
     const customComfyPaths = resolveCustomPaths(['comfyui'], 'diffusion_models'); 
     
@@ -438,8 +438,16 @@ function updateDiffusionModelList(model_path_comfyui, search_subfolder) {
              ...readDirectory(unetPath, '', search_subfolder, Infinity, 0, '.gguf')];
     } else {
         DIFFUSION_MODELS_COMFYUI = ['None'];
-    }    
-    
+    }        
+
+    // Apply filter
+    if (enable_filter && model_filter && model_filter !== `*`) {
+        const filters = model_filter.split(',').map(f => f.trim().toLowerCase());
+        DIFFUSION_MODELS_COMFYUI = DIFFUSION_MODELS_COMFYUI.filter(fileName =>
+            filters.some(filter => fileName.toLowerCase().includes(filter))
+        );
+    }
+
     if (DIFFUSION_MODELS_COMFYUI.length === 0) {        
         DIFFUSION_MODELS_COMFYUI = ['None'];
     }
@@ -891,7 +899,7 @@ function updateModelAndLoRAList(args) {
 
     updateModelList(args[0], args[1], args[2], args[3], args[4]);
     updateVAEList(args[0], args[1], args[4]);
-    updateDiffusionModelList(args[0], args[4]);
+    updateDiffusionModelList(args[0], args[4], args[5], args[3]);
     updateTextEncoderList(args[0], args[1], args[4]);
 
     updateLoRAList(args[0], args[1], args[4]);

@@ -2,6 +2,7 @@ import { app, ipcMain, dialog } from 'electron';
 import * as fs from 'node:fs';
 import path from 'node:path';
 import { loadCSVFile, loadJSONFile } from './fileHandlers.js';
+import { requestDownloadOldThumbs, requestDownloadAnimaThumbs } from './downloadFiles.js';
 
 const CAT = '[FileCache]';
 
@@ -17,7 +18,7 @@ let cachedPrivacyBall = {};
 
 const appPath = app.isPackaged ? path.join(path.dirname(app.getPath('exe')), 'resources', 'app') : app.getAppPath();
 
-function setupCachedFiles(){
+function setupCachedFiles(thumbSelect) {
     function loadFileEx(saveDir, fileName, dataPointer)
     {
         const filePath = path.join(appPath, saveDir, fileName);
@@ -64,10 +65,16 @@ function setupCachedFiles(){
         }
     }
 
-    const thumb = loadFileEx('data', 'wai_character_thumbs.json', cachedCharacterThumb);
-    const language = loadFileEx('data', 'language.json', cachedLanguages);
-    const characters = loadFileEx('data', 'wai_characters.csv', cachedCharacter);
-    const character_tag_assist = loadFileEx('data', 'wai_tag_assist.json', cachedTagAssist);
+    const thumb_name = `${thumbSelect}_thumbs.json`;
+    const characters_name = `${thumbSelect}_characters.csv`;
+    const tag_assist_name = `${thumbSelect}_tag_assist.json`;
+    console.log(`${CAT}: Loading cached files for thumbnail selection: ${thumbSelect}`);
+
+    const thumb = loadFileEx('data', thumb_name, cachedCharacterThumb);
+    const characters = loadFileEx('data', characters_name, cachedCharacter);
+    const character_tag_assist = loadFileEx('data', tag_assist_name, cachedTagAssist);
+
+    const language = loadFileEx('data', 'language.json', cachedLanguages);        
     const oc_characters = loadFileEx('data', 'original_character.json', cachedOCCharacter);
     const view_tags = loadFileEx('data', 'view_tags.json', cachedViewTags);
 
@@ -89,6 +96,44 @@ function setupCachedFiles(){
             privacyBall: cachedPrivacyBall
         };
     });
+
+    ipcMain.handle('update-cached-character-thumb', async (event, thumbSelect) => {
+        console.log(`${CAT}: Updating cached files for thumbnail selection: ${thumbSelect}`);
+
+        if (thumbSelect === `waiNSFWIllustrious_v120`) {
+            console.log(`${CAT}: Requesting download of waiNSFWIllustrious_v120 thumbs...`);
+            await requestDownloadOldThumbs();
+        } else if (thumbSelect === `waiANIMA_v10Base10`) {
+            console.log(`${CAT}: Requesting download of waiANIMA_v10Base10 thumbs...`);
+            await requestDownloadAnimaThumbs();
+        }
+        
+        const temp_cachedCharacterThumb = {};
+        const temp_cachedCharacter = {};
+        const temp_cachedTagAssist = {};        
+
+        const thumb_name = `${thumbSelect}_thumbs.json`;
+        const characters_name = `${thumbSelect}_characters.csv`;
+        const tag_assist_name = `${thumbSelect}_tag_assist.json`;
+
+        const thumb = loadFileEx('data', thumb_name, temp_cachedCharacterThumb);
+        const characters = loadFileEx('data', characters_name, temp_cachedCharacter);
+        const character_tag_assist = loadFileEx('data', tag_assist_name, temp_cachedTagAssist);
+
+        const success = thumb && characters && character_tag_assist;
+        if (success) {
+            cachedCharacterThumb = temp_cachedCharacterThumb;
+            cachedCharacter = temp_cachedCharacter;
+            cachedTagAssist = temp_cachedTagAssist;
+            console.log(`${CAT}: Number of characters loaded: ${Object.entries(cachedCharacter).length}`);
+        } else {
+            console.error(`${CAT}: Failed to update cached files for thumbnail selection: ${thumbSelect}`);
+        }
+
+        return success;
+    });
+
+    console.log(`${CAT}: Number of characters loaded: ${Object.entries(cachedCharacter).length}`);
 
     return thumb && language && characters && oc_characters && view_tags && character_tag_assist && loadingWait && loadingFailed && privacyBall;
 }

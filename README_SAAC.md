@@ -18,6 +18,7 @@ Web Service/Ports/Addr can be modify in your `settings.json`.
 7. Start your Comfyui/WebUI API on `computer A`; start SAA on `computer B` and set API to `computer A`; connect SAAC from `computer C`...    
 8. You can modify/save `SAAC Settings` in `Settings` tab, but be noticed this is for your `SAA host PC`      
 9. Write to clipboard not working from remote with HTTP mode (except `localhost`), added a info window to show those message. Check `HTTPS mode` to solve that problem. [More information](https://webkit.org/blog/10855/async-clipboard-api/)       
+10. The SAAC listening port should NOT less than 10001, any incorrect settings will result to default port or failed to setup SAAC service         
 
 ## HTTPS mode
 You should always use HTTPS/WSS for security. The HTTP fallback is suitable for development or local usage only.     

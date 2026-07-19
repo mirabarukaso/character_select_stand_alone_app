@@ -9,7 +9,7 @@ let SETTINGFILES = [];
 let globalSettings;
 
 const defaultSettings = {
-    "ws_service": true,
+    "ws_service": false,
     "ws_addr": '0.0.0.0',
     "ws_port": 51028,
 
@@ -25,12 +25,15 @@ const defaultSettings = {
 
     "model_filter": false,
     "model_filter_keyword": "waiIllustrious,waiNSFW,waiSHUFFLENOOB",
+    "model_filter_keyword_diffusion": "*",  //waiANIMA
     "search_modelinsubfolder": true,
     
+    "thumb_select": "waiIllustriousSDXL_v160",
+    "thumb_select_list": [`waiIllustriousSDXL_v160`, `waiANIMA_v10Base10`, `waiNSFWIllustrious_v120`],
     "character1": "Random",
     "character2": "None",
     "character3": "None",
-    "tag_assist": false,
+    "tag_assist": true,
     "wildcard_random": false,
 
     "regional_condition": false,    
@@ -161,6 +164,10 @@ function setupGlobalSettings() {
         return saveSettings(fineName, settings);
     });
 
+    ipcMain.handle('delete-setting-file', async (event, fineName) => {
+        return deleteSettings(fineName);
+    });
+
     ipcMain.handle('update-all-miraitu-setting-files', async () => {
         return updateMiraITUSettingFiles();
     });
@@ -228,6 +235,23 @@ function loadSettings(fineName) {
     }
     
     return globalSettings;
+}
+
+function deleteSettings(fineName) {
+    const settingsDir = path.join(appPath, 'settings', fineName);
+    try {
+        if (fs.existsSync(settingsDir)) {
+            fs.unlinkSync(settingsDir);
+            console.log(CAT, `Successfully deleted settings file: ${settingsDir}`);
+            return true;
+        } else {
+            console.error(CAT, `File not found: ${settingsDir}`);
+            return false;
+        }
+    } catch (err) {
+        console.error(CAT, `Failed to delete settings file ${settingsDir}: ${err.message}`);
+        return false;
+    }
 }
 
 function enumSettings() {
@@ -332,4 +356,5 @@ export {
     updateMiraITUSettingFiles,
     loadMiraITUSettings,
     saveMiraITUSettings,
+    deleteSettings
 };

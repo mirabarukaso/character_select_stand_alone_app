@@ -166,6 +166,15 @@ function splitByTopLevelPipe(str) {
     return options;
 }
 
+function getSecureRandomInt(max) {
+    if (max <= 0) {
+        return 0;
+    }
+    const array = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(array);
+    return array[0] % max;
+}
+
 export function processRandomString(input) {
     // Check if input contains braces
     if (!String(input).includes('{')) {
@@ -209,8 +218,8 @@ export function processRandomString(input) {
         // Split options by top-level |
         const options = splitByTopLevelPipe(braceContent);
         
-        // Randomly select one option
-        const randomIndex = Math.floor(Math.random() * options.length);
+        // Randomly select one option securely
+        const randomIndex = getSecureRandomInt(options.length);
         const selected = options[randomIndex].trim();
         
         // Replace brace content with selected option

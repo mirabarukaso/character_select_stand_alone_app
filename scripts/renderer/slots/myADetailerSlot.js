@@ -209,7 +209,7 @@ class ADetailerSlotManager {
             if (!input.matches('.numeric-input')) return;
 
             const value = input.value;
-            const validPattern = /^-?\d*\.?\d*$/;
+            const validPattern = /^-?\d*\.?\d*$/;   //NOSONAR S8786
             if (validPattern.test(value)) {
                 input.dataset.lastValid = value;
             } else {

@@ -1,3 +1,15 @@
+2026.07.16 v2.8.0
+Add `waiANIMA_v10Base10` and `waiNSFWIllustrious_v120` thumbList select, need download from HF         
+Add `Diffuson model` filters          
+Add `Delete Settings` button to delete selected settings file from SAA       
+Add `SAAC` settings in setup wizard at first run       
+Add version indicator and link for ComfyUI custom nodes #95       
+Add Python Tool `SAA Character Comparison`          
+Bugfix, #96        
+Change, `SAAC` service `Disable` by default settings, modify your `settings.json` set `ws_service` to `false` to disable SAAC            
+Remove 68 duplicate/mismach characters from `waiIllustriousSDXL_v160` thumbList        
+
+
 2026.07.15 v2.7.4
 Add check port availability before creating the SAAC service       
 Bugfix, `EXTRA_MODELS` is not reading subfolder        

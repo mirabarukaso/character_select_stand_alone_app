@@ -80,7 +80,7 @@ async function initializeApp() {
   const SETTINGS = setupGlobalSettings();
   setupModelList(SETTINGS);
   const downloadSuccess = await setupDownloadFiles();
-  const cacheSuccess = setupCachedFiles();
+  const cacheSuccess = setupCachedFiles(SETTINGS.thumb_select);
 
   // Ensure wildcards list are set up before tag auto-complete
   setupWildcardsHandlers();
@@ -93,7 +93,7 @@ async function initializeApp() {
 
   if (downloadSuccess && cacheSuccess && tacSuccess) {   
     createWindow();
-    mainWindow.setTitle(`Wai Character Select SAA ${version}`);
+    mainWindow.setTitle(`Character Select SAA ${version}`);
 
     app.on('activate', function () {
       // On macOS it's common to re-create a window in the app when the
@@ -101,7 +101,7 @@ async function initializeApp() {
       if (BrowserWindow.getAllWindows().length === 0) createWindow()
     })
   } else {
-    console.error('[Main] Failed to download required files. Exiting...');
+    console.error('[Main] Failed to load required files. Exiting...');
     app.quit();
   }
   

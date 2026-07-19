@@ -722,7 +722,7 @@ function createDropdown({
             numberInput.addEventListener('input', (e) => {
             const value = e.target.value;
             // Allow empty input or intermediate states (e.g., "1.", ".")
-            if (value === '' || /^\d*\.?\d*$/.test(value)) {
+            if (value === '' || /^\d*\.?\d*$/.test(value)) {    //NOSONAR S8786
                 numberValues[index] = value;
                 return;
             }
@@ -732,7 +732,7 @@ function createDropdown({
 
             numberInput.addEventListener('blur', (e) => {
             let value = e.target.value.trim();
-            if (value === '' || !/^\d*\.?\d*$/.test(value)) {
+            if (value === '' || !/^\d*\.?\d*$/.test(value)) {   //NOSONAR S8786
                 value = '1'; 
             } else {
                 let numValue = Number.parseFloat(value);

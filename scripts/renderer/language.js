@@ -29,7 +29,7 @@ function safeCheck(){
     return true;
 }
 
-function setDropdownLanguage(containerID, labelPrefixList){
+export function setDropdownLanguage(containerID, labelPrefixList){
   const labels = document.querySelectorAll(`.${containerID} .mydropdown-input-container`);
   for (const [index, label] of labels.entries()) {
     if (labelPrefixList[index]) {
@@ -70,11 +70,17 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.dropdownList.vpred.setTitle(LANG.vpred);
     globalThis.dropdownList.vpred.setValue(LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr,LANG.vpred_off]);
     globalThis.dropdownList.settings.setTitle(LANG.title_settings_load);
+    console.log(CAT, '[updateLanguage] Settings load button title updated to:', LANG.title_settings_load);
+    console.log(globalThis.headerIcon.save.title);
     globalThis.headerIcon.save.title = LANG.title_settings_save;
+    console.log(globalThis.headerIcon.save.title);
+    globalThis.headerIcon.delete.title = LANG.title_settings_delete;
     globalThis.headerIcon.reload.title = LANG.title_model_reload;
     globalThis.headerIcon.refresh.title = LANG.title_global_refresh;
     globalThis.headerIcon.swap.title = LANG.title_swap_layout;
     globalThis.headerIcon.theme.title = LANG.title_theme;
+
+    globalThis.dropdownList.thumb_select.setTitle(LANG.thumb_select);
 
     // Language List
     setDropdownLanguage('global-settings-language', [LANG.language_select]);
@@ -139,6 +145,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     
     globalThis.generate.model_filter.setTitle(LANG.model_filter);    
     globalThis.generate.model_filter_keyword.setTitle(LANG.model_filter_keyword);
+    globalThis.generate.model_filter_keyword_diffusion.setTitle(LANG.model_filter_keyword_diffusion);
     globalThis.generate.search_modelinsubfolder.setTitle(LANG.search_modelinsubfolder);    
     globalThis.generate.model_path_comfyui.setTitle(LANG.model_path_comfyui);
     globalThis.generate.model_path_webui.setTitle(LANG.model_path_webui);
@@ -193,8 +200,9 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
         globalThis.aDetailer.reload();
     }
 
-    if(!skipRightClick)
+    if(!skipRightClick) {
         globalThis.rightClick.updateLanguage();
+    }
 
     globalThis.imageInfo.updateHintText(LANG.image_info_drag_hint_top, LANG.image_info_drag_hint_bottom);
 }
@@ -226,6 +234,7 @@ export function updateSettings() {
 
     globalThis.generate.model_filter.setValue(SETTINGS.model_filter);
     globalThis.generate.model_filter_keyword.setValue(SETTINGS.model_filter_keyword);
+    globalThis.generate.model_filter_keyword_diffusion.setValue(SETTINGS.model_filter_keyword_diffusion);
     globalThis.generate.search_modelinsubfolder.setValue(SETTINGS.search_modelinsubfolder);    
     globalThis.generate.model_path_comfyui.setValue(SETTINGS.model_path_comfyui);
     globalThis.generate.model_path_webui.setValue(SETTINGS.model_path_webui);
@@ -241,6 +250,7 @@ export function updateSettings() {
     globalThis.characterListRegional.updateDefaults(SETTINGS.character_left, SETTINGS.character_right, 'None', 'None');
     globalThis.characterListRegional.setTextValue(0, SETTINGS.weights4dropdownlist[7]);
     globalThis.characterListRegional.setTextValue(1, SETTINGS.weights4dropdownlist[8]);
+    
     globalThis.generate.tag_assist.setValue(SETTINGS.tag_assist);
     globalThis.generate.wildcard_random.setValue(SETTINGS.wildcard_random);
 
@@ -294,6 +304,7 @@ export function updateSettings() {
     globalThis.dropdownList.textencoder_device.updateDefaults(SETTINGS.api_model_file_text_encoder_device);    
 
     globalThis.dropdownList.vpred.updateDefaults(SETTINGS.api_model_file_vpred);
+    globalThis.dropdownList.thumb_select.updateDefaults(SETTINGS.thumb_select);
     globalThis.generate.seed.setValue(SETTINGS.random_seed);
     globalThis.generate.cfg.setValue(SETTINGS.cfg);
     globalThis.generate.step.setValue(SETTINGS.step);

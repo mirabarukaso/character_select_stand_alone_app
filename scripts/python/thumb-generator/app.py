@@ -67,15 +67,23 @@ def load_csv_entries(path: str) -> list[tuple[str, str]]:
 
 
 def load_tag_assist(path: str) -> dict:
-    """Load tag assist JSON. Returns empty dict if file doesn't exist or is invalid."""
+    """Load tag assist JSON and normalize keys to lowercase.
+
+    Returns an empty dict if the file doesn't exist, is invalid JSON,
+    or is not a JSON object.
+    """
     if not path:
         return {}
     try:
         if os.path.exists(path):
             with open(path, "r", encoding="utf-8") as f:
-                return json.load(f)
-    except (json.JSONDecodeError, IOError):
-        # Silently ignore any errors and return empty dict
+                data = json.load(f)
+            if isinstance(data, dict):
+                return {str(key).lower(): value for key, value in data.items()}
+    except json.JSONDecodeError:
+        # Explicitly ignore invalid JSON and return empty dict
+        pass
+    except IOError:
         pass
     return {}
 
@@ -293,7 +301,7 @@ def _generation_loop(
         else:
             escaped = escape_name(raw_name)
             tag = f"{tag_assist[tag_key]}," if tag_key in tag_assist else ""
-            full_prompt = f"{tag}{escaped},{positive_suffix}"
+            full_prompt = f"{positive_suffix}, {escaped}, {tag}"
 
             if tag_display != "no tag":
                 log_lines.append(f"{progress_str}  ⚙️  Generating... '{raw_name}' [tag_assist: {tag_display}]")
@@ -593,14 +601,17 @@ with st.sidebar:
         )
 
         if st.session_state.model_type == "diffusion":
-            DIFFUSION_MODEL_TYPES = ["stable_diffusion", "sd3", "cosmos", "lumia2", "chroma", "qwen_image", "hunyuan_image", "flux2"]
+            DIFFUSION_MODEL_TYPES = ["stable_diffusion", "stable_cascade", "sd3", "stable_audio", "mochi", "ltxv", 
+                                     "pixart", "cosmos", "lumina2", "wan", "hidream", "chroma", "ace", "omnigen2", "qwen_image", 
+                                     "hunyuan_image", "flux2", "ovis", "longcat_image", "cogvideox", "lens" , "pixeldit", 
+                                     "ideogram4", "boogu", "krea2"]
             st.session_state.diffusion_model_type = st.selectbox(
                 "Diffusion Model Type",
                 DIFFUSION_MODEL_TYPES,
                 index=DIFFUSION_MODEL_TYPES.index(st.session_state.diffusion_model_type)
                 if st.session_state.diffusion_model_type in DIFFUSION_MODEL_TYPES else 0,
                 disabled=st.session_state.gen_running,
-                help="Model type for diffusion-based generation (Flux, SD3, Cosmos, etc.)"
+                help="Model type for diffusion-based generation (Flux, SD3, Anima, Krea2, etc...)"
             )
             st.session_state.text_encoder = st.text_input(
                 "Text Encoder", st.session_state.text_encoder,
@@ -773,7 +784,9 @@ def start_generation(
     # Extract the slice of entries to process
     entries_to_process = entries[actual_start_idx:actual_end_idx]
     
+    st.info(f"Load tag_assist from {tag_assist_path}")
     tag_assist = load_tag_assist(tag_assist_path)
+    print(tag_assist)
     cfg = get_comfyui_cfg()
     suffix = st.session_state.positive_suffix
     

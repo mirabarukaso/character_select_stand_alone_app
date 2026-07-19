@@ -402,7 +402,7 @@ function applyADetailer(workflow, adetailers, workflowInfo){
   let index =startIndex + 1;
   const modelUSE = refiner?43:45; // 45: default   43: refiner
   let imageVAED = hiresfix?28:6;
-  const randomSeed = Math.floor(Math.random() * 4294967296); // 4294967296 = 2^32
+  const randomSeed = globalThis.crypto.getRandomValues(new Uint32Array(1))[0]; // 4294967296 = 2^32
 
   for(const adetailer of adetailers) {
     if(adetailer.mask_filter_method === 'Off')
@@ -1047,7 +1047,7 @@ class ComfyUI {
 
       // Latent or Model hifix
       if (hifix?.model.includes('Latent')) {
-        const match = hifix.model.match(/\(([^)]+)\)/);
+        const match = hifix.model.match(/\(([^)]+)\)/); // NOSONAR S8786
         const latentMethod = match ? match[1].trim() : 'nearest-exact'; // Default nearest-exact
 
         workflow["46"].inputs.upscale_method = latentMethod;
@@ -1357,7 +1357,7 @@ class ComfyUI {
 
       // Latent or Model hifix
       if (hifix?.model.includes('Latent')) {
-          const match = hifix.model.match(/\(([^)]+)\)/);
+          const match = hifix.model.match(/\(([^)]+)\)/); // NOSONAR S8786
           const latentMethod = match ? match[1].trim() : 'nearest-exact'; // Default nearest-exact
 
           workflow["58"].inputs.upscale_method = latentMethod;

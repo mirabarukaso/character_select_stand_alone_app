@@ -64,7 +64,9 @@ export function extractAPISecure(apiInterface) {
 }
 
 export function generateRandomSeed() {
-    return Math.floor(Math.random() * 4294967296); // 4294967296 = 2^32
+    const array = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(array);
+    return array[0];
 }
 
 function createViewTag(view_list, in_tag, seed, weight) {
@@ -359,7 +361,7 @@ export function getLoRAs(apiInterface) {
                     continue;
             }
         } else {
-            const pattern = /([^/\\]+?)(?=\.safetensors$)/i;
+            const pattern = /([^/\\]+?)(?=\.safetensors$)/i;    //NOSONAR S8786
             const match = loraName.match(pattern);
             if (match) {
                 formattedStrings.push(`<lora:${match[1]}:${modelStrength}>`);

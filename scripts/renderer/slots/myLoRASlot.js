@@ -7,10 +7,13 @@ let instanceSlotManager = null;
 export function generateGUID() {
     const template = 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx';
     let result = template;
+    const randomValues = new Uint8Array(16);
+    crypto.getRandomValues(randomValues);
+    let randomIndex = 0;
     for (let i = 0; i < template.length; i++) {
         const c = template[i];
         if (c === 'x' || c === 'y') {
-            const r = (Math.random() * 16) | Math.trunc(0);
+            const r = randomValues[randomIndex++] % 16;
             const v = c === 'x' ? r : (r & 0x3) | 0x8;
             result = result.substring(0, i) + v.toString(16) + result.substring(i + 1);
         }
@@ -251,7 +254,7 @@ class SlotManager {
             if (!input.matches('.numeric-input')) return;
 
             const value = input.value;
-            const validPattern = /^-?\d*\.?\d*$/;
+            const validPattern = /^-?\d*\.?\d*$/;   //NOSONAR S8786
             if (validPattern.test(value)) {
                 input.dataset.lastValid = value;
             } else {

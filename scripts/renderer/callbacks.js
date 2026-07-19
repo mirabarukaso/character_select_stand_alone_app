@@ -3,15 +3,18 @@ import { generateImage, startQueue } from './generate.js';
 import { generateRegionalImage } from './generate_regional.js';
 import { generateMiraITU } from './generate_miraITU.js';
 import { doSwap, reloadFiles } from './components/myCollapsed.js';
-import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI, updateLanguage, updateSettings } from './language.js';
+import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI, 
+    updateLanguage, updateSettings, setDropdownLanguage } from './language.js';
 import { setBlur, setNormal } from './components/myDialog.js';
 import { applyTheme } from './theme.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { myCharacterList, myRegionalCharacterList } from './components/myDropdown.js';
 
 export async function callback_mySettingList(index, selectedValue) {    
     if(!globalThis.initialized)
         return;
-    
+
+    const lastThumbSelect = globalThis.globalSettings.thumb_select;
     const lastApiInterface = globalThis.globalSettings.api_interface;
     const value = selectedValue[0];
     console.log('Loading settings file:', value);
@@ -29,12 +32,23 @@ export async function callback_mySettingList(index, selectedValue) {
     doSwap(globalThis.globalSettings.rightToleft);    
     await reloadFiles()
     updateLanguage(true, globalThis.inBrowser); 
-    updateSettings(true);
-    globalThis.dropdownList.settings.updateDefaults(value);
+    updateSettings();
+
+    // update thumbnail selection if it has changed
+    if(lastThumbSelect !== globalThis.globalSettings.thumb_select){
+        await update_thumb_select(globalThis.globalSettings.thumb_select);
+    }
+    
     if(old_css !== globalThis.globalSettings.css_style)
         applyTheme(globalThis.globalSettings.css_style);
     
+    // Load LoRA slots and update the collapsed state of the LoRA tab
     globalThis.lora.flush();
+    if(globalThis.lora.getSlots().length > 0 ) {
+        globalThis.collapsedTabs.lora.setCollapsed(false);
+    } else if(globalThis.collapsedTabs.lora.getCollapsed() === false) {
+        globalThis.collapsedTabs.lora.setCollapsed(true);
+    }
     globalThis.initialized = true;
 
     // The interface has changed!
@@ -44,6 +58,7 @@ export async function callback_mySettingList(index, selectedValue) {
     }
     setNormal();
 
+    globalThis.dropdownList.settings.updateDefaults(value);
     globalThis.globalSettings.lastLoadedSettings = value.slice(0, -5);
 }
 
@@ -379,7 +394,7 @@ export async function callback_queue_autostart(trigger, isDummy=false) {
     }
 }
 
-export function setQueueAutoStart(trigger){
+export function setQueueAutoStart(trigger) {
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
@@ -394,3 +409,63 @@ export function setQueueAutoStart(trigger){
     globalThis.generate.queueAutostart_dummy.setValue(trigger);
     globalThis.overlay.buttons.reload();
 }
+
+export async function callback_thumb_select(index, selectedValue) {
+    const value = selectedValue[0];
+    if(value === globalThis.globalSettings.thumb_select ) {
+        console.log('Thumbnail selection unchanged:', value);
+        return;
+    }
+
+    setBlur();
+    await update_thumb_select(value);
+    setNormal();
+}
+
+async function update_thumb_select(value) {
+    const bak_thumb_select = globalThis.globalSettings.thumb_select;    
+    globalThis.globalSettings.thumb_select = value;
+    console.log('Selected thumbnail:', globalThis.globalSettings.thumb_select);
+
+    // load new thumbnail files
+    const success = await globalThis.api.updateCachedCharacterThumb(globalThis.globalSettings.thumb_select);
+    if (!success) {
+        console.error('Failed to load thumbnail files for selection:', globalThis.globalSettings.thumb_select);
+        globalThis.globalSettings.thumb_select = bak_thumb_select;
+        return;
+    }        
+
+    // update globalThis.cachedFiles with the new results
+    const cachedFiles = await globalThis.api.getCachedFiles();
+    globalThis.cachedFiles.characterThumb = cachedFiles.characterThumb;
+    globalThis.cachedFiles.characterList = cachedFiles.characters;
+    globalThis.cachedFiles.tagAssist = cachedFiles.tagAssist;
+
+    const SETTINGS = globalThis.globalSettings;
+    const FILES = globalThis.cachedFiles;
+    const LANG = FILES.language[SETTINGS.language];
+    globalThis.cachedFiles.characterListArray = Object.entries(FILES.characterList);    
+
+    // Character and OC List
+    globalThis.characterList = myCharacterList('dropdown-character', FILES.characterList, FILES.ocList);
+    globalThis.characterListRegional = myRegionalCharacterList('dropdown-character-regional', FILES.characterList, FILES.ocList);
+        
+    // Character List
+    setDropdownLanguage('dropdown-character', [LANG.character1, LANG.character2, LANG.character3, LANG.original_character]);
+    globalThis.characterList.setValueOnly(globalThis.globalSettings.language === 'en-US');
+    globalThis.characterList.updateDefaults(SETTINGS.character1, SETTINGS.character2, SETTINGS.character3, 'None');
+    globalThis.characterList.setTextValue(0, SETTINGS.weights4dropdownlist[4]);
+    globalThis.characterList.setTextValue(1, SETTINGS.weights4dropdownlist[5]);
+    globalThis.characterList.setTextValue(2, SETTINGS.weights4dropdownlist[6]);
+    
+
+    // Regional Condition
+    setDropdownLanguage('dropdown-character-regional', [LANG.regional_character_left, LANG.regional_character_right, LANG.regional_origina_character_left, LANG.regional_origina_character_right]);
+    globalThis.characterListRegional.setValueOnly(globalThis.globalSettings.language === 'en-US');
+    globalThis.characterListRegional.updateDefaults(SETTINGS.character_left, SETTINGS.character_right, 'None', 'None');
+    globalThis.characterListRegional.setTextValue(0, SETTINGS.weights4dropdownlist[7]);
+    globalThis.characterListRegional.setTextValue(1, SETTINGS.weights4dropdownlist[8]);
+
+    console.log('Thumbnail files loaded successfully.', FILES.characterListArray.length, 'characters available.');
+}
+

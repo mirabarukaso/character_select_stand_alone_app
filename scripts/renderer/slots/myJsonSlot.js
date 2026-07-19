@@ -14,6 +14,15 @@ function decodeBase64ToJson(base64String) {
     return JSON.parse(decodeURIComponent(atob(base64String)));
 }
 
+function getSecureRandomInt(max) {
+    if (max <= 0) {
+        return 0;
+    }
+    const array = new Uint32Array(1);
+    globalThis.crypto.getRandomValues(array);
+    return array[0] % max;
+}
+
 function createJsonSlotsFromValues(slotManager, slotValues, options = {}) {
     const { clearSlots = true } = options;
     if (clearSlots) {
@@ -40,9 +49,8 @@ function createJsonSlotFromValues(slotManager, jsonObj,
 
     slot.jsonObj = jsonObj;
     const keys = Object.keys(slot.jsonObj);
-    //Add enumKey and random key
-    keys.unshift(enumKey);
-    keys.unshift(randomKey);
+    // Add enumKey and random key
+    keys.unshift(randomKey, enumKey);
 
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
@@ -150,7 +158,7 @@ class JsonSlotManager {
             if (!input.matches('.numeric-input')) return;
 
             const value = input.value;
-            const validPattern = /^-?\d*\.?\d*$/;
+            const validPattern = /^-?\d*\.?\d*$/;  //NOSONAR S8786
             if (!validPattern.test(value)) {
                 input.value = input.dataset.lastValid || '1.0';
                 return;
@@ -353,16 +361,16 @@ class JsonSlotManager {
             const jsonNameComponent = this.componentInstances.get(`${className}-${json_name}`);
             const selectedName = jsonNameComponent.getValue();
             const keys = Object.keys(slot.jsonObj);
-            if(selectedName === randomKey || (selectedName === enumKey && loop === -1)) {                
-                const rnd = keys[Math.floor(keys.length*Math.random())];
+            if (selectedName === randomKey || (selectedName === enumKey && loop === -1)) {
+                const rnd = keys[getSecureRandomInt(keys.length)];
                 rowValues.push(slot.jsonObj[rnd]);
-            } else if(selectedName === enumKey) {
+            } else if (selectedName === enumKey) {
                 const idx = loop % keys.length;
                 const key = keys[idx];
                 rowValues.push(slot.jsonObj[key]);
             } else {
                 rowValues.push(slot.jsonObj[selectedName]);
-            }            
+            }
 
             const jsonStrengthComponent = this.componentInstances.get(`${className}-${json_strength}`);
             rowValues.push(jsonStrengthComponent.getValue());

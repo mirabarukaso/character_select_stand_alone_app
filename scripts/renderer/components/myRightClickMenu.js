@@ -648,7 +648,7 @@ function prompt_sendLoRAtoSlot(element, textArea){
         const loraRegex = /<lora:[^>]+>/g;
         const loraMatches = text.match(loraRegex) || [];
         const allLora = loraMatches.join(' ');
-        const allPrompt = text.replaceAll(loraRegex, '').replaceAll(/,\s*,/g, ',').replaceAll(/(^,\s*)|(\s*,$)/g, '').trim();
+        const allPrompt = text.replaceAll(loraRegex, '').replaceAll(/,\s*,/g, ',').replaceAll(/^,\s+|,\s+$/gm, '').trim();
 
         if(allLora.trim() === '') {
             console.warn(`No LoRA in ${textArea}`);

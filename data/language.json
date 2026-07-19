@@ -64,8 +64,9 @@
         "regional_option_right": "Right Area (ComfyUI)",
         "regional_a1111": "Note: Regional Condition for A1111 need [color=CornflowerBlue]sd-webui-regional-prompter[/color]. Click to copy the Plugin download link.\n\n[color=CornflowerBlue]https://github.com/hako-mikan/sd-webui-regional-prompter[/color]",
 
-        "title_settings_save": "Save Settings",
+        "title_settings_save": "Save Settings",        
         "title_settings_load": "Load Settings",
+        "title_settings_delete": "Delete Settings",
         "title_model_reload": "Reload Model/Lora/Settings List",
         "title_global_refresh": "Refresh Page",
         "title_swap_layout": "Right to left",
@@ -106,7 +107,8 @@
         "webui_auth_enable": "Enable",
 
         "model_filter": "Enable model name filter",
-        "model_filter_keyword": "Model name filter keyword",
+        "model_filter_keyword": "Checkpoint Model filter",
+        "model_filter_keyword_diffusion": "Diffusion Model filter (Set to * to disable this filter)",
         "search_modelinsubfolder": "Search model subfolder",
 
         "api_hf_enable": "Enable Hires Fix",
@@ -252,6 +254,12 @@
         "save_settings_success": "{0} Saved!",
         "save_settings_failed": "Save {0} failed!",
 
+        "delete_settings_title": "Delete settings file: {0}.json\nAre you sure you want to delete this file?",
+        "delete_settings_success": "Settings file {0}.json deleted",
+        "delete_settings_failed": "Failed to delete settings file: {0}.json",
+
+        "thumb_select": "thumbList",
+
         "saac_http_connection": "[Warning] Non-Secure Connection\n\nConnected using HTTP/WebSocket. For enhanced security, ensure the SAA server is configured with valid SSL certificates.",
         "saac_disconnected": "[color=red][Error] Disconnected from SAA...[/color]\nThe system will automatically attempt to reconnect when you select character or generate image.",
         "saac_macos_clipboard": "\n[color=red]Clipboard API not working[/color]\nDue to HTTP protocol security restrictions, the clipboard cannot be used in MacOS and iOS environments.\nPlease copy the relevant information manually:\n\n{0}",
@@ -266,8 +274,14 @@
         "setup_model_folder": "Please enter the directory where your Checkpoints files (.safetensors) are located. It is recommended to copy the path from address bar.\n\nExample:\n ...ComfyUI\\models\\checkpoints\n ...stable-diffusion-webui\\models\\Stable-diffusion",
         "setup_webui_comfyui_api_addr": "Please enter the address for {0} backend. You can copy the IP address and port from your browser.",
         "setup_model_filter": "Please select whether or not to enable the model name filters.",
-        "setup_model_filter_keyword": "Please set the whitelist filters keywords.\nIf multiple keywords are needed, separate them with commas (,).",
+        "setup_model_filter_keyword": "Please set the filter keywords for Checkpoint models.\nIf multiple keywords are needed, separate them with commas (,).",
+        "setup_model_filter_keyword_diffusion": "Please set the filter keywords for Diffusion models.\nIf multiple keywords are needed, separate them with commas (,).",
         "setup_search_modelinsubfolder": "Search for model files in subfolders of the model folder.",
+
+        "setup_enable_saac": "Do you want to enable the SAA Client service?",
+        "setup_saac_addr": "Please enter the SAAC service listening address, default is to listen on all local addresses",
+        "setup_saac_port": "Please enter the SAAC service listening port, port number must be greater than 10000",
+        "setup_saac_start": "SAAC service will start automatically when SAA launched next time.\nIf you want to modify the SAAC service, please modify the settings.json file and set \"ws_service/ws_addr/ws_addr\".\n\nListening address: {0}:{1}",
 
         "setup_remote_ai_interface": "Configure the AI language model interface (None to disable, Remote for remote, Local for local).",
         "setup_remote_ai_addr": "Please enter the API address for the remote language model.",
@@ -345,6 +359,7 @@
 
         "title_settings_save": "保存设置",
         "title_settings_load": "读取设置",
+        "title_settings_delete": "删除设置",
         "title_model_reload": "重新载入（模型、LoRA、设置）列表",
         "title_global_refresh": "刷新页面",
         "title_swap_layout": "切换左右",
@@ -384,7 +399,8 @@
         "webui_auth_enable": "启用",
 
         "model_filter": "启用模型名称过滤",
-        "model_filter_keyword": "模型名称过滤规则",
+        "model_filter_keyword": "Checkpoint 模型名称过滤规则",
+        "model_filter_keyword_diffusion": "Diffusion 模型名称过滤规则 (设置为 * 表示关闭此过滤)",
         "search_modelinsubfolder": "搜索模型文件夹子目录",
 
         "api_hf_enable": "启用高清修复",
@@ -530,11 +546,17 @@
         "save_settings_title": "保存配置文件\n请输入要保存的文件名称：",
         "save_settings_success": "配置文件 {0} 保存成功",
         "save_settings_failed": "配置文件 {0} 保存失败",
-        
+
+        "delete_settings_title": "删除配置文件：{0}.json\n确定要删除此文件吗？",
+        "delete_settings_success": "配置文件 {0}.json 删除成功",
+        "delete_settings_failed": "配置文件 {0}.json 删除失败",
+
         "saac_http_connection": "非安全连接\n\n通过HTTP/WebSocket连接。为增强安全性，请确保SAA服务器已配置有效的SSL证书。",
         "saac_disconnected": "[color=red]错误：与SAA失去连接[/color]\n选择角色或生成图片时会自动尝试重连",
         "saac_macos_clipboard": "\n[color=red]剪切板API无效[/color]\n由于HTTP协议安全策略限制，剪切板在MacOS以及iOS环境中无法使用，请手动复制相关信息：\n\n{0}",
         "saac_macos_copy_image": "\n[color=red]复制图片失败：如果是MiraITU放大后的图片，可能会由于数据过大导致失败，请尝试再次进行复制。\n剪切板API无效[/color]\n由于HTTP协议安全策略限制，剪切板在MacOS以及iOS环境中无法使用。\n\nMacOS用户可以直接将图片拖拽到本地目录保存，iOS长按图片选择“保存到照片”。",
+
+        "thumb_select": "角色头像",
 
         "setup_yes": "是",
         "setup_no": "否",
@@ -545,8 +567,14 @@
         "setup_model_folder": "请设置您的Checkpoints模型文件(.safetensors)所在目录，建议从文件夹地址栏复制\n示例:\n ...ComfyUI\\models\\checkpoints\n ...stable-diffusion-webui\\models\\Stable-diffusion",
         "setup_webui_comfyui_api_addr": "请输入后端{0}的访问地址，你可以从浏览器里复制IP地址与端口",        
         "setup_model_filter": "请选择是否要开启模型白名单",
-        "setup_model_filter_keyword": "请设置过滤器白名单关键字\n如果需要多个关键字，请用半角逗号隔开“,”",
+        "setup_model_filter_keyword": "请设置Checkpoint模型过滤器白名单关键字\n如果需要多个关键字，请用半角逗号隔开“,”",
+        "setup_model_filter_keyword_diffusion": "请设置Diffusion模型过滤器白名单关键字\n如果需要多个关键字，请用半角逗号隔开“,”",
         "setup_search_modelinsubfolder": "是否搜索模型文件夹子目录下的模型文件",
+
+        "setup_enable_saac": "是否启用SAA服务",
+        "setup_saac_addr": "请输入SAAC服务监听地址，默认监听本地全部地址",
+        "setup_saac_port": "请输入SAAC服务监听端口，端口号必须大于10000",
+        "setup_saac_start": "SAAC服务将在下次启动SAA时自动启动。\n注意，如需修改SAAC服务设置，请修改settings.json文件中的\"ws_service/ws_addr/ws_addr\"参数。\n\n监听地址: {0}:{1}",
         
         "setup_remote_ai_interface": "设置AI语言模型接口（关闭 None,远程 Remote,本地 Local）",
         "setup_remote_ai_addr": "请输入远程语言模型API地址",
