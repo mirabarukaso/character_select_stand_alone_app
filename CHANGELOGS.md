@@ -3,9 +3,10 @@ Add `waiANIMA_v10Base10` and `waiNSFWIllustrious_v120` thumbList select, need do
 Add `Diffuson model` filters          
 Add `Delete Settings` button to delete selected settings file from SAA       
 Add `SAAC` settings in setup wizard at first run       
-Add version indicator and link for ComfyUI custom nodes #95       
+Add version indicator and link for ComfyUI custom nodes in `README` #95       
+Add `SAAC indicator` on app title          
 Add Python Tool `SAA Character Comparison`          
-Bugfix, #96        
+Bugsfix, #96        
 Change, `SAAC` service `Disable` by default settings, modify your `settings.json` set `ws_service` to `false` to disable SAAC            
 Remove 68 duplicate/mismach characters from `waiIllustriousSDXL_v160` thumbList        
 

@@ -7,6 +7,8 @@ import bcrypt from 'bcrypt';
 const version = app.getVersion();
 
 let backendBusy = false;
+let ws_service = `none`;
+
 const mutex = new Mutex();
 async function getMutexBackendBusy() {
   const release = await mutex.acquire();
@@ -51,9 +53,15 @@ async function bcryptHadh(pass) {
   }
 }
 
-function setupIPCs() {
+function setupIPCs(ws_service_result) {
+  ws_service = ws_service_result;
+  
   // Version
-  ipcMain.handle('get-saa-version', async (event) => {  
+  ipcMain.handle('get-saa-version', async (event) => {    
+    if(ws_service !== `none`) {
+      return `${version} with SAAC listening at ${ws_service}`;
+    }
+
     return version;
   });
 

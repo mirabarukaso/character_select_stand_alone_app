@@ -70,10 +70,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.dropdownList.vpred.setTitle(LANG.vpred);
     globalThis.dropdownList.vpred.setValue(LANG.vpred, [LANG.vpred_auto, LANG.vpred_on, LANG.vpred_on_zsnr,LANG.vpred_off]);
     globalThis.dropdownList.settings.setTitle(LANG.title_settings_load);
-    console.log(CAT, '[updateLanguage] Settings load button title updated to:', LANG.title_settings_load);
-    console.log(globalThis.headerIcon.save.title);
     globalThis.headerIcon.save.title = LANG.title_settings_save;
-    console.log(globalThis.headerIcon.save.title);
     globalThis.headerIcon.delete.title = LANG.title_settings_delete;
     globalThis.headerIcon.reload.title = LANG.title_model_reload;
     globalThis.headerIcon.refresh.title = LANG.title_global_refresh;

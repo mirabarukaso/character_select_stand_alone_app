@@ -98,10 +98,10 @@ async function setupDownloadFiles() {
         // github
         { 'name': 'original_character', 'file_path': path.join(saveDir, 'original_character.json'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/original_character.json' },
         { 'name': 'view_tags', 'file_path': path.join(saveDir, 'view_tags.json'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/view_tags.json' },
-        { 'name': 'waiIllustriousSDXL_v160_characters', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_characters.csv'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/wai_characters.csv' },
-        { 'name': 'waiIllustriousSDXL_v160_tag_assist', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_tag_assist.json'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/wai_tag_assist.json' },
         // huggingface
-        { 'name': 'waiIllustriousSDXL_v160_thumbs', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_thumbs.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs_v160.json?download=true' },
+        { 'name': 'waiIllustriousSDXL_v160_thumbs', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_thumbs.json'),         'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs_v160.json?download=true' },
+        { 'name': 'waiIllustriousSDXL_v160_characters', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_characters.csv'),  'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/wai_characters_v160.csv' },
+        { 'name': 'waiIllustriousSDXL_v160_tag_assist', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_tag_assist.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiIllustriousSDXL_v160_tag_assist.json' },
         // github outside
         { 'name': 'danbooru_tag', 'file_path': path.join(saveDir, 'danbooru_e621_merged.csv'), 'url': 'https://raw.githubusercontent.com/DominikDoom/a1111-sd-webui-tagcomplete/refs/heads/main/tags/danbooru_e621_merged.csv' }
     ];
@@ -167,11 +167,10 @@ async function setupDownloadFiles() {
     }
 
     const wai_illustrious_character_select_files = [    
-        // github
-        { 'name': 'waiNSFWIllustrious_v120_tag_assist', 'file_path': path.join(saveDir, 'waiNSFWIllustrious_v120_tag_assist.json'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/wai_tag_assist.json' },
         // huggingface        
-        { 'name': 'waiNSFWIllustrious_v120_thumbs', 'file_path': path.join(saveDir, 'waiNSFWIllustrious_v120_thumbs.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs_v120.json?download=true' },
-        { 'name': 'waiNSFWIllustrious_v120_characters', 'file_path': path.join(saveDir, 'waiNSFWIllustrious_v120_characters.csv'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/wai_characters_v120.csv' }
+        { 'name': 'waiNSFWIllustrious_v120_thumbs', 'file_path': path.join(saveDir, 'waiNSFWIllustrious_v120_thumbs.json'),         'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs_v120.json?download=true' },
+        { 'name': 'waiNSFWIllustrious_v120_characters', 'file_path': path.join(saveDir, 'waiNSFWIllustrious_v120_characters.csv'),  'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/wai_characters_v120.csv' },
+        { 'name': 'waiNSFWIllustrious_v120_tag_assist', 'file_path': path.join(saveDir, 'waiNSFWIllustrious_v120_tag_assist.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiIllustriousSDXL_v160_tag_assist.json' }
         
     ];
 
@@ -193,16 +192,16 @@ async function setupDownloadFiles() {
         fs.mkdirSync(saveDir, { recursive: true });
     }
 
-    const wai_illustrious_character_select_files = [    
-        // github
-        { 'name': 'waiANIMA_v10Base10tag_assist', 'file_path': path.join(saveDir, 'waiANIMA_v10Base10_tag_assist.json'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/waiANIMA_tag_assist.json' },
-        { 'name': 'waiANIMA_v10Base10_characters', 'file_path': path.join(saveDir, 'waiANIMA_v10Base10_characters.csv'), 'url': 'https://raw.githubusercontent.com/mirabarukaso/character_select_stand_alone_app/refs/heads/main/data/waiANIMA_characters.csv' },
-        // huggingface        
-        { 'name': 'waiANIMA_v10Base10_thumbs', 'file_path': path.join(saveDir, 'waiANIMA_v10Base10_thumbs.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/waiANIMA_v10Base10_thumbs.json?download=true' }
+    const waiANIMA_character_select_files = [
+        // huggingface
+        { 'name': 'waiANIMA_v10Base10_thumbs', 'file_path': path.join(saveDir, 'waiANIMA_v10Base10_thumbs.json'),        'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/waiANIMA_v10Base10_thumbs.json?download=true' },
+        { 'name': 'waiANIMA_v10Base10_characters', 'file_path': path.join(saveDir, 'waiANIMA_v10Base10_characters.csv'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiANIMA_v10Base10_characters.csv' },
+        { 'name': 'waiANIMA_v10Base10tag_assist', 'file_path': path.join(saveDir, 'waiANIMA_v10Base10_tag_assist.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiANIMA_v10Base10_tag_assist.json' }
+        
     ];
 
     // download files if they don't exist
-    const downloadPromises = wai_illustrious_character_select_files.map(async (wai) => {
+    const downloadPromises = waiANIMA_character_select_files.map(async (wai) => {
         if (!fs.existsSync(wai.file_path)) {
             await downloadFile(wai.url, wai.file_path);
         }

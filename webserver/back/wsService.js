@@ -256,6 +256,8 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
 
     // Set up WebSocket server
     wss = createWebSocketServer(server, useHttps);
+
+    return wss!==null;
 }
 
 function closeWebSocketServer() {

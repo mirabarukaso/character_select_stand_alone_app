@@ -5,7 +5,7 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/WebUI(A1111
 > If you find a character that isn't show on the list but can be generated correctly, please don't hesitate to raise an issue to let me know.       
 >
 > The default thumbList is based on `waiIllustriousSDXL_v160`. There are two alternative thumbList: `waiANIMA_v10Base10` and `waiNSFWIllustrious_v120`. Will download automatically from `HuggingFace` once you have selected it. 
->Create your own thumbList with [SAA Thumb Generator](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/thumb-generator/README.md)
+> Create your own thumbList with [SAA Thumb Generator](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/thumb-generator/README.md)
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%>   
 
@@ -25,11 +25,39 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/WebUI(A1111
 | Custom VAE for SDXL | Yes | Yes | Yes |
 *NOT Support ComfyUI Desktop*
 
-For browser based SAAC information, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)
-For Python based CLI tool for OpenClaw [SAA Agent](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md) and [ClawHub](https://clawhub.ai/mirabarukaso/saa-agent)
+*Online Character Select* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
 
-*Try Online Character Select Simple Advanced App* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
+For browser based SAAC, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)           
+For Python based CLI tool for OpenClaw [SAA Agent](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md) and [ClawHub](https://clawhub.ai/mirabarukaso/saa-agent)         
 
+## thumbList manually download guide
+<details>
+<summary>If you experienced a slow or failed download in SAA, check the manual solution here.</summary>        
+
+Navigate to my [HF dataset](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/tree/main), download the following files to the `data` folder and rename them as follows:    
+
+### waiIllustriousSDXL_v160
+[waiIllustriousSDXL_v160_thumbs.json](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs_v160.json?download=true)        
+
+[waiIllustriousSDXL_v160_characters.csv](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/wai_characters_v160.csv)           
+
+[waiIllustriousSDXL_v160_tag_assist.json](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiIllustriousSDXL_v160_tag_assist.json)           
+
+### waiIllustriousSDXL_v120
+[waiNSFWIllustrious_v120_thumbs.json](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/wai_character_thumbs_v120.json?download=true)            
+
+[waiNSFWIllustrious_v120_characters.csv](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/wai_characters_v120.csv)       
+
+[waiNSFWIllustrious_v120_tag_assist.json](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiIllustriousSDXL_v160_tag_assist.json)        
+
+### waiANIMA_v10Base10
+[waiANIMA_v10Base10_thumbs.json](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/waiANIMA_v10Base10_thumbs.json?download=true)           
+
+[waiANIMA_v10Base10_characters.csv](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiANIMA_v10Base10_characters.csv)          
+
+[waiANIMA_v10Base10_tag_assist.json](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiANIMA_v10Base10_tag_assist.json)         
+
+</details>
 
 ## Install and run
 > [!TIP]
@@ -37,7 +65,7 @@ For Python based CLI tool for OpenClaw [SAA Agent](https://github.com/mirabaruka
 > 
 > For ComfyUI, you need latest [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) for SAA.     
 >
-> *One-Click package v2.7.0*    
+> *One-Click package v2.8.0*    
 > The full package [embeded_env_for_SAA](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/embeded_env_for_SAA.zip)      
 
 Clone this repo into your local folder     

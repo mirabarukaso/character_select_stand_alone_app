@@ -92,8 +92,7 @@ async function initializeApp() {
   setupTagger();
 
   if (downloadSuccess && cacheSuccess && tacSuccess) {   
-    createWindow();
-    mainWindow.setTitle(`Character Select SAA ${version}`);
+    createWindow();    
 
     app.on('activate', function () {
       // On macOS it's common to re-create a window in the app when the
@@ -113,12 +112,13 @@ async function initializeApp() {
     return addToDictionary(word);
   });
 
-  setupIPCs();
-
+  let ws_service_result = false;
   // Start the HTTP server
   if (SETTINGS.ws_service) {
-    await setupHttpServer(path.join(__dirname), SETTINGS.ws_addr, SETTINGS.ws_port);
+    ws_service_result = await setupHttpServer(path.join(__dirname), SETTINGS.ws_addr, SETTINGS.ws_port);
   }
+
+  setupIPCs(ws_service_result?`${SETTINGS.ws_addr}:${SETTINGS.ws_port}`:`none`);  
 }
 
 // Initialize the app
