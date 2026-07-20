@@ -11,13 +11,23 @@ pip install -r requirements
 app.bat
 ```
 
-## Dataset
-1. Download character dataset from [HF](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/tree/main) or create your own list       
-2. Replace `./data/character_list.txt` with your list        
-3. Setart your ComfyUI, setup the correct `Server Address`       
-4. Modify `./data/recreate_chatacters.txt` to re-create incorrect thumbs, you may need to adjust `Prompts` or `Seed`      
+Set up your ComfyUI on the left-hand sidebar and follow the steps in the instructions to generate your own list.     
 
-## Custom thumbList
+
+## Dataset
+Download character dataset CSV from [HF](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/tree/main) or create your own list       
+
+*ANIMA*
+```
+waiANIMA_v10Base10_characters.csv
+```
+
+*IL*
+```
+wai_characters_v160.csv.csv
+```
+
+## Custom thumbList in SAA
 1. Create your own `*_characters.csv`, `*_tag_assist.json` and `*_thumbs.json` 
 2. Replace `*` with your own name, e.g. `testThumbList`       
 3. Modify your `settings.json` (or any settings file you want) add `testThumbList` into `thumb_select_list`        
@@ -33,11 +43,13 @@ app.bat
 1. Test and verify with models above before raise an issue
 2. No LORA is allowed
 3. Assist tags should not more than 4
-4. Post in a `code` or `table` format list with small case
+4. Post `character name` in a `code` or `table` format list with small case
 
 ## Prompts and Configuration
+Simply select `checkpoint` or `diffusion` for all default settings below.       
+
 ### Common
-Seed: 42 or 1024 or 12345
+Seed: 42 or 1028 or 12345
 Width: 768
 Height: 1152
 
