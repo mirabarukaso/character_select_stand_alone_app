@@ -7,6 +7,7 @@ Dependencies:
 """
 
 import base64
+import csv
 import gzip
 import hashlib
 import html
@@ -49,7 +50,24 @@ def escape_name(name: str) -> str:
 
 
 def load_txt_list(path: str) -> list[str]:
-    """Load a newline-separated text file, stripping blanks."""
+    """Load a character list file.
+
+    Supports newline-separated TXT files and CSV files where the second column
+    contains the character name. Blank lines are skipped.
+    """
+    if path.lower().endswith(".csv"):
+        names: list[str] = []
+        with open(path, newline="", encoding="utf-8") as f:
+            reader = csv.reader(f)
+            for row in reader:
+                if not row:
+                    continue
+                if len(row) >= 2 and row[1].strip():
+                    names.append(row[1].strip())
+                elif row[0].strip():
+                    names.append(row[0].strip())
+        return names
+
     with open(path, "r", encoding="utf-8") as f:
         return [line.strip() for line in f if line.strip()]
 
@@ -516,7 +534,7 @@ _default(
 _default("negative", "bad quality,worst quality,worst detail,sketch,nsfw,explicit")
 
 # Path defaults
-_default("char_list_path", "./data/character_list.txt")
+_default("char_list_path", "./data/character_list.csv")
 _default("output_folder", "./output/")
 _default("thumb_folder", "./output_thumb/")
 _default("tag_assist_path", "./data/tag_assist.json")
@@ -862,7 +880,7 @@ tab1, tab2, tab3, tab4 = st.tabs([
 with tab1:
     st.header("Step 1 — Create Name Dictionary")
     st.caption(
-        "Reads a character list `.txt` file (one name per line), computes an MD5 hash "
+        "Reads a character list file (`.txt` or `.csv`), computes an MD5 hash "
         "for each escaped name, and saves the mapping as both **JSON** and **CSV**. "
         "The CSV is used by Step 3 and Re-create."
     )
@@ -870,9 +888,9 @@ with tab1:
     c1, c2 = st.columns(2)
     with c1:
         s1_char = st.text_input(
-            "Character List TXT",
+            "Character List File",
             st.session_state.char_list_path,
-            placeholder="./data/character_list.txt",
+            placeholder="./data/character_list.csv",
             key="s1_char_input",
         )
     with c2:
@@ -886,7 +904,7 @@ with tab1:
     if st.button("▶ Run Step 1", type="primary"):
         errs = []
         if not s1_char or not os.path.exists(s1_char):
-            errs.append("Character list TXT not found.")
+            errs.append("Character list file not found.")
         if not s1_out:
             errs.append("Output folder is required.")
         if errs:
@@ -935,7 +953,7 @@ with tab1:
 with tab2:
     st.header("Step 2 — Generate Character Thumbnails")
     st.caption(
-        "Iterates through the same character TXT list, builds a prompt for each character "
+        "Iterates through the same character list file, builds a prompt for each character "
         "(optionally prepending tag-assist tags), calls ComfyUI, resizes to 40 %, and saves "
         "as `<md5>.webp`.  Already-existing files can be skipped."
     )
@@ -943,9 +961,9 @@ with tab2:
     c1, c2 = st.columns(2)
     with c1:
         s2_char = st.text_input(
-            "Character List TXT",
+            "Character List File",
             st.session_state.char_list_path,
-            placeholder="./data/character_list.txt",
+            placeholder="./data/character_list.csv",
             key="s2_char_input",
         )
         s2_tag = st.text_input(
@@ -1047,7 +1065,7 @@ with tab2:
         
         errs = validate_comfyui_cfg()
         if not s2_char or not os.path.exists(s2_char):
-            errs.append("Character list TXT not found.")
+            errs.append("Character list file not found.")
         if not s2_thumb:
             errs.append("Thumb output folder required.")
             
@@ -1283,14 +1301,14 @@ with tab4:
     st.header("Re-create Thumbnails")
     st.caption(
         "Generate (or regenerate) thumbnails for a **specific subset** of characters "
-        "using a name list `.txt` file (one name per line). Typically used for the missing list "
+        "using a name list `.txt` or `.csv` file. Typically used for the missing list "
         "exported by Step 3, or any custom selection. You can also paste entries directly."
     )
 
     c1, c2 = st.columns(2)
     with c1:
         s4_txt = st.text_input(
-            "Source TXT (character names, one per line)",
+            "Source list file (TXT or CSV)",
             st.session_state.recreate_csv,
             placeholder="./data/recreate_chatacters.txt",
             key="s4_txt_input",
@@ -1362,10 +1380,10 @@ with tab4:
         errs = validate_comfyui_cfg()
         entries: list[tuple[str, str]] = []
 
-        # Load from TXT file
+        # Load from source list file
         if s4_txt:
             if not os.path.exists(s4_txt):
-                errs.append(f"TXT file not found: {s4_txt}")
+                errs.append(f"Source list file not found: {s4_txt}")
             else:
                 names = load_txt_list(s4_txt)
                 for name in names:
@@ -1381,7 +1399,7 @@ with tab4:
                     entries.append((line, md5))
 
         if not entries:
-            errs.append("No entries found — check TXT file or manual input.")
+            errs.append("No entries found — check source list file or manual input.")
         if not s4_thumb:
             errs.append("Thumb output folder required.")
 
