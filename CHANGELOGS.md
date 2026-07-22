@@ -1,4 +1,4 @@
-2026.07.22 v2.8.1               
+2026.07.22 v2.8.2               
 Add more options `Replace`, `Overwrite` and `Merge` for `Favorites List` #99       
 
 
