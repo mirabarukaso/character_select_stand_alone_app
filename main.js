@@ -78,6 +78,8 @@ async function initializeApp() {
 
   setupFileHandlers();  
   const SETTINGS = setupGlobalSettings();
+  SETTINGS.version = version;
+  
   setupModelList(SETTINGS);
   const downloadSuccess = await setupDownloadFiles();
   const cacheSuccess = setupCachedFiles(SETTINGS.thumb_select);

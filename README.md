@@ -371,7 +371,17 @@ LoRA in `Common Prompt` also works if you have the same one. If you don't like L
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/imageInfo.png" width=45%>   
 
-## Realtime Character preview and Search
+## Character List
+### Favorite Character List
+*SAVE your settings after you add/remove facorite list, there are NO HINTS after you press F8/F9*                  
+
+*Add:* Select a character in `Character1` or `OC`, press `Alt` + `D`        
+*Remove:* Select a character in `Character3` or `OC`, press `Alt` + `Q`       
+*Search:* Use `@` in `ANY` character list to load your `Favorite Character List`          
+
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/favoriteList.png" width=65%>
+
+### Preview and Search
 The Character List supports keywords search in both Chinese and English.      
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/characterPreview.png" width=45%>

@@ -9,6 +9,8 @@ let SETTINGFILES = [];
 let globalSettings;
 
 const defaultSettings = {
+    "version": "2.8.1",
+
     "ws_service": false,
     "ws_addr": '0.0.0.0',
     "ws_port": 51028,
@@ -118,6 +120,9 @@ const defaultSettings = {
     "api_adetailer_enable": false,
 
     "lora_slot": [],
+    "ad_slot": [],
+
+    "fav_characters" : [],
 
     "generate_auto_start": true,
     //4:3:2=9 views 0-3, characters 4-6, regional characters 7-8

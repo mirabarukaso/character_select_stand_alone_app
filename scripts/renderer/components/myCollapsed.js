@@ -1,6 +1,7 @@
 import { setBlur, setNormal, showDialog } from './myDialog.js';
 import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
 import { setADetailerModelList } from '../slots/myADetailerSlot.js';
+import { addFavorites, delFavorites } from './favoriteCharacters.js';
 
 const CAT = '[myCollapsed]'
 
@@ -68,6 +69,7 @@ export async function setupSaveSettingsToggle() {
         });
         if(inputResult){
             globalThis.globalSettings.lora_slot = globalThis.lora.getValues();
+            globalThis.globalSettings.ad_slot = globalThis.aDetailer.getValues();
 
             const tag_angle = globalThis.viewList.getTextValue(0);
             const tag_camera = globalThis.viewList.getTextValue(1);
@@ -254,21 +256,47 @@ export async function reloadFiles(){
     globalThis.refiner.model.setValue(LANG.api_refiner_model, globalThis.cachedFiles.modelListAll);    
 }
 
-export function setupRefreshToggle() {
+export function setupFuctionKeys() {
     const refreshButton = document.getElementById('global-refresh-toggle');
     if (!refreshButton) {
-        console.error(CAT, '[setupRefreshToggle] Refresh button not found');
+        console.error(CAT, '[setupFuctionKeys] Refresh button not found');
         return null;
     }
 
+    // Refresh
     refreshButton.addEventListener('click', () => {
         location.reload(); 
     });
 
     document.addEventListener('keydown', (event) => {
+        const key = event.key.toLowerCase();
+
+        // Refresh
         if (event.key === 'F5') {
             event.preventDefault(); 
             location.reload(); 
+            return;
+        }
+
+        // Add to favorite list (Alt + D)
+        if (event.altKey && !event.ctrlKey && !event.metaKey && key === 'd') {
+            event.preventDefault();
+            const c1 = globalThis.characterList.getValue()[0];
+            const oc = globalThis.characterList.getKey()[3];
+
+            addFavorites(c1);
+            addFavorites(oc);
+            return;
+        }
+
+        // Remove from favorite list (Alt + R)
+        if (event.altKey && !event.ctrlKey && !event.metaKey && key === 'q') {
+            event.preventDefault();
+            const c3 = globalThis.characterList.getValue()[2];
+            const oc = globalThis.characterList.getKey()[3];
+
+            delFavorites(c3);
+            delFavorites(oc);
         }
     });
 

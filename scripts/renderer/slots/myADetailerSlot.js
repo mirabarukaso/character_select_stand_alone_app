@@ -625,6 +625,17 @@ class ADetailerSlotManager {
         });
     }
 
+    flush() {
+        this.clear();
+
+        const slots = globalThis.globalSettings.ad_slot;
+        if (!slots || slots.length === 0) {
+            return;
+        }
+
+        this.AddADetailerSlot(slots);
+    }
+
     reload() {
         const slotValues = this.getValues();
     

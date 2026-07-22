@@ -41,6 +41,56 @@ const activeDropdownsRegistry = {
     }
 };
 
+function normalizeOptionText(value) {
+    return String(value || '').trim().toLowerCase();
+}
+
+function getSpecialSearchOptions() {
+    const specialList = Array.isArray(globalThis.globalSettings?.fav_characters)
+        ? globalThis.globalSettings.fav_characters
+        : [];
+
+    return specialList
+        .map(item => normalizeOptionText(item))
+        .filter(item => item !== '');
+}
+
+function filterOptionsByText(optionList, searchText) {
+    const normalizedSearchText = normalizeOptionText(searchText);
+    if (!normalizedSearchText) {
+        return [...optionList];
+    }
+
+    return optionList.filter(option => {
+        const key = normalizeOptionText(option.key);
+        const value = normalizeOptionText(option.value);
+        return key.includes(normalizedSearchText) || value.includes(normalizedSearchText);
+    });
+}
+
+function filterSpecialOptions(optionList, searchText) {
+    const specialKeywords = getSpecialSearchOptions();
+    const normalizedSearchText = normalizeOptionText(searchText).slice(1);
+    const matchedSpecialKeywords = normalizedSearchText
+        ? specialKeywords.filter(keyword => keyword.includes(normalizedSearchText))
+        : specialKeywords;
+
+    if (matchedSpecialKeywords.length === 0) {
+        return [];
+    }
+
+    const specialLookup = new Set(matchedSpecialKeywords);
+    return optionList.filter(option => {
+        const key = normalizeOptionText(option.key);
+        const value = normalizeOptionText(option.value);
+        return specialLookup.has(key) || specialLookup.has(value);
+    });
+}
+
+function isSpecialSearchMode(searchText) {
+    return typeof searchText === 'string' && searchText.startsWith('@');
+}
+
 function handleCharacterOptions(options, filteredOptions, args, dropdownCount) {
     const [[keys, values], oc] = args;
     if (!Array.isArray(keys) || !Array.isArray(values) || keys.length !== values.length) {
@@ -520,16 +570,18 @@ function createDropdown({
             activeInput = null;
         },
         
+        // eslint-disable-next-line sonarjs/cognitive-complexity
         _updateOptionsList: function(activeIndex, searchText = null) {
             const existingItems = Array.from(optionsList.children);
             const fragment = document.createDocumentFragment();
             let currentOptions = [];
     
-            if (searchText) {            
-                currentOptions = filteredOptions[activeIndex].filter(option =>
-                    option.key.toLowerCase().includes(searchText) ||
-                    option.value.toLowerCase().includes(searchText)
-                );        
+            if (searchText) {
+                if (isSpecialSearchMode(searchText)) {
+                    currentOptions = filterSpecialOptions(options[activeIndex], searchText);
+                } else {
+                    currentOptions = filterOptionsByText(filteredOptions[activeIndex], searchText);
+                }
             } else {
                 currentOptions = filteredOptions[activeIndex];
             }
@@ -801,11 +853,11 @@ function createDropdown({
                 const searchText = (input.value || '').toLowerCase();
                 inputHistory[index] = input.value || ''; // Save Search history
 
-                if (searchText) {                
-                    filteredOptions[index] = options[index].filter(option =>
-                        option.key.toLowerCase().includes(searchText) ||
-                        option.value.toLowerCase().includes(searchText)
-                    );
+                if (isSpecialSearchMode(searchText)) {
+                    filteredOptions[index] = filterSpecialOptions(options[index], searchText);
+                    dropdown._updateOptionsList(index, searchText);
+                } else if (searchText) {
+                    filteredOptions[index] = filterOptionsByText(options[index], searchText);
                     dropdown._updateOptionsList(index, searchText);
                 } else if (filteredOptions[index].length === 1) {
                     filteredOptions[index] = [...options[index]];

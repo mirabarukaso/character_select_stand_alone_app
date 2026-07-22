@@ -13,7 +13,7 @@ import { setupSlider } from './renderer/components/mySlider.js';
 import { setupCheckbox, setupRadiobox } from './renderer/components/myCheckbox.js';
 import { setupButtons, toggleButtons, showCancelButtons } from './renderer/components/myButtons.js';
 import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, setupModelReloadToggle, 
-    setupRefreshToggle, setupSwapToggle, reloadFiles, doSwap } from './renderer/components/myCollapsed.js';
+    setupFuctionKeys, setupSwapToggle, reloadFiles, doSwap } from './renderer/components/myCollapsed.js';
 import { setupTextbox, setupInfoBox } from './renderer/components/myTextbox.js';
 import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from './renderer/generate_backend.js';
 import { setupLoRA } from './renderer/slots/myLoRASlot.js';
@@ -89,7 +89,7 @@ export async function setupHeader(SETTINGS, FILES, LANG){
         save: await setupSaveSettingsToggle(),
         delete: await setupDeleteSettingsToggle(),
         reload: await setupModelReloadToggle(),
-        refresh: setupRefreshToggle(),
+        refresh: setupFuctionKeys(),
         swap: setupSwapToggle(),
         theme: setupThemeToggle()
     }        
@@ -540,6 +540,15 @@ async function init(){
                 globalThis.collapsedTabs.lora.setCollapsed(false);
             } else if(globalThis.collapsedTabs.lora.getCollapsed() === false) {
                 globalThis.collapsedTabs.lora.setCollapsed(true);
+            }
+
+            // Load aDetailer slots and update the collapsed state of the aDetailer tab
+            globalThis.aDetailer.flush();
+            console.log(globalThis.aDetailer.getSlots());
+            if(globalThis.aDetailer.getSlots().length > 0 ) {
+                globalThis.collapsedTabs.aDetailer.setCollapsed(false);
+            } else if(globalThis.collapsedTabs.aDetailer.getCollapsed() === false) {
+                globalThis.collapsedTabs.aDetailer.setCollapsed(true);
             }
 
             globalThis.globalSettings.lastLoadedSettings = `settings`;
