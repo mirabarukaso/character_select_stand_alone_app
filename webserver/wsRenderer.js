@@ -26,7 +26,8 @@ import { setupImageUploadOverlay } from '../scripts/renderer/imageInfo.js';
 import { setupThemeToggle } from '../scripts/renderer/theme.js';
 import { setupRightClickMenu } from '../scripts/renderer/components/myRightClickMenu.js';
 import { initWebSocket, isSecuredConnection, sendWebSocketMessage, registerCallback } from './front/wsRequest.js';
-import {CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE} from '../scripts/types.js';
+import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE } from '../scripts/types.js';
+import { flushSlots } from '../scripts/renderer/slots/slotsManager.js';
 
 // Run the init function when the DOM is fully loaded
 function afterDOMinit() {
@@ -437,8 +438,8 @@ async function init() {
 
     // Init Global Settings
     try {
-        globalThis.globalSettings = await sendWebSocketMessage({ type: 'API', method: 'getGlobalSettings' });
-        console.log('Global settings loaded:', globalThis.globalSettings);    
+        globalThis.globalSettings = await sendWebSocketMessage({ type: 'API', method: 'getGlobalSettings' });        
+        console.log('Global settings loaded:', globalThis.globalSettings);        
     } catch (error) {
         console.error('Failed to load global settings:', error);
         return;
@@ -561,22 +562,8 @@ async function init() {
         updateLanguage(true, globalThis.inBrowser); 
         updateSettings();
         
-        // Load LoRA slots and update the collapsed state of the LoRA tab
-        globalThis.lora.flush();
-        if(globalThis.lora.getSlots().length > 0 ) {
-            globalThis.collapsedTabs.lora.setCollapsed(false);
-        } else if(globalThis.collapsedTabs.lora.getCollapsed() === false) {
-            globalThis.collapsedTabs.lora.setCollapsed(true);
-        }
-
-        // Load aDetailer slots and update the collapsed state of the aDetailer tab
-        globalThis.aDetailer.flush();
-        console.log(globalThis.aDetailer.getSlots());
-        if(globalThis.aDetailer.getSlots().length > 0 ) {
-            globalThis.collapsedTabs.aDetailer.setCollapsed(false);
-        } else if(globalThis.collapsedTabs.aDetailer.getCollapsed() === false) {
-            globalThis.collapsedTabs.aDetailer.setCollapsed(true);
-        }
+        // reLoad slots stuff: LoRA, aDetailer
+        flushSlots();
 
         globalThis.globalSettings.lastLoadedSettings = `settings`;
     } catch (error) {

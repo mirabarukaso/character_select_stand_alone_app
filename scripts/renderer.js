@@ -26,7 +26,8 @@ import { setupImageUploadOverlay } from './renderer/imageInfo.js';
 import { setupThemeToggle } from './renderer/theme.js';
 import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/components/myRightClickMenu.js';
 import { extractHostPort } from './renderer/generate.js';
-import {CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE} from './types.js';
+import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE } from './types.js';
+import { flushSlots } from './renderer/slots/slotsManager.js';
 
 function afterDOMinit() {
     console.log("Script loaded, attempting initial setup");
@@ -422,8 +423,7 @@ async function init(){
 
     try {
         // Init Global Settings
-        globalThis.globalSettings = await globalThis.api.getGlobalSettings();
-        
+        globalThis.globalSettings = await globalThis.api.getGlobalSettings();        
 
         // Setup main func
         globalThis.mainGallery = {};
@@ -534,22 +534,8 @@ async function init(){
             updateLanguage(true, globalThis.inBrowser); 
             updateSettings();
             
-            // Load LoRA slots and update the collapsed state of the LoRA tab
-            globalThis.lora.flush();
-            if(globalThis.lora.getSlots().length > 0 ) {
-                globalThis.collapsedTabs.lora.setCollapsed(false);
-            } else if(globalThis.collapsedTabs.lora.getCollapsed() === false) {
-                globalThis.collapsedTabs.lora.setCollapsed(true);
-            }
-
-            // Load aDetailer slots and update the collapsed state of the aDetailer tab
-            globalThis.aDetailer.flush();
-            console.log(globalThis.aDetailer.getSlots());
-            if(globalThis.aDetailer.getSlots().length > 0 ) {
-                globalThis.collapsedTabs.aDetailer.setCollapsed(false);
-            } else if(globalThis.collapsedTabs.aDetailer.getCollapsed() === false) {
-                globalThis.collapsedTabs.aDetailer.setCollapsed(true);
-            }
+            // reLoad slots stuff: LoRA, aDetailer
+            flushSlots();
 
             globalThis.globalSettings.lastLoadedSettings = `settings`;
         }

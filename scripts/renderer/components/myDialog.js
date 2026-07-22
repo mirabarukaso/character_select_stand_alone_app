@@ -180,7 +180,7 @@ function showDialog(type, options = {}) {
                 const radiobox = setupRadiobox(
                     radioContainer.className,
                     '',
-                    itemsTitle,
+                    itemsTitle.replaceAll('\n', '<br>'),
                     items,                    
                     defaultSelectedIndex,
                     null

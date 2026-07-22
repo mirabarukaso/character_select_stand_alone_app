@@ -5,14 +5,19 @@ import { generateMiraITU } from './generate_miraITU.js';
 import { doSwap, reloadFiles } from './components/myCollapsed.js';
 import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI, 
     updateLanguage, updateSettings, setDropdownLanguage } from './language.js';
-import { setBlur, setNormal } from './components/myDialog.js';
+import { setBlur, setNormal, showDialog } from './components/myDialog.js';
 import { applyTheme } from './theme.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { myCharacterList, myRegionalCharacterList } from './components/myDropdown.js';
+import { flushSlots } from './slots/slotsManager.js';
+import { compareAndMergeFavoriteLists } from './components/favoriteCharacters.js';
 
 export async function callback_mySettingList(index, selectedValue) {    
     if(!globalThis.initialized)
         return;
+
+    const lastFavList = globalThis.globalSettings.fav_characters;
+    const lastLoadedSettings = globalThis.globalSettings.lastLoadedSettings;
 
     const lastThumbSelect = globalThis.globalSettings.thumb_select;
     const lastApiInterface = globalThis.globalSettings.api_interface;
@@ -42,20 +47,48 @@ export async function callback_mySettingList(index, selectedValue) {
     if(old_css !== globalThis.globalSettings.css_style)
         applyTheme(globalThis.globalSettings.css_style);
     
-    // Load LoRA slots and update the collapsed state of the LoRA tab
-    globalThis.lora.flush();
-    if(globalThis.lora.getSlots().length > 0 ) {
-        globalThis.collapsedTabs.lora.setCollapsed(false);
-    } else if(globalThis.collapsedTabs.lora.getCollapsed() === false) {
-        globalThis.collapsedTabs.lora.setCollapsed(true);
-    }
+    // reLoad slots stuff: LoRA, aDetailer
+    flushSlots();
 
-    // Load aDetailer slots and update the collapsed state of the aDetailer tab
-    globalThis.aDetailer.flush();
-    if(globalThis.aDetailer.getSlots().length > 0 ) {
-        globalThis.collapsedTabs.aDetailer.setCollapsed(false);
-    } else if(globalThis.collapsedTabs.aDetailer.getCollapsed() === false) {
-        globalThis.collapsedTabs.aDetailer.setCollapsed(true);
+    const new_settings_name = value.slice(0, -5);
+
+    // check favorite list
+    const new_fav = compareAndMergeFavoriteLists(lastFavList, globalThis.globalSettings.fav_characters);
+    if(new_fav) {
+        const SETTINGS = globalThis.globalSettings;
+        const FILES = globalThis.cachedFiles;
+        const LANG = FILES.language[SETTINGS.language];
+
+        const favlist_mismach = LANG.favlist_mismach
+                                    .replace('{0}', lastLoadedSettings)
+                                    .replace('{1}', lastFavList.length)
+                                    .replace('{2}', new_settings_name)
+                                    .replace('{3}', globalThis.globalSettings.fav_characters.length);
+
+        const merge = LANG.favlist_title_merge
+                        .replace('{0}', lastLoadedSettings)
+                        .replace('{1}', new_settings_name)
+                        .replace('{2}', new_fav.length);        
+        const overwrite = LANG.favlist_title_overwrite.replace('{0}', lastLoadedSettings);
+        const replace = LANG.favlist_title_replace.replace('{0}', new_settings_name);
+
+        const combine_itemsTitle = `${replace},${overwrite},${merge}`;
+        const combine_items = `${LANG.favlist_replace},${LANG.favlist_overwrite},${LANG.favlist_merge}`;
+
+        // Ask user what's next
+        const result = await showDialog('radio', { 
+            message: favlist_mismach,
+            items: combine_items,
+            itemsTitle: combine_itemsTitle,
+            buttonText: LANG.setup_ok
+        });
+
+        console.log(result);
+        if (result === 2)   // merge
+            globalThis.globalSettings.fav_characters = new_fav;
+        else if(result === 1) // overwrite
+            globalThis.globalSettings.fav_characters = lastFavList;            
+        // replace  0
     }
 
     // Done
@@ -69,7 +102,7 @@ export async function callback_mySettingList(index, selectedValue) {
     setNormal();
 
     globalThis.dropdownList.settings.updateDefaults(value);
-    globalThis.globalSettings.lastLoadedSettings = value.slice(0, -5);
+    globalThis.globalSettings.lastLoadedSettings = new_settings_name;
 }
 
 export async function callback_api_model_select(index, selectedValue) {

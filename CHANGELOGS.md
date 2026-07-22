@@ -1,4 +1,8 @@
 2026.07.22 v2.8.1               
+Add more options `Replace`, `Overwrite` and `Merge` for `Favorites List` #99       
+
+
+2026.07.22 v2.8.1               
 Add `aDetailer` settings now saved into settings file #98        
 Add `Favorites List` #99       
 
