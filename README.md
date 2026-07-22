@@ -373,7 +373,7 @@ LoRA in `Common Prompt` also works if you have the same one. If you don't like L
 
 ## Character List
 ### Favorite Character List
-*SAVE your settings after you add/remove facorite list, there are NO HINTS after you press F8/F9*                  
+*SAVE your settings after you add/remove facorite list, there are NO HINTS at all*                  
 
 *Add:* Select a character in `Character1` or `OC`, press `Alt` + `D`        
 *Remove:* Select a character in `Character3` or `OC`, press `Alt` + `Q`       
