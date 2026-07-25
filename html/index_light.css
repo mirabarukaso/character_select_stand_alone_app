@@ -134,7 +134,7 @@ body {
     width: 100%;
     flex-shrink: 0;
     padding-top: 0;
-    align-items: anchor-center;
+    align-items: center;
 }
 
 /* Main Gallery */
@@ -256,7 +256,7 @@ body {
 .controlnet-header, .regional-condition-header, .jsonlist-header, .adetailer-header, .queue-header {
     padding-right: 2px;
     display: flex;
-    align-items: anchor-center;
+    align-items: center;
     justify-content: flex-end;
     position: relative;
     border: none;
@@ -363,7 +363,7 @@ body {
     margin-bottom: 4px;
     gap: 16px;
     width: 100%;
-    align-items: anchor-center;
+    align-items: center;
 }
 
 .mydropdown-container-1 {
@@ -379,11 +379,11 @@ body {
 .mydropdown-container-grid {
     display: grid;
     grid-template-columns: 1fr 3fr;
-    margin-top: 4px;
-    margin-bottom: 4px;
+    margin-top: 2px;
+    margin-bottom: 2px;
     gap: 16px;
     width: 100%;
-    align-items: anchor-center;
+    align-items: center;
 }
 
 .mydropdown-wrapper {
@@ -397,7 +397,7 @@ body {
     display: grid;  
     grid-template-columns: 9fr 1fr;
     box-sizing: border-box;
-    align-items: anchor-center;
+    align-items: center;
 }
 
 .mydropdown-label {
@@ -484,7 +484,6 @@ body {
 /* generate settings */
 .image-infobox-container,
 .image-infobox-main,
-#prompt-text-container,
 .highres-fix-container, .refiner-container, .controlnet-container, .regional-condition-container, .model-settings-container, .add-lora-container, 
 .system-settings-container, .jsonlist-container, .adetailer-container, .queue-container, 
 .highres-fix-main, .refiner-main, .controlnet-main, .regional-condition-main, .model-settings-main, .add-lora-main, 
@@ -510,6 +509,7 @@ body {
     display: grid;
     grid-template-columns: 1.2fr 1.3fr 0.7fr 0.8fr;
     grid-template-rows: repeat(1, auto);
+    align-items: end;
 }
 
 #generate-settings-static > div, #generate-settings-slider > div {
@@ -612,6 +612,15 @@ body {
 
 /* prompt text */
 #prompt-text-container {
+    padding: 1px;
+    box-sizing: border-box;
+    background: rgb(230, 227, 210); /* Warm off-white */
+    border: #D2CBB8 2px solid; /* Warm beige */
+    border-radius: 8px;
+    position: relative;
+    color: #4A403A; /* Dark gray-brown */
+    gap: 0;
+
     display: flex;
     flex-direction: column;
 }
@@ -619,11 +628,19 @@ body {
 #prompt-text-container > div {
     background: rgb(230, 227, 210); /* Warm off-white */
     color: #4A403A; /* Dark gray-brown */
-    border: 1px solid #D2CBB8; /* Warm beige */
-    border-radius: 4px;
     padding: 0;
     text-align: left;
-    box-sizing: border-box;
+}
+
+#prompt-textbox-settings {
+    align-items: center;
+    display: grid; 
+    grid-template-columns: 1fr 1fr 1fr 1fr; 
+    margin-left: 10px;
+    margin-right: 10px;
+    margin-top: 2px;
+    margin-bottom: 2px;
+    background-color: rgb(230,227,211);
 }
 
 [class^="myTextbox-"][class*="-header"] {
@@ -656,6 +673,44 @@ body {
 [class^="myTextbox-"][class*="-textarea"]:disabled {
     cursor: not-allowed;
     filter: blur(2px);
+}
+
+/* Container layout setup */
+.myTextbox-container-relative {
+    position: relative;
+    width: 100%;
+    display: flex;
+}
+
+/* Base styles for the dynamic resize handle */
+[class*="-resize-handle"] {
+    position: absolute;
+    right: 4px;
+    bottom: 4px;
+    width: 12px;
+    height: 12px;
+    cursor: ns-resize;
+    user-select: none;
+    opacity: 0.5;
+    font-size: 10px;
+    line-height: 12px;
+    text-align: right;
+    z-index: 2;
+    pointer-events: auto;
+}
+
+/* Ensure padding-right on textarea to prevent text overlap with handle */
+[class*="-textarea"] {
+    resize: none;
+    box-sizing: border-box;
+    width: 100%;
+    padding-right: 14px;
+}
+
+.myTextbox-wrapper {
+    display: flex; 
+    flex-direction: column; 
+    width: 100%;
 }
 
 .image-infobox-main,
@@ -715,9 +770,14 @@ body {
 
 [class^="myCheckbox-"][class*="-input"] {
     flex: 0;
-    width: 13px;
-    height: 13px;
-    cursor: pointer;
+    width: 10px;
+    height: 10px;
+}
+
+[class^="myRadiobox-"][class*="-input"] {
+    flex: 0;
+    width: 10px;
+    height: 10px;
 }
 
 /* myDialog */

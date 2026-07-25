@@ -1,6 +1,6 @@
 import { getAiPrompt } from '../remoteAI.js';
 import { showDialog } from './myDialog.js';
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 
 function debounce(func, wait) {
     let timeout;
@@ -322,7 +322,11 @@ export function setupRightClickMenu() {
 
         // render menu items
         for(const item of menuConfig) {
-            if (item.displayName === null && item.handler === null) {
+            if (item.displayName === null || item.handler === null) {
+                if (item.handler && !targetElement.closest(item.handler.selector)) {
+                    continue;
+                }
+
                 const separator = document.createElement('div');
                 separator.className = 'menu-separator';
                 fragment.appendChild(separator);
@@ -425,9 +429,14 @@ function updateRightClickMenu(){
 
     globalThis.rightClick.setTitle('copy_image', LANG.right_menu_copy_image);
     globalThis.rightClick.setTitle('copy_image_metadata', LANG.right_menu_copy_image_metadata);
+    globalThis.rightClick.setTitle('copy_image_grid', LANG.right_menu_copy_image);
+    globalThis.rightClick.setTitle('copy_image_metadata_grid', LANG.right_menu_copy_image_metadata);    
     globalThis.rightClick.setTitle('copy_image_full_screen', LANG.right_menu_copy_image);
     globalThis.rightClick.setTitle('copy_image_metadata_full_screen', LANG.right_menu_copy_image_metadata);
     
+    globalThis.rightClick.setTitle('remove_current_image', LANG.right_menu_remove_current_image);
+    globalThis.rightClick.setTitle('remove_current_image_grid', LANG.right_menu_remove_current_image);
+
     globalThis.rightClick.setTitle('clear_gallery', LANG.right_menu_clear_gallery);
     globalThis.rightClick.setTitle('bcryptHash', LANG.right_menu_bcrypt_hash);
 
@@ -451,6 +460,36 @@ function registerDefaultMenuItems() {
         selector: '.cg-main-image-container',
         func: async (element) => await menu_copyImageMetadata(element)
     });
+    // line-------------------
+    globalThis.rightClick.append('separator_split_mode', null, {
+        selector: '.cg-main-image-container'
+    });
+    globalThis.rightClick.append('remove_current_image', LANG.right_menu_remove_current_image, {
+        selector: '.cg-main-image-container',
+        func: (element) => { globalThis.mainGallery.removeCurrentImage(element); }
+    });
+
+    // grid mode    
+    globalThis.rightClick.append('copy_image_grid', LANG.right_menu_copy_image, {
+        selector: '.cg-gallery-item',
+        func: (element) => menu_copyImage(element)
+    });
+    globalThis.rightClick.append('copy_image_metadata_grid', LANG.right_menu_copy_image_metadata, {
+        selector: '.cg-gallery-item',
+        func: async (element) => await menu_copyImageMetadata(element)
+    });
+    // line-------------------
+    globalThis.rightClick.append('separator_grid_mode', null, {
+        selector: '.cg-gallery-item'
+    });
+    globalThis.rightClick.append('remove_current_image_grid', LANG.right_menu_remove_current_image, {
+        selector: '.cg-gallery-item',
+        func: (element) => { 
+            const img = element.querySelector('img');
+            globalThis.mainGallery.removeCurrentImage(img.src); 
+        }
+    });
+
     // full screen mode
     globalThis.rightClick.append('copy_image_full_screen', LANG.right_menu_copy_image, {
         selector: '.cg-fullscreen-overlay',
@@ -460,11 +499,17 @@ function registerDefaultMenuItems() {
         selector: '.cg-fullscreen-overlay',
         func: async (element) => await menu_copyImageMetadata(element)
     });
-    // Custom overlay image
+
+
+    // Copy thumb preview image
     globalThis.rightClick.append('copy_image_preview', LANG.right_menu_copy_image, {
-        selector: '.cg-image-wrapper',
+        selector: '.cg-thumb-scroll-container',
         func: (element) => menu_copyImage(element)
-    });    
+    });
+    globalThis.rightClick.append('copy_image_preview_grid', LANG.right_menu_copy_image, {
+        selector: '.cg-thumb-item',
+        func: (element) => menu_copyImage(element)
+    });
 
     // Common
     globalThis.rightClick.append('lora_common_to_slot', LANG.right_menu_send_lora_to_slot, {

@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 
 function debounce(func, wait) {
     let timeout;
@@ -9,7 +9,7 @@ function debounce(func, wait) {
 }
 
 function extractCurrentWeight(targetText) {
-    const weightMatch = targetText.match(/^\((.+):(\d*\.?\d+)\)$/);
+    const weightMatch = targetText.match(/^\((.+):(\d*\.?\d+)\)$/); //NOSONAR S8786
     return weightMatch ? Number.parseFloat(weightMatch[2]) : 1;
 }
 
@@ -21,7 +21,7 @@ function calculateNewWeight(currentWeight, isIncrease) {
 }
 
 function formatNewTag(targetText, newWeight) {
-    const baseText = targetText.match(/^\((.+):\d*\.?\d+\)$/)?.[1] || targetText;
+    const baseText = targetText.match(/^\((.+):\d*\.?\d+\)$/)?.[1] || targetText;    //NOSONAR S8786
     return newWeight === 1 ? baseText : `(${baseText}:${newWeight})`;
 }
 
@@ -36,7 +36,7 @@ function findBracketedTag(beforeCursor, afterCursor) {
     const fullText = beforeCursor + afterCursor;
     const cursorPos = beforeCursor.length;
 
-    const bracketRegex = /\(([^()]+:\d*\.?\d+)\)/g;
+    const bracketRegex = /\(([^()]+:\d*\.?\d+)\)/g;  //NOSONAR S8786
     let match;
     while ((match = bracketRegex.exec(fullText)) !== null) {
         const start = match.index;
@@ -227,7 +227,7 @@ export function setupSuggestionSystem() {
                     let previousElement;
                     do {
                         previousElement = sanitizedElement;
-                        sanitizedElement = sanitizedElement.replaceAll(/<[^>]+>/g, '');
+                        sanitizedElement = sanitizedElement.replaceAll(/<[^>]+>/g, '');  //NOSONAR S8786
                     } while (sanitizedElement !== previousElement);
                     tempDiv.textContent = sanitizedElement;
                     maxWidth = Math.max(maxWidth, tempDiv.offsetWidth);

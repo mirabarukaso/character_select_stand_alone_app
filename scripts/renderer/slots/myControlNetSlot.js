@@ -2,7 +2,7 @@ import { mySimpleList } from '../components/myDropdown.js';
 import { setupTextbox } from '../components/myTextbox.js';
 import { generateGUID } from './myLoRASlot.js'
 import { generateControlnetImage } from '../generate.js';
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { resizeImageToControlNetResolution } from '../components/imageInfoUtils.js';
 
 const controlNetValuesComfyUI = [

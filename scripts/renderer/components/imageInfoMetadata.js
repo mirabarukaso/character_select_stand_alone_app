@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 
 export async function fileToBase64(file) {
     return new Promise((resolve, reject) => {

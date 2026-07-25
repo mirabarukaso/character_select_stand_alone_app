@@ -7,7 +7,7 @@ import { fileURLToPath } from 'node:url';
 // common functions for main and wsService
 import { setupIPCs, getAppVersion } from './main-common.js';
 // WebSocket server
-import { setupHttpServer, closeWebSocketServer } from './webserver/back/wsService.js';
+import { setupHttpServer, closeWebSocketServer } from './scripts/webserver/back/wsService.js';
 // Import custom modules
 import { setupFileHandlers } from './scripts/main/fileHandlers.js';
 import { setupGlobalSettings } from './scripts/main/globalSettings.js';
@@ -42,9 +42,9 @@ function createWindow () {
     autoHideMenuBar: true,  // Hide menu
     width: 1300,
     height: 1200,
-    icon: path.join(__dirname, 'html/icon.png'),
+    icon: path.join(__dirname, './html/icon.png'),
     webPreferences: {
-      preload: path.join(__dirname, 'scripts/preload.js'),
+      preload: path.join(__dirname, './scripts/preload.js'),
       contextIsolation: true, // Enable context isolation
       nodeIntegration: false, // Disable Node.js integration
       nodeIntegrationInWorker: true, // Enable multithread
@@ -125,7 +125,7 @@ async function initializeApp() {
 
 // Initialize the app
 // eslint-disable-next-line unicorn/prefer-top-level-await
-(async () => {
+(async () => { 
   await app.whenReady();
   await initializeApp();
   
@@ -141,5 +141,3 @@ app.on('window-all-closed', function () {
 
   app.quit()
 })
-
-

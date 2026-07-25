@@ -173,7 +173,7 @@ class WebUI {
         });
     }
 
-    async setModel(addr, model, auth, vae, unet) {
+    async setModel(addr, model, auth, vae, unet, img_prefix = '[date]') {
         this.addr = addr;
         
         if (this.isForge === null) {
@@ -203,6 +203,11 @@ class WebUI {
             const vae_key = this.isForge ? "forge_additional_modules" : "sd_vae";
             if (vae?.vae_override)
                 optionPayload[vae_key] = vae.vae;
+
+            if(img_prefix !== '[date]') {
+                console.error(CAT, 'Override directories_filename_pattern with:', img_prefix);
+                optionPayload["directories_filename_pattern"] = img_prefix;
+            }
 
             const body = JSON.stringify(optionPayload);
             const apiUrl = `http://${this.addr}/sdapi/v1/options`;
@@ -947,7 +952,7 @@ async function runWebUI(generateData){
     await refreshModelLists(generateData);
     
     const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
-        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, generateData?.unet);
+        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, generateData?.unet, generateData.img_prefix);
     if(result === '200') {
         try {
             if(backendWebUI.uuid !== 'none')
@@ -993,7 +998,7 @@ async function runWebUI_Regional(generateData){
     await refreshModelLists(generateData);
     
     const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
-        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null);
+        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null, generateData.img_prefix);
     if(result === '200') {
         try {
             if(backendWebUI.uuid !== 'none')

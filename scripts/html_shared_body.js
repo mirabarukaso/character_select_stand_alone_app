@@ -100,11 +100,18 @@ export const sharedBodyHTML = `
                 <div class="system-settings-api-webui-auth-enable"></div>
               </div>
               <div class="system-settings-main-2">
+                <div></div>
                 <div class="system-settings-api-fliter"></div>
                 <div class="system-settings-api-fliter-list"></div>
                 <div class="system-settings-api-fliter-diffusion-list"></div>
-                <div class="system-settings-api-comfyui"></div>
-                <div class="system-settings-api-webui"></div>                
+                <div></div>
+                <div class="system-settings-api-comfyui"></div>                
+                <div class="system-settings-api-webui"></div>
+                <div></div>
+                <div class="system-settings-api-embed_character_name"></div>
+                <div class="system-settings-api-comfyui-image-save-path"></div>              
+                <div class="system-settings-api-webui-image-save-path"></div>                
+                <div></div>
               </div>
               <div class="system-settings-main-1">
                 <div class="system-settings-ai-interface"></div>
@@ -275,12 +282,18 @@ export const sharedBodyHTML = `
           </div>
           
           <div id="prompt-text-container">
+            <div id="prompt-textbox-settings">
+              <div></div>
+              <div></div>
+              <div class="prompt-textbox-autoresize"></div>
+              <div class="prompt-textbox-fontsize"></div>              
+            </div>
             <div class="prompt-common">common</div>
             <div class="prompt-positive">positive</div>
             <div class="prompt-positive-right">positive-right</div>
             <div class="prompt-negative">negative</div>
             <div class="prompt-ai">negative</div>
-            <div class="prompt-exclude">exclude</div>
+            <div class="prompt-exclude">exclude</div>            
           </div>
 
           <div class="jsonlist-container">

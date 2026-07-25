@@ -144,6 +144,30 @@ export function setupGallery(containerId) {
         container.innerHTML = '';
     };
 
+    globalThis.mainGallery.removeCurrentImage = function (element = null) {
+        if(isGridMode) {
+            const index = images.indexOf(element);
+            if (index !== -1) {
+                images.splice(index, 1);
+                seeds.splice(index, 1);
+                tags.splice(index, 1);
+
+                renderedImageCount = images.length;
+                currentIndex = 0;
+                gallery_renderGridMode(false);
+            }
+        } else {
+            images.splice(currentIndex, 1);
+            seeds.splice(currentIndex, 1);
+            tags.splice(currentIndex, 1);
+            renderedImageCount = images.length;
+            currentIndex = currentIndex - 1;
+            if(currentIndex < 0)
+                currentIndex = 0;
+            gallery_renderSplitMode(false);
+        }            
+    };
+
     globalThis.mainGallery.appendImageData = function (base64, seed, tagsString, keep_gallery, switchToLatest = false) {
         if ('False' === keep_gallery) {
             globalThis.mainGallery.clearGallery();
@@ -465,7 +489,7 @@ export function setupGallery(containerId) {
     
             for (let i = images.length - 1; i >= renderedImageCount; i--) {
                 const imgContainer = document.createElement('div');
-                imgContainer.className = 'cg-gallery-item';
+                imgContainer.className = `cg-gallery-item ${i}`;
                 imgContainer.style.width = `${targetWidth}px`;
                 imgContainer.style.height = `${targetHeight}px`;
                 imgContainer.dataset.index = i;

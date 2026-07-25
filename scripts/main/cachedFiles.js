@@ -18,53 +18,53 @@ let cachedPrivacyBall = {};
 
 const appPath = app.isPackaged ? path.join(path.dirname(app.getPath('exe')), 'resources', 'app') : app.getAppPath();
 
-function setupCachedFiles(thumbSelect) {
-    function loadFileEx(saveDir, fileName, dataPointer)
-    {
-        const filePath = path.join(appPath, saveDir, fileName);
-        if (fs.existsSync(filePath)) {       
-            
-            const ext = path.extname(filePath).toLowerCase();
-                        
-            if (ext === '.csv') {
-                const data = loadCSVFile(filePath);      
-                Object.assign(dataPointer, data);            
-            } else if (ext === '.json') {
-                const data = loadJSONFile(filePath);      
-                Object.assign(dataPointer, data); 
-            } else {
-                console.error(`${CAT}: ${fileName} load failed`);
-                return false;
-            }
-            console.log(`${CAT}: ${fileName} loaded into memory`);
+function loadFileEx(saveDir, fileName, dataPointer)
+{
+    const filePath = path.join(appPath, saveDir, fileName);
+    if (fs.existsSync(filePath)) {       
+        
+        const ext = path.extname(filePath).toLowerCase();
+                    
+        if (ext === '.csv') {
+            const data = loadCSVFile(filePath);      
+            Object.assign(dataPointer, data);            
+        } else if (ext === '.json') {
+            const data = loadJSONFile(filePath);      
+            Object.assign(dataPointer, data); 
         } else {
             console.error(`${CAT}: ${fileName} load failed`);
-            dialog.showErrorBox(CAT, `${fileName} load failed`);
             return false;
         }
-        return true;
+        console.log(`${CAT}: ${fileName} loaded into memory`);
+    } else {
+        console.error(`${CAT}: ${fileName} load failed`);
+        dialog.showErrorBox(CAT, `${fileName} load failed`);
+        return false;
     }
+    return true;
+}
 
-    function loadImageEx(filePath, fileName, dataPointer) {
-        const fileFullPath = path.join(appPath, filePath, fileName);
-        if (fs.existsSync(fileFullPath)) {
-            try {
-                const fileBuffer = fs.readFileSync(fileFullPath);               
-                const base64Data = fileBuffer.toString('base64');
-                dataPointer.data = base64Data;
+function loadImageEx(filePath, fileName, dataPointer) {
+    const fileFullPath = path.join(appPath, filePath, fileName);
+    if (fs.existsSync(fileFullPath)) {
+        try {
+            const fileBuffer = fs.readFileSync(fileFullPath);               
+            const base64Data = fileBuffer.toString('base64');
+            dataPointer.data = base64Data;
 
-                console.log(`${CAT}: ${fileName} loaded into memory, size: ${fileBuffer.length} bytes`);
-                return true;
-            } catch (error) {
-                console.error(`${CAT}: Error loading ${fileName}: ${error.message}`);
-                return false;
-            }
-        } else {
-            console.error(`${CAT}: ${fileName} load failed - file does not exist at ${fileFullPath}`);
+            console.log(`${CAT}: ${fileName} loaded into memory, size: ${fileBuffer.length} bytes`);
+            return true;
+        } catch (error) {
+            console.error(`${CAT}: Error loading ${fileName}: ${error.message}`);
             return false;
         }
+    } else {
+        console.error(`${CAT}: ${fileName} load failed - file does not exist at ${fileFullPath}`);
+        return false;
     }
+}
 
+function setupCachedFiles(thumbSelect) {   
     const thumb_name = `${thumbSelect}_thumbs.json`;
     const characters_name = `${thumbSelect}_characters.csv`;
     const tag_assist_name = `${thumbSelect}_tag_assist.json`;
@@ -98,39 +98,7 @@ function setupCachedFiles(thumbSelect) {
     });
 
     ipcMain.handle('update-cached-character-thumb', async (event, thumbSelect) => {
-        console.log(`${CAT}: Updating cached files for thumbnail selection: ${thumbSelect}`);
-
-        if (thumbSelect === `waiNSFWIllustrious_v120`) {
-            console.log(`${CAT}: Requesting download of waiNSFWIllustrious_v120 thumbs...`);
-            await requestDownloadOldThumbs();
-        } else if (thumbSelect === `waiANIMA_v10Base10`) {
-            console.log(`${CAT}: Requesting download of waiANIMA_v10Base10 thumbs...`);
-            await requestDownloadAnimaThumbs();
-        }
-        
-        const temp_cachedCharacterThumb = {};
-        const temp_cachedCharacter = {};
-        const temp_cachedTagAssist = {};        
-
-        const thumb_name = `${thumbSelect}_thumbs.json`;
-        const characters_name = `${thumbSelect}_characters.csv`;
-        const tag_assist_name = `${thumbSelect}_tag_assist.json`;
-
-        const thumb = loadFileEx('data', thumb_name, temp_cachedCharacterThumb);
-        const characters = loadFileEx('data', characters_name, temp_cachedCharacter);
-        const character_tag_assist = loadFileEx('data', tag_assist_name, temp_cachedTagAssist);
-
-        const success = thumb && characters && character_tag_assist;
-        if (success) {
-            cachedCharacterThumb = temp_cachedCharacterThumb;
-            cachedCharacter = temp_cachedCharacter;
-            cachedTagAssist = temp_cachedTagAssist;
-            console.log(`${CAT}: Number of characters loaded: ${Object.entries(cachedCharacter).length}`);
-        } else {
-            console.error(`${CAT}: Failed to update cached files for thumbnail selection: ${thumbSelect}`);
-        }
-
-        return success;
+        return await updateCharacterThumb(thumbSelect);
     });
 
     console.log(`${CAT}: Number of characters loaded: ${Object.entries(cachedCharacter).length}`);
@@ -175,9 +143,46 @@ function getCharacterThumb(md5Chara) {
     return cachedCharacterThumb[md5Chara];
 }
 
+async function updateCharacterThumb(thumbSelect) {
+    console.log(`${CAT}: Updating cached files for thumbnail selection: ${thumbSelect}`);
+
+    if (thumbSelect === `waiNSFWIllustrious_v120`) {
+        console.log(`${CAT}: Requesting download of waiNSFWIllustrious_v120 thumbs...`);
+        await requestDownloadOldThumbs();
+    } else if (thumbSelect === `waiANIMA_v10Base10`) {
+        console.log(`${CAT}: Requesting download of waiANIMA_v10Base10 thumbs...`);
+        await requestDownloadAnimaThumbs();
+    }
+    
+    const temp_cachedCharacterThumb = {};
+    const temp_cachedCharacter = {};
+    const temp_cachedTagAssist = {};        
+
+    const thumb_name = `${thumbSelect}_thumbs.json`;
+    const characters_name = `${thumbSelect}_characters.csv`;
+    const tag_assist_name = `${thumbSelect}_tag_assist.json`;
+
+    const thumb = loadFileEx('data', thumb_name, temp_cachedCharacterThumb);
+    const characters = loadFileEx('data', characters_name, temp_cachedCharacter);
+    const character_tag_assist = loadFileEx('data', tag_assist_name, temp_cachedTagAssist);
+
+    const success = thumb && characters && character_tag_assist;
+    if (success) {
+        cachedCharacterThumb = temp_cachedCharacterThumb;
+        cachedCharacter = temp_cachedCharacter;
+        cachedTagAssist = temp_cachedTagAssist;
+        console.log(`${CAT}: Number of characters loaded: ${Object.entries(cachedCharacter).length}`);
+    } else {
+        console.error(`${CAT}: Failed to update cached files for thumbnail selection: ${thumbSelect}`);
+    }
+
+    return success;
+}
+
 export {
     setupCachedFiles,
     getCachedFiles,
     getCachedFilesWithoutThumb,
-    getCharacterThumb
+    getCharacterThumb,
+    updateCharacterThumb
 };

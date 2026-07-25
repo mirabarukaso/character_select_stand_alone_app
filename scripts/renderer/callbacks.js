@@ -7,10 +7,12 @@ import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI,
     updateLanguage, updateSettings, setDropdownLanguage } from './language.js';
 import { setBlur, setNormal, showDialog } from './components/myDialog.js';
 import { applyTheme } from './theme.js';
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { myCharacterList, myRegionalCharacterList } from './components/myDropdown.js';
 import { flushSlots } from './slots/slotsManager.js';
 import { compareAndMergeFavoriteLists } from './components/favoriteCharacters.js';
+import { changeFontSize } from './components/myTextbox.js';
+import { set_prompt_textBox_Heights } from './components/componentsManager.js';
 
 export async function callback_mySettingList(index, selectedValue) {    
     if(!globalThis.initialized)
@@ -99,6 +101,9 @@ export async function callback_mySettingList(index, selectedValue) {
         console.log("Reload UI and update cache due to interface changed.");
         await callback_api_interface(0, [globalThis.globalSettings.api_interface]);
     }
+
+    callback_ptompt_textbox_fontsize(globalThis.globalSettings.ptompt_textbox_fontsize);
+    callback_ptompt_textbox_autoresize(globalThis.globalSettings.ptompt_textbox_autoresize);    
     setNormal();
 
     globalThis.dropdownList.settings.updateDefaults(value);
@@ -471,7 +476,12 @@ async function update_thumb_select(value) {
     console.log('Selected thumbnail:', globalThis.globalSettings.thumb_select);
 
     // load new thumbnail files
-    const success = await globalThis.api.updateCachedCharacterThumb(globalThis.globalSettings.thumb_select);
+    let success;
+    if (globalThis.inBrowser) {
+        success = await sendWebSocketMessage({ type: 'API', method: 'updateCharacterThumb', params: [globalThis.globalSettings.thumb_select] });
+    } else {
+        success = await globalThis.api.updateCachedCharacterThumb(globalThis.globalSettings.thumb_select);
+    }
     if (!success) {
         console.error('Failed to load thumbnail files for selection:', globalThis.globalSettings.thumb_select);
         globalThis.globalSettings.thumb_select = bak_thumb_select;
@@ -479,7 +489,12 @@ async function update_thumb_select(value) {
     }        
 
     // update globalThis.cachedFiles with the new results
-    const cachedFiles = await globalThis.api.getCachedFiles();
+    let cachedFiles
+    if (globalThis.inBrowser) {
+        cachedFiles = await sendWebSocketMessage({ type: 'API', method: 'getCachedFiles'});
+    } else {
+        cachedFiles = await globalThis.api.getCachedFiles();
+    }
     globalThis.cachedFiles.characterThumb = cachedFiles.characterThumb;
     globalThis.cachedFiles.characterList = cachedFiles.characters;
     globalThis.cachedFiles.tagAssist = cachedFiles.tagAssist;
@@ -512,3 +527,24 @@ async function update_thumb_select(value) {
     console.log('Thumbnail files loaded successfully.', FILES.characterListArray.length, 'characters available.');
 }
 
+export function callback_ptompt_textbox_autoresize(value) {    
+    globalThis.globalSettings.ptompt_textbox_autoresize = value
+
+    globalThis.prompt.common.setAutoResize(value);
+    globalThis.prompt.positive.setAutoResize(value);
+    globalThis.prompt.positive_right.setAutoResize(value);
+    globalThis.prompt.negative.setAutoResize(value);
+    globalThis.prompt.ai.setAutoResize(value);
+    globalThis.prompt.exclude.setAutoResize(value);
+
+    if (value === false) {
+        // set to manual hight
+        set_prompt_textBox_Heights();
+    }
+}
+
+export function callback_ptompt_textbox_fontsize(value) { 
+    globalThis.globalSettings.ptompt_textbox_fontsize=value; 
+
+    changeFontSize(value);
+}

@@ -2,9 +2,9 @@ import { decodeThumb } from './customThumbGallery.js';
 import { generateRandomSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, getRandomIndex, formatCharacterInfo, formatOriginalCharacterInfo,
     getViewTags, createHiFix, createRefiner, extractHostPort, checkVpred, extractAPISecure,
     createControlNet, createADetailer, toggleQueueColor, startQueue, REPLACE_AI_MARK,
-    updateADetailerModelList } from './generate.js';
+    updateADetailerModelList, getImageSavePrefix } from './generate.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { filterPrompts } from './tools/promptFilter.js';
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
@@ -144,26 +144,28 @@ async function createCharacters(index, seeds) {
     const seed = seeds[index];
 
     if (character.toLowerCase() === 'none') {
-        return { tag: '', tag_assist: '', thumb: null, info: '' };
+        return { tag: '', tag_assist: '', thumb: null, info: '', neg_tags: '' };
     }
 
     const isOriginalCharacter = (index === 3 || index === 2);
     const { tag, thumb, info, weight, name } = isOriginalCharacter
         ? handleOriginalCharacter(character, seed, isValueOnly, index, FILES)
-        : await handleStandardCharacter(character, seed, isValueOnly, index, FILES);    
+        : await handleStandardCharacter(character, seed, isValueOnly, index, FILES);
 
-    const tagAssist = getTagAssist(tag, globalThis.generate.tag_assist.getValue(), FILES, index, info);
+    const { tag: parsedTag, neg_tags } = splitTagNegativePrompt(tag);
+    const tagAssist = getTagAssist(parsedTag, globalThis.generate.tag_assist.getValue(), FILES, index, info);
     if (tagAssist.tas !== '')
         tagAssist.tas = `${tagAssist.tas}, `;
 
-    const finalTag = isOriginalCharacter ? `${tag}` : tag.replaceAll('\\', '\\\\').replaceAll('(', String.raw`\(`).replaceAll(')', String.raw`\)`);
+    const finalTag = isOriginalCharacter ? `${parsedTag}` : parsedTag.replaceAll('\\', '\\\\').replaceAll('(', String.raw`\(`).replaceAll(')', String.raw`\)`);
     return {
         tag: finalTag,
         tag_assist: tagAssist.tas,
         thumb,
         info: tagAssist.info,
         weight: weight,
-        characterName:name
+        characterName:name,
+        neg_tags
     };
 }
 
@@ -216,6 +218,20 @@ function handleOriginalCharacter(character, seed, isValueOnly, index, FILES) {
     return { tag, thumb: null, info, weight, name };
 }
 
+function splitTagNegativePrompt(tag = '') {
+    const marker = '___NEGATIVE_PROMPT___:';
+    const lowerTag = tag.toLowerCase();
+    const markerIndex = lowerTag.indexOf(marker.toLowerCase());
+
+    if (markerIndex === -1) {
+        return { tag, neg_tags: '' };
+    }
+
+    const positiveTag = tag.slice(0, markerIndex);
+    const neg_tags = tag.slice(markerIndex + marker.length).trim();
+    return { tag: positiveTag, neg_tags };
+}
+
 function parseCharacter(weight, tag){
     if(weight === 1){
         return (tag === '')?'':`${tag}, `;
@@ -237,8 +253,9 @@ async function getCharacters(){
     let information = '';
     let thumbImages = [];
     let characters = '';
+    let negativeTags = '';
     for(let index=0; index < 4; index++) {
-        let {tag, tag_assist, thumb, info, weight, characterName} = await createCharacters(index, seeds);
+        let {tag, tag_assist, thumb, info, weight, characterName, neg_tags} = await createCharacters(index, seeds);
         if (index === 0 || index === 2){
             character_left += parseCharacter(weight, tag);
             character_left += tag_assist;
@@ -255,6 +272,10 @@ async function getCharacters(){
             }     
         }
 
+        if (neg_tags) {
+            negativeTags = (negativeTags === '') ? neg_tags : `${negativeTags}, ${neg_tags}`;
+        }
+
         information += `${info}`;
         if(characterName)
             characters += (characters.length>0)?`\n${characterName}`:`${characterName}`;
@@ -269,7 +290,8 @@ async function getCharacters(){
         character_right:character_right,
         information: information,
         seed:random_seed,
-        characters:characters
+        characters:characters,
+        negative_tags: negativeTags
     }
 }
 
@@ -298,7 +320,7 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
         charactersName = globalThis.generate.lastCharacter;
 
     } else {            
-        const {thumb, character_left, character_right, information, seed, characters} = await getCharacters();
+        const {thumb, character_left, character_right, information, seed, characters, negative_tags} = await getCharacters();
         randomSeed = seed;
         randomSeedr = Math.floor(seed / 3);
         finalInfo = information;
@@ -330,7 +352,8 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
         }
         positivePromptLeftColored = posLc;
         positivePromptRightColored = posRc;
-        negativePrompt = globalThis.prompt.negative.getValue();
+        const mergedNegativePrompt = [globalThis.prompt.negative.getValue(), negative_tags].filter(Boolean).join(', ').trim();
+        negativePrompt = mergedNegativePrompt;
         thumbImage = thumb;
         charactersName = characters;         
     }
@@ -479,7 +502,7 @@ export async function generateRegionalImage(dataPack){
             step: globalThis.generate.step.getValue(),
             seed: createPromptResult.randomSeed,
             sampler: globalThis.generate.sampler.getValue(),
-            scheduler: globalThis.generate.scheduler.getValue(),
+            scheduler: globalThis.generate.scheduler.getValue(),            
             refresh:globalThis.generate.api_preview_refresh_time.getValue(),
             hifix: hifix,
             refiner: refiner,
@@ -487,12 +510,13 @@ export async function generateRegionalImage(dataPack){
             controlnet: createControlNet(),      
             adetailer: createADetailer(apiInterface),
             vae: {vae_override: vae_override, vae: vae},
+            img_prefix: getImageSavePrefix(apiInterface)
         }
         
         let finalInfo = `${createPromptResult.finalInfo}\n`;
-            finalInfo += `Positive Left: ${createPromptResult.positivePromptLeftColored}\n`;
-            finalInfo += `Positive Right: ${createPromptResult.positivePromptRightColored}\n`;
-            finalInfo += `Negative: [color=${negativeColor}]${generateData.negative}[/color]\n\n`;
+            finalInfo += `Positive Left:\n${createPromptResult.positivePromptLeftColored}\n`;
+            finalInfo += `Positive Right:\n${createPromptResult.positivePromptRightColored}\n`;
+            finalInfo += `Negative:\n[color=${negativeColor}]${generateData.negative}[/color]\n\n`;
             finalInfo += `Layout: [[color=${brownColor}]${generateData.width} x ${generateData.height}[/color]]\t`;
             finalInfo += `CFG: [[color=${brownColor}]${generateData.cfg}[/color]]\t`;
             finalInfo += `Setp: [[color=${brownColor}]${generateData.step}[/color]]\n`;

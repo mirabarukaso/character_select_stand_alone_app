@@ -4,7 +4,7 @@ import { TileHelper, CropImageHelper } from './helper.js';
 import { callback_generate_start } from '../callbacks.js';
 import { SAMPLER_COMFYUI, SCHEDULER_COMFYUI } from '../language.js';
 import { fileToBase64 } from '../generate.js';
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { setBlur, setNormal, showDialog } from './myDialog.js';
 import { CLIP_TYPE } from '../../types.js';
 

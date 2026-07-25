@@ -7,7 +7,7 @@ import { myCharacterList, myRegionalCharacterList, myViewsList, myLanguageList, 
 import { callback_mySettingList, callback_api_model_select, callback_api_model_type, callback_api_interface, 
     callback_generate_start, callback_generate_skip, callback_generate_cancel,callback_keep_gallery,
     callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart,
-    callback_thumb_select
+    callback_thumb_select, callback_ptompt_textbox_autoresize, callback_ptompt_textbox_fontsize
  } from './renderer/callbacks.js';
 import { setupSlider } from './renderer/components/mySlider.js';
 import { setupCheckbox, setupRadiobox } from './renderer/components/myCheckbox.js';
@@ -28,12 +28,14 @@ import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/compon
 import { extractHostPort } from './renderer/generate.js';
 import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE } from './types.js';
 import { flushSlots } from './renderer/slots/slotsManager.js';
+import { set_prompt_textBox_Heights } from './renderer/components/componentsManager.js';
 
 function afterDOMinit() {
-    console.log("Script loaded, attempting initial setup");
     (async () => {
         const version = await globalThis.api.getAppVersion();
         document.title = `Character Select SAA ${version}`;
+
+        console.log("Script loaded, attempting initial setup");
 
         setBlur();
         await init();
@@ -44,7 +46,10 @@ function afterDOMinit() {
         if (globalThis.initialized) {
             setNormal();
         }
-    })();    
+    })().catch((e) => {
+        console.log('SAAC may load this script and get error with undefined api\nDo nothing here:');
+        console.log(e);
+    });
 }
 
 export async function setupHeader(SETTINGS, FILES, LANG){
@@ -147,12 +152,12 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         scrollToLatest: setupCheckbox('gallery-main-latest', LANG.scroll_to_last, SETTINGS.scroll_to_last, true, (value) => { globalThis.globalSettings.scroll_to_last = value; }),
         keepGallery: setupCheckbox('gallery-main-keep', LANG.keep_gallery, SETTINGS.keep_gallery, true, callback_keep_gallery),
 
-        seed: setupSlider('generate-random-seed', LANG.random_seed, -1, 4294967295, 1, SETTINGS.random_seed, (value) =>{globalThis.globalSettings.random_seed = value;}),
-        cfg: setupSlider('generate-cfg', LANG.cfg, 0, 20, 0.01, SETTINGS.cfg, (value) =>{globalThis.globalSettings.cfg = value;}),
-        step: setupSlider('generate-step', LANG.step, 1, 100, 1, SETTINGS.step, (value) =>{globalThis.globalSettings.step = value;}),
-        width: setupSlider('generate-width', LANG.width, 512, 2048, 8, SETTINGS.width, (value) =>{globalThis.globalSettings.width = value;}),
-        height: setupSlider('generate-height', LANG.height, 512, 2048, 8, SETTINGS.height, (value) =>{globalThis.globalSettings.height = value;}),
-        batch: setupSlider('generate-batch', LANG.batch, 1, 2038, 1, SETTINGS.batch, (value) =>{globalThis.globalSettings.batch = value;}),
+        seed: setupSlider('generate-random-seed', LANG.random_seed, {min:-1, max:4294967295, step:1, defaultValue:SETTINGS.random_seed}, (value) =>{globalThis.globalSettings.random_seed = value;}),
+        cfg: setupSlider('generate-cfg', LANG.cfg, {min:0, max:20, step:0.01, defaultValue:SETTINGS.cfg}, (value) =>{globalThis.globalSettings.cfg = value;}),
+        step: setupSlider('generate-step', LANG.step, {min:1, max:100, step:1, defaultValue:SETTINGS.step}, (value) =>{globalThis.globalSettings.step = value;}),
+        width: setupSlider('generate-width', LANG.width, {min:512, max:2048, step:8, defaultValue:SETTINGS.width}, (value) =>{globalThis.globalSettings.width = value;}),
+        height: setupSlider('generate-height', LANG.height, {min:512, max:2048, step:8, defaultValue:SETTINGS.height}, (value) =>{globalThis.globalSettings.height = value;}),
+        batch: setupSlider('generate-batch', LANG.batch, {min:1, max:2038, step:1, defaultValue:SETTINGS.batch}, (value) =>{globalThis.globalSettings.batch = value;}),
         hifix: setupCheckbox('generate-hires-fix', LANG.api_hf_enable, SETTINGS.api_hf_enable, true, (value) => { globalThis.globalSettings.api_hf_enable = value; globalThis.generate.hifix_dummy.setValue(value);}),
         hifix_dummy: setupCheckbox('generate-hires-fix-dummy', LANG.api_hf_enable, SETTINGS.api_hf_enable, true, (value) => { globalThis.globalSettings.api_hf_enable = value; globalThis.generate.hifix.setValue(value);}),
         refiner: setupCheckbox('generate-refiner', LANG.api_refiner_enable, SETTINGS.api_refiner_enable, true, (value) => { globalThis.globalSettings.api_refiner_enable = value; globalThis.generate.refiner_dummy.setValue(value);}),
@@ -227,7 +232,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
             maxLines: 1
             }, true, (value) => { globalThis.globalSettings.api_addr = value; }),
         api_preview_refresh_time: setupSlider('system-settings-api-refresh-rate', 
-            LANG.api_preview_refresh_time, 0, 5, 1, SETTINGS.api_preview_refresh_time, 
+            LANG.api_preview_refresh_time, {min:0, max:5, step:1, defaultValue:SETTINGS.api_preview_refresh_time}, 
             (value) => { globalThis.globalSettings.api_preview_refresh_time = value; }),
         
         model_filter:setupCheckbox('system-settings-api-fliter', LANG.model_filter, SETTINGS.model_filter,
@@ -258,9 +263,22 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         model_path_webui:setupTextbox('system-settings-api-webui', LANG.model_path_webui, {
             value: SETTINGS.model_path_webui,
             maxLines: 1
-            }, true, (value) => {
-                globalThis.globalSettings.model_path_webui = value;
+            }, true, (value) => { globalThis.globalSettings.model_path_webui = value; }),
+        image_save_path_comfyui:setupTextbox('system-settings-api-comfyui-image-save-path', LANG.image_save_path_comfyui, {
+            value: SETTINGS.image_save_path_comfyui,
+            defaultTextColor: 'MediumSeaGreen',
+            maxLines: 1
+            }, true, (value) => { globalThis.globalSettings.image_save_path_comfyui = value; }),
+        image_save_path_webui:setupTextbox('system-settings-api-webui-image-save-path', LANG.image_save_path_webui, {
+            value: SETTINGS.image_save_path_webui,
+            defaultTextColor: 'MediumSeaGreen',
+            maxLines: 1
+            }, true, (value) => { globalThis.globalSettings.image_save_path_webui = value;}),
+        image_save_embed_character_name:setupCheckbox('system-settings-api-embed_character_name', LANG.image_save_embed_character_name, 
+            SETTINGS.image_save_embed_character_name, false, (value) => {
+                globalThis.globalSettings.image_save_embed_character_name = value;
         }),
+
         webui_auth: setupTextbox('system-settings-api-webui-auth', 'API Key', {
             value: SETTINGS.remote_ai_webui_auth,
             defaultTextColor: 'MediumAquaMarine',
@@ -286,33 +304,42 @@ export async function createPrompt(SETTINGS, FILES, LANG) {
         common: setupTextbox('prompt-common', LANG.custom_prompt, {
             value: SETTINGS.custom_prompt,
             defaultTextColor: 'darkorange',
-            maxLines: 20               
+            minLines: 3,
+            maxLines: 50
             }, false, (value) => { globalThis.globalSettings.custom_prompt = value; }),
         positive: setupTextbox('prompt-positive', LANG.api_prompt, {
             value: SETTINGS.api_prompt,
             defaultTextColor: 'LawnGreen',
-            maxLines: 20
+            minLines: 3,
+            maxLines: 50
             }, false, (value) => { globalThis.globalSettings.api_prompt = value; }),
         positive_right: setupTextbox('prompt-positive-right', LANG.api_prompt, {    //Regional Condition
             value: SETTINGS.api_prompt_right,
             defaultTextColor: 'LawnGreen',
-            maxLines: 5
+            minLines: 3,
+            maxLines: 50
             }, false, (value) => { globalThis.globalSettings.api_prompt_right = value; }),
         negative: setupTextbox('prompt-negative', LANG.api_neg_prompt, {
             value: SETTINGS.api_neg_prompt,
             defaultTextColor: 'Crimson',
-            maxLines: 5
+            maxLines: 10
             }, false, (value) => { globalThis.globalSettings.api_neg_prompt = value; }),
         ai: setupTextbox('prompt-ai', LANG.ai_prompt, {
             value: SETTINGS.ai_prompt,
             defaultTextColor: 'hotpink',
-            maxLines: 5
+            maxLines: 10
             }, false, (value) => { globalThis.globalSettings.ai_prompt = value; }),
         exclude: setupTextbox('prompt-exclude', LANG.prompt_ban, {
             value: SETTINGS.prompt_ban,
             defaultTextColor: 'khaki',
-            maxLines: 5
-            }, false, (value) => { globalThis.globalSettings.prompt_ban = value; })
+            maxLines: 10
+            }, false, (value) => { globalThis.globalSettings.prompt_ban = value; }),
+        autoResize: setupCheckbox('prompt-textbox-autoresize', LANG.ptompt_textbox_autoresize,
+            true, true, callback_ptompt_textbox_autoresize
+        ),
+        fontSize: setupSlider('prompt-textbox-fontsize', LANG.ptompt_textbox_fontsize,
+            {min:6, max:22, step:1, defaultValue:14}, callback_ptompt_textbox_fontsize, true
+        )
     }
     console.log('Creating setupSuggestionSystem');
     setupSuggestionSystem();
@@ -327,11 +354,11 @@ export async function createHifixRefiner(SETTINGS, FILES, LANG) {
             , (index, value) => { globalThis.globalSettings.api_hf_colortransfer = value; }, 3, false, true),
         randomSeed: setupCheckbox('hires-fix-random-seed',LANG.api_hf_random_seed, SETTINGS.api_hf_random_seed, true, 
             (value) => { globalThis.globalSettings.api_hf_random_seed = value; }),
-        scale: setupSlider('hires-fix-scale', LANG.api_hf_scale, 1, 2, 0.1, SETTINGS.api_hf_scale, 
+        scale: setupSlider('hires-fix-scale', LANG.api_hf_scale, {min:1, max:2, step:0.1, defaultValue:SETTINGS.api_hf_scale}, 
             (value) => { globalThis.globalSettings.api_hf_scale = value; }),
-        denoise: setupSlider('hires-fix-denoise', LANG.api_hf_denoise, 0.1, 1, 0.01, SETTINGS.api_hf_denoise, 
+        denoise: setupSlider('hires-fix-denoise', LANG.api_hf_denoise, {min:0.1, max:1, step:0.01, defaultValue:SETTINGS.api_hf_denoise}, 
             (value) => { globalThis.globalSettings.api_hf_denoise = value; }),
-        steps: setupSlider('hires-fix-steps', LANG.api_hf_steps, 1, 100, 1, SETTINGS.api_hf_steps,
+        steps: setupSlider('hires-fix-steps', LANG.api_hf_steps, {min:1, max:100, step:1, defaultValue:SETTINGS.api_hf_steps},
             (value) => { globalThis.globalSettings.api_hf_steps = value; })
     }
 
@@ -343,7 +370,7 @@ export async function createHifixRefiner(SETTINGS, FILES, LANG) {
             (index, value) => { globalThis.globalSettings.api_refiner_model_vpred = value; }, 5, false, false),
         addnoise: setupCheckbox('refiner-addnoise', LANG.api_refiner_add_noise, SETTINGS.api_refiner_add_noise, true,
             (value) => { globalThis.globalSettings.api_refiner_add_noise = value; }),
-        ratio: setupSlider('refiner-ratio', LANG.api_refiner_ratio, 0.1, 1, 0.1, SETTINGS.api_refiner_ratio,
+        ratio: setupSlider('refiner-ratio', LANG.api_refiner_ratio, {min:0.1, max:1, step:0.1, defaultValue:SETTINGS.api_refiner_ratio},
             (value) => { globalThis.globalSettings.api_refiner_ratio = value; })
     }
 }
@@ -353,13 +380,13 @@ export async function createRegional(SETTINGS, FILES, LANG) {
     globalThis.regional = {
         swap: setupCheckbox('regional-condition-swap', LANG.regional_swap, SETTINGS.regional_swap, true,
             (value) => { globalThis.globalSettings.regional_swap = value; }),
-        overlap_ratio: setupSlider('regional-condition-overlap-ratio', LANG.regional_overlap_ratio, 0, 200, 10, SETTINGS.regional_overlap_ratio,
+        overlap_ratio: setupSlider('regional-condition-overlap-ratio', LANG.regional_overlap_ratio, {min:0, max:200, step:10, defaultValue:SETTINGS.regional_overlap_ratio},
             (value) => { globalThis.globalSettings.regional_overlap_ratio = value; }),
-        image_ratio: setupSlider('regional-condition-image-ratio', LANG.regional_image_ratio, 10, 90, 5, SETTINGS.regional_image_ratio,
+        image_ratio: setupSlider('regional-condition-image-ratio', LANG.regional_image_ratio, {min:10, max:90, step:5, defaultValue:SETTINGS.regional_image_ratio},
             (value) => { globalThis.globalSettings.regional_image_ratio = value; }),
-        str_left: setupSlider('regional-condition-strength-left', LANG.regional_str_left, 0, 10, 0.1, SETTINGS.regional_str_left,
+        str_left: setupSlider('regional-condition-strength-left', LANG.regional_str_left, {min:0, max:10, step:0.1, defaultValue:SETTINGS.regional_str_left},
             (value) => { globalThis.globalSettings.regional_str_left = value; }),
-        str_right: setupSlider('regional-condition-strength-right', LANG.regional_str_right, 0, 10, 0.1, SETTINGS.regional_str_right,
+        str_right: setupSlider('regional-condition-strength-right', LANG.regional_str_right, {min:0, max:10, step:0.1, defaultValue:SETTINGS.regional_str_right},
             (value) => { globalThis.globalSettings.regional_str_right = value; }),
         option_left: mySimpleList('regional-condition-option-left', LANG.regional_option_left, ['default', 'mask bounds'],
             (index, value) => { globalThis.globalSettings.regional_option_left = value; }, 5, false, true),
@@ -378,7 +405,7 @@ export async function createAI(SETTINGS, FILES, LANG) {
 
         interface: mySimpleList('system-settings-ai-interface', LANG.ai_interface, ['None', 'Remote', 'Local'], 
             (index, value) => {globalThis.globalSettings.ai_interface = value;}, 5, false, true),
-        remote_timeout: setupSlider('system-settings-ai-timeout', LANG.remote_ai_timeout, 2, 60, 1, SETTINGS.remote_ai_timeout, 
+        remote_timeout: setupSlider('system-settings-ai-timeout', LANG.remote_ai_timeout, {min:2, max:60, step:1, defaultValue:SETTINGS.remote_ai_timeout}, 
             (value) => { globalThis.globalSettings.remote_ai_timeout = value; }),
         remote_address: setupTextbox('system-settings-ai-address', LANG.remote_ai_base_url, {
             value: SETTINGS.remote_ai_base_url,
@@ -399,10 +426,10 @@ export async function createAI(SETTINGS, FILES, LANG) {
             maxLines: 1
             }, true, (value) => { globalThis.globalSettings.ai_local_addr = value;}),
         local_temp: setupSlider('system-settings-ai-local-temperature', 
-            LANG.ai_local_temp, 0.1, 2, 0.1, SETTINGS.ai_local_temp,
+            LANG.ai_local_temp, {min:0.1, max:2, step:0.1, defaultValue:SETTINGS.ai_local_temp},
             (value) => { globalThis.globalSettings.ai_local_temp = value;} ),
         local_n_predict: setupSlider('system-settings-ai-local-npredict', 
-            LANG.ai_local_n_predict, 256, 4096, 256, SETTINGS.ai_local_n_predict,
+            LANG.ai_local_n_predict, {min:256, max:4096, step:256, defaultValue:SETTINGS.ai_local_n_predict},
             (value) => { globalThis.globalSettings.ai_local_n_predict = value;} ),
 
         ai_system_prompt: setupTextbox('system-settings-ai-sysprompt', LANG.ai_system_prompt_text, {
@@ -536,6 +563,9 @@ async function init(){
             
             // reLoad slots stuff: LoRA, aDetailer
             flushSlots();
+
+            // set prompt textBox heights
+            set_prompt_textBox_Heights();
 
             globalThis.globalSettings.lastLoadedSettings = `settings`;
         }

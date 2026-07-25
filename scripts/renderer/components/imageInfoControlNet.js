@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { generateControlnetImage, fileToBase64 } from '../generate.js';
 import { getControlNetListWithProcessorList } from "../slots/myControlNetSlot.js";
 import { resizeImageToControlNetResolution, arrayBufferToBase64 } from './imageInfoUtils.js';

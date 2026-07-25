@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { extractHostPort, extractAPISecure, toggleQueueColor, generateRandomSeed, startQueue, checkVpred } from './generate.js';
 import { resizeImageToControlNetResolution } from './components/imageInfoUtils.js';
 

@@ -3,7 +3,7 @@ import { getAiPrompt } from './remoteAI.js';
 import { from_renderer_generate_updatePreview } from './generate_backend.js';
 import { seartGenerateRegional } from './generate_regional.js';
 import { startGenerateMiraITU } from './generate_miraITU.js';
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { setADetailerModelList } from './slots/myADetailerSlot.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
 import { convertToMultipleOfNFloor, checkNumberInRange } from './tools/numbers.js';
@@ -123,7 +123,7 @@ async function createCharacters(index, seeds) {
     const seed = seeds[index];
 
     if (character.toLowerCase() === 'none') {
-        return { tag: '', tag_assist: '', thumb: null, info: '' };
+        return { tag: '', tag_assist: '', thumb: null, info: '', neg_tags: '' };
     }
 
     const isOriginalCharacter = index === 3;
@@ -131,16 +131,19 @@ async function createCharacters(index, seeds) {
         ? handleOriginalCharacter(character, seed, isValueOnly, index, FILES)
         : await handleStandardCharacter(character, seed, isValueOnly, index, FILES);
 
-    const tagAssist = getTagAssist(tag, globalThis.generate.tag_assist.getValue(), FILES, index, info);
+    const { tag: parsedTag, neg_tags } = splitTagNegativePrompt(tag);
+
+    const tagAssist = getTagAssist(parsedTag, globalThis.generate.tag_assist.getValue(), FILES, index, info);
     if (tagAssist.tas !== '')
         tagAssist.tas = `${tagAssist.tas}, `;
     return {
-        tag: isOriginalCharacter ? `${tag}` : tag.replaceAll('\\', '\\\\').replaceAll('(', String.raw`\(`).replaceAll(')', String.raw`\)`),
-        tag_assist: tagAssist.tas,
+        tag: isOriginalCharacter ? parsedTag : parsedTag.replaceAll('\\', '\\\\').replaceAll('(', String.raw`\(`).replaceAll(')', String.raw`\)`),
+        tag_assist: isOriginalCharacter? '' : tagAssist.tas,
         thumb,
         info: tagAssist.info,
         weight: weight,
-        characterName:name
+        characterName:name,
+        neg_tags: neg_tags
     };
 }
 
@@ -230,6 +233,20 @@ export function getTagAssist(tag, useTAS, FILES, index, characterInfo) {
     return { tas, info };
 }
 
+function splitTagNegativePrompt(tag = '') {
+    const marker = '___NEGATIVE_PROMPT___:';
+    const lowerTag = tag.toLowerCase();
+    const markerIndex = lowerTag.indexOf(marker.toLowerCase());
+
+    if (markerIndex === -1) {
+        return { tag, neg_tags: '' };
+    }
+
+    const positiveTag = tag.slice(0, markerIndex);
+    const neg_tags = tag.slice(markerIndex + marker.length).trim();
+    return { tag: positiveTag, neg_tags };
+}
+
 function getCustomJSON(loop = -1) {
     let BeforeOfPrompts = '';
     let BeforeOfCharacter = '';
@@ -258,8 +275,19 @@ function getCustomJSON(loop = -1) {
     };
 }
 
+function packWeight(character, tag, weight, seperate = ', ') {
+    let new_character = character;
+    if(weight === 1) {
+        new_character += (tag === '')?'':`${tag}${seperate}`;
+    } else {
+        new_character += (tag === '')?'':`(${tag}:${weight})${seperate}`;
+    }
+
+    return new_character;
+}
+
 // eslint-disable-next-line sonarjs/cognitive-complexity
-async function getCharacters(){
+async function getCharacters() {
     const brownColor = (globalThis.globalSettings.css_style==='dark')?'BurlyWood':'Brown';
     let random_seed = globalThis.generate.seed.getValue();
     if (random_seed === -1){
@@ -271,14 +299,28 @@ async function getCharacters(){
     let information = '';
     let thumbImages = [];
     let characters = '';
+    let negativeTags = '';
     for(let index=0; index < 4; index++) {
-        let {tag, tag_assist, thumb, info, weight, characterName} = await createCharacters(index, seeds);
-        if(weight === 1){
-            character += (tag === '')?'':`${tag}, `;
+        let {tag, tag_assist, thumb, info, weight, characterName, neg_tags} = await createCharacters(index, seeds);
+        let seperate = ', ';
+        if (index === 3) {            
+            if(tag.endsWith('.')) {
+                seperate = ' ';
+            } else if (tag.endsWith('\n')) {
+                seperate = '';
+            }
+            character = packWeight(character, tag, weight, seperate);
         } else {
-            character += (tag === '')?'':`(${tag}:${weight}), `;            
+            if(tag.endsWith(',')) {
+                seperate = ' ';
+            }
+            character = packWeight(character, tag, weight, seperate);
+            character += tag_assist;
+        }        
+
+        if (neg_tags) {
+            negativeTags = (negativeTags === '') ? neg_tags : `${negativeTags}, ${neg_tags}`;
         }
-        character += tag_assist;
 
         if (thumb) {            
             thumbImages.push(thumb);
@@ -294,11 +336,13 @@ async function getCharacters(){
         characters_tag:character,
         information: information,
         seed:random_seed,
-        characters:characters
+        characters:characters,
+        negative_tags: negativeTags
     }
 }
 
-function getPrompts(characters, views, ai='', apiInterface = 'None', loop=-1) {    
+// eslint-disable-next-line sonarjs/cognitive-complexity
+function appendPrompts(characters, views, ai, BOP, BOC, EOC, EOP) {
     const commonColor = (globalThis.globalSettings.css_style==='dark')?'darkorange':'Sienna';
     const viewColor = (globalThis.globalSettings.css_style==='dark')?'BurlyWood':'Brown';
     const aiColor = (globalThis.globalSettings.css_style==='dark')?'hotpink':'Purple';
@@ -306,21 +350,87 @@ function getPrompts(characters, views, ai='', apiInterface = 'None', loop=-1) {
     const positiveColor = (globalThis.globalSettings.css_style==='dark')?'LawnGreen':'SeaGreen';
 
     let common = globalThis.prompt.common.getValue();
-    let positive = globalThis.prompt.positive.getValue().trim();
-    let aiPrompt = ai.trim();
-    const exclude = globalThis.prompt.exclude.getValue();
+    let positive = globalThis.prompt.positive.getValue();
+    let aiPrompt = ai;
 
-    if (common !== '' && !common.endsWith(',')) {
-        common += ', ';
-    }
-
+    aiPrompt = aiPrompt.trim();
     if(aiPrompt !== '' && !aiPrompt.endsWith(','))
         aiPrompt += ', ';
 
-    const {BOP, BOC, EOC, EOP} = getCustomJSON(loop);
-    const tmpPositivePrompt = `${BOP}${common}${views}${aiPrompt}${BOC}${characters}${EOC}${positive}${EOP}`.replaceAll(/\n+/g, ''); 
-    const tmpPositivePromptColored = `[color=${commonColor}]${BOP}${common}[/color][color=${viewColor}]${views}[/color][color=${aiColor}]${aiPrompt}[/color][color=${characterColor}]${BOC}${characters}${EOC}[/color][color=${positiveColor}]${positive}${EOP}[/color]`.replaceAll(/\n+/g, ''); 
+    let prompt = ``;
+    let promptColored = ``;
 
+    // Attach every block if EXIST
+    if(BOP) {
+        prompt += `${BOP}`;
+        promptColored += `${BOP}`;
+    }
+
+    if (common) {
+        const trimmedCommon = common.trim();
+        if (trimmedCommon === '') {
+            common = '';
+        } else if (globalThis.globalSettings.api_model_type === 'Diffusion') {
+            if (trimmedCommon.endsWith('.')) {
+                common = `${trimmedCommon} `;
+            } else if (!trimmedCommon.endsWith(',') && !trimmedCommon.endsWith('\n')) {
+                common = `${trimmedCommon}, `;
+            } else {
+                common = trimmedCommon;
+            }
+        } else {
+            common = trimmedCommon.endsWith(',') ? trimmedCommon : `${trimmedCommon}, `;
+        }
+
+        if (common) {
+            prompt += `${common}`;
+            promptColored += `[color=${commonColor}]${common}[/color]`;
+        }
+    }
+
+    if(views) {
+        prompt += `${views}`;
+        promptColored += `[color=${viewColor}]${views}[/color]`;
+    }
+
+    if(aiPrompt) {
+        prompt += `${aiPrompt}`;
+        promptColored += `[color=${aiColor}]${aiPrompt}[/color]`;
+    }
+
+    if (BOC) {
+        prompt += `${BOC}`;
+        promptColored += `${BOC}`;
+    }
+
+    if(characters) {
+        prompt += `${characters}`;
+        promptColored += `[color=${characterColor}]${characters}[/color]`;
+    }
+
+    if (EOC) {
+        prompt += `${EOC}`;
+        promptColored += `${EOC}`;
+    }
+
+    if(positive) {
+        prompt += `${positive}`;
+        promptColored += `[color=${positiveColor}]${positive}[/color]`;
+    }
+
+    if (EOP) {
+        prompt += `${EOP}`;
+        promptColored += `${EOP}`;
+    }
+    
+    return {tmpPositivePrompt: prompt, tmpPositivePromptColored: promptColored};
+}
+
+function getPrompts(characters, views, ai='', apiInterface = 'None', loop=-1) {       
+    const {BOP, BOC, EOC, EOP} = getCustomJSON(loop);
+    const {tmpPositivePrompt, tmpPositivePromptColored} = appendPrompts(characters, views, ai, BOP, BOC, EOC, EOP); 
+
+    const exclude = globalThis.prompt.exclude.getValue();
     const {positivePrompt, positivePromptColored} = filterPrompts(tmpPositivePrompt, tmpPositivePromptColored, exclude);
     const loraPromot = getLoRAs(apiInterface);
     return {pos:positivePrompt, posc:positivePromptColored, lora:loraPromot}
@@ -421,7 +531,7 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
         charactersName = globalThis.generate.lastCharacter;
 
     } else {            
-        const {thumb, characters_tag, information, seed, characters} = await getCharacters();
+        const {thumb, characters_tag, information, seed, characters, negative_tags} = await getCharacters();
         randomSeed = seed;
         finalInfo = information;
 
@@ -442,8 +552,9 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
             positivePrompt = `${pos}\n${lora}`;
             finalInfo += `LoRA: [color=${loraColor}]${lora}[/color]\n`;
         }
-        positivePromptColored = posc;            
-        negativePrompt = globalThis.prompt.negative.getValue();
+        positivePromptColored = posc;
+        const mergedNegativePrompt = [globalThis.prompt.negative.getValue(), negative_tags].filter(Boolean).join(', ').trim();
+        negativePrompt = mergedNegativePrompt;
         thumbImage = thumb;
         charactersName = characters;
     }
@@ -752,6 +863,38 @@ export async function generateControlnetImage(imageData, controlNetSelect, contr
     };
 }
 
+function check_character(character){
+    if(character.toLowerCase() !== 'none' && character.toLowerCase() !== 'random') {
+        return character;
+    }
+    return '';
+}
+
+export function getImageSavePrefix(apiInterface) {
+    let embed_character = '';
+    if(globalThis.globalSettings.image_save_embed_character_name) {
+        const c1 = globalThis.characterList.getValue()[0];
+        const c2 = globalThis.characterList.getValue()[1];
+        const c3 = globalThis.globalSettings.regional_condition?globalThis.characterList.getKey()[2]:globalThis.characterList.getValue()[2];
+        const oc = globalThis.characterList.getKey()[3];
+
+        embed_character = `${check_character(c1)} `;
+        embed_character += `${check_character(c2)} `;
+        embed_character += `${check_character(c3)} `;
+        embed_character += `${check_character(oc)} `;
+
+        embed_character = embed_character.trim();
+    }
+
+    if (apiInterface === 'ComfyUI') {
+        return `${embed_character}${globalThis.globalSettings.image_save_path_comfyui}`;
+    } else if (apiInterface === 'WebUI') {
+        return `${embed_character}${globalThis.globalSettings.image_save_path_webui}`;
+    }
+
+    return `${embed_character}`;
+}
+
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export async function generateImage(dataPack){
     const {loops, runSame} = dataPack;
@@ -878,12 +1021,14 @@ export async function generateImage(dataPack){
                     clip_device: globalThis.dropdownList.textencoder_device.getValue(),
                 },
                 hifix: hifix,
-            })
+            }),
+
+            img_prefix: getImageSavePrefix(apiInterface)
         };        
 
         let finalInfo = `${createPromptResult.finalInfo}\n`;
-            finalInfo += `Positive: ${createPromptResult.positivePromptColored}\n`;
-            finalInfo += `Negative: [color=${negativeColor}]${generateData.negative}[/color]\n\n`;
+            finalInfo += `Positive:\n${createPromptResult.positivePromptColored}\n`;
+            finalInfo += `Negative:\n[color=${negativeColor}]${generateData.negative}[/color]\n\n`;
             finalInfo += `Layout: [[color=${brownColor}]${generateData.width} x ${generateData.height}[/color]]\t`;
             finalInfo += `CFG: [[color=${brownColor}]${generateData.cfg}[/color]]\t`;
             finalInfo += `Setp: [[color=${brownColor}]${generateData.step}[/color]]\n`;

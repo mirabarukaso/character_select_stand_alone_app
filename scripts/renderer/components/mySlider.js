@@ -1,6 +1,13 @@
 const CAT = '[mySlider]';
 
-export function setupSlider(containerId, spanText = 'mySlider', min = 0, max = 255, step = 1, defaultValue = 0, callback = null) {
+export function setupSlider(containerId, spanText = 'mySlider', options = {},  callback = null, noTitle = false) {
+    const {
+        min = 0, 
+        max = 255, 
+        step = 1,
+        defaultValue = 0
+    } = options;
+
     const container = document.querySelector(`.${containerId}`);
     if (!container) {
         console.error(CAT, `[setupSlider] Container with class "${containerId}" not found.`);
@@ -8,11 +15,11 @@ export function setupSlider(containerId, spanText = 'mySlider', min = 0, max = 2
     }
 
     container.innerHTML = `        
-        <div class="mySlider-${containerId}-row">
-            <span class="mySlider-${containerId}-span">${spanText}</span>
-            <input class="mySlider-${containerId}-value" type="number" min="${min}" max="${max}" step="${step}" value="${defaultValue}">
+        <div class="mySlider-${containerId}-row" ${noTitle?'hidden':''}>
+            <span class="mySlider-${containerId}-span" ${noTitle?'hidden':''}>${spanText}</span>
+            <input class="mySlider-${containerId}-value" type="number" min="${min}" max="${max}" step="${step}" value="${defaultValue}" ${noTitle?'hidden':''}>
         </div>
-        <input class="mySlider-${containerId}-bar" type="range" min="${min}" max="${max}" step="${step}" value="${defaultValue}">
+        <input class="mySlider-${containerId}-bar" title=${spanText} type="range" min="${min}" max="${max}" step="${step}" value="${defaultValue}">
     `;
 
     const sliderBar = container.querySelector(`.mySlider-${containerId}-bar`);
@@ -67,6 +74,7 @@ export function setupSlider(containerId, spanText = 'mySlider', min = 0, max = 2
         },
         setTitle: (text) => {
             sliderSpan.textContent = text;
+            sliderBar.title = text;
         }
     };
 }

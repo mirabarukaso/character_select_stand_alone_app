@@ -1,3 +1,16 @@
+2026.07.26 v2.8.3     
+Add `Replace tags` in `Prompt & Tagger Ban List`          
+Add `Drag to resize` for `Prompt textbox`          
+Add `Font size` for `Prompt textbox`          
+Add `Remove Current Image` in `Right Click Menu`         
+Add `Copy Image` for `Thumb Preview`          
+Add `Image Save Path Prefix` in `Settings` #101           
+Bugs fix        
+Change, prompts now almost AS IS, will not trim        
+Change, simplify the SAAC code       
+Change, UI Finetuning       
+
+
 2026.07.22 v2.8.2               
 Add more options `Replace`, `Overwrite` and `Merge` for `Favorites List` #99       
 

@@ -1,4 +1,4 @@
-const CAT='[myTextbox]';
+const CAT = '[myTextbox]';
 
 function addDynamicColorClass(color) {
     try {
@@ -30,7 +30,7 @@ function escapeHtml(text) {
 }
 
 export function parseTaggedContent(content) {
-    const colorRegex = /\[color=([^\]]*?)\](.*?)\[\/color\]/g;
+    const colorRegex = /\[color=([^\]]*?)\]([\s\S]*?)\[\/color\]/g;
     content = content.replaceAll(colorRegex, (match, color, text) => {
         const isValidColor = /^#[0-9A-Fa-f]{6}$|^rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)$|^[a-zA-Z]+$/.test(color);
         if (isValidColor) {
@@ -40,7 +40,7 @@ export function parseTaggedContent(content) {
         return escapeHtml(text);
     });
 
-    const urlRegex = /\[url=([^\]]*?)\](.*?)\[\/url\]/g;
+    const urlRegex = /\[url=([^\]]*?)\]([\s\S]*?)\[\/url\]/g;
     content = content.replaceAll(urlRegex, (match, url, text) => {
         const isValidUrl = /^(https?:\/\/[^\s<>"']+)$/.test(url);
         if (isValidUrl) {
@@ -59,8 +59,10 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
     const {
         value = '',
         defaultTextColor = 'auto', 
-        maxLines = 10,
-        readOnly = false
+        minLines = 2,
+        maxLines = 20,
+        readOnly = false,
+        autoResize = true
     } = options;
 
     const container = document.querySelector(`.${containerId}`);
@@ -69,80 +71,139 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
         return;
     }
 
-    if(showTitle){
-        container.innerHTML = `
-            <div class="myTextbox-${containerId}-header">${placeholder}</div>
-            <textarea class="myTextbox-${containerId}-textarea ${numberOnly ? 'numeric-input' : ''}" title="${placeholder}" placeholder="${placeholder}" ${readOnly?'readonly':''}></textarea>
-        `;
-    } else {
-        container.innerHTML = `
-        <textarea class="myTextbox-${containerId}-textarea ${numberOnly ? 'numeric-input' : ''}" title="${placeholder}" placeholder="${placeholder}" ${readOnly?'readonly':''}></textarea>
+    let isAutoMode = Boolean(autoResize);
+    let currentAllowedLines = minLines;
+
+    const wrapperHTML = `
+        <div class="myTextbox-wrapper">
+            ${showTitle ? `<div class="myTextbox-${containerId}-header">${placeholder}</div>` : ''}
+            <div class="myTextbox-container-relative">
+                <textarea class="myTextbox-${containerId}-textarea ${numberOnly ? 'numeric-input' : ''}" title="${placeholder}" placeholder="${placeholder}" ${readOnly ? 'readonly' : ''}></textarea>
+                <div class="myTextbox-${containerId}-resize-handle">◢</div>
+            </div>
+        </div>
     `;
-    }
+
+    container.innerHTML = wrapperHTML;
 
     const textbox_header = container.querySelector(`.myTextbox-${containerId}-header`);
     const textbox = container.querySelector(`.myTextbox-${containerId}-textarea`);
+    const resizeHandle = container.querySelector(`.myTextbox-${containerId}-resize-handle`);
+
     if (!textbox) {
         console.error(CAT, `Failed to create textbox.`, textbox);
         return;
     }
 
     textbox.value = value;
-    if(defaultTextColor !== 'auto') textbox.style.color = defaultTextColor;
+    if (defaultTextColor !== 'auto') textbox.style.color = defaultTextColor;
     
     const DEFAULT_LINE_HEIGHT = 20;     
+
+    const getLineHeight = () => {
+        let lineHeight = Number.parseInt(globalThis.getComputedStyle(textbox).lineHeight, 10);
+        if (Number.isNaN(lineHeight)) {
+            lineHeight = DEFAULT_LINE_HEIGHT;
+        }
+        return lineHeight;
+    };
+
+    const updateHandleVisibility = () => {
+        if (resizeHandle) {
+            resizeHandle.style.display = isAutoMode ? 'none' : 'block';
+        }
+    };
+
     const adjustHeight = () => {
+        const lineHeight = getLineHeight();
+
         if (maxLines === 1) {
-            let lineHeight = Number.parseInt(globalThis.getComputedStyle(textbox).lineHeight, 10);
-            if (Number.isNaN(lineHeight)) {
-                lineHeight = DEFAULT_LINE_HEIGHT;
-            }
             textbox.style.height = `${lineHeight}px`;
             textbox.style.overflowY = 'hidden';
 
             textbox.addEventListener('keydown', (e) => {
-                const key = e.key;
-                if (['Enter'].includes(key)) {
+                if (e.key === 'Enter') {
                     e.preventDefault();
                 }                
             });
             return;
         }
 
-        textbox.style.height = 'auto'; 
-        const scrollHeight = textbox.scrollHeight;
-        
-        let lineHeight = Number.parseInt(globalThis.getComputedStyle(textbox).lineHeight, 10);
-        if (Number.isNaN(lineHeight)) {
-            lineHeight = DEFAULT_LINE_HEIGHT;
+        // Auto mode: calculate needed lines strictly based on current content
+        if (isAutoMode) {
+            textbox.style.height = 'auto';
+            const neededLines = Math.ceil(textbox.scrollHeight / lineHeight);
+            currentAllowedLines = Math.max(minLines, Math.min(maxLines, neededLines));
         }
-        
-        const maxHeight = lineHeight * maxLines;        
-        if (scrollHeight > maxHeight) {
-            textbox.style.height = `${maxHeight}px`;
+
+        // Apply clamped allowed lines limit
+        const clampedLines = Math.max(minLines, Math.min(maxLines, currentAllowedLines));
+        const targetHeight = clampedLines * lineHeight;
+
+        textbox.style.height = `${targetHeight}px`;
+
+        // Overflow/scrollbar control independent of resize capability
+        if (textbox.scrollHeight > targetHeight) {
             textbox.style.overflowY = 'scroll'; 
         } else {
-            textbox.style.height = `${scrollHeight}px`;
             textbox.style.overflowY = 'hidden';
         }
     };
+
+    // --- Drag-to-resize logic by single-line increments ---
+    let startY = 0;
+    let startLines = currentAllowedLines;
+
+    const onMouseMove = (e) => {
+        if (isAutoMode) return;
+        
+        const deltaY = e.clientY - startY;
+        const lineHeight = getLineHeight();
+        const lineDelta = Math.round(deltaY / lineHeight);
+
+        let targetLines = startLines + lineDelta;
+        targetLines = Math.max(minLines, Math.min(maxLines, targetLines));
+
+        if (targetLines !== currentAllowedLines) {
+            currentAllowedLines = targetLines;
+            adjustHeight();
+        }
+    };
+
+    const onMouseUp = () => {
+        document.removeEventListener('mousemove', onMouseMove);
+        document.removeEventListener('mouseup', onMouseUp);
+    };
+
+    if (resizeHandle) {
+        resizeHandle.addEventListener('mousedown', (e) => {
+            if (isAutoMode) return;
+            e.preventDefault();
+            startY = e.clientY;
+            startLines = currentAllowedLines;
+            document.addEventListener('mousemove', onMouseMove);
+            document.addEventListener('mouseup', onMouseUp);
+        });
+    }
+
+    updateHandleVisibility();
 
     setTimeout(() => {
         adjustHeight();
     }, 0);
 
     let realValue = textbox.value;
-    if(passwordMode){
+    if (passwordMode) {
         realValue = textbox.value; 
         textbox.value = '******';
     }
 
     textbox.addEventListener('input', () => {
         if (numberOnly) {
-            const value = textbox.value;
-            const validPattern = /^-?\d*\.?\d*$/;
-            if (validPattern.test(value)) {
-                textbox.dataset.lastValid = value;
+            const val = textbox.value;
+            const validPattern = /^-?\d*\.?\d*$/;       // NOSONAR S8786
+            if (validPattern.test(val)) {
+                textbox.dataset.lastValid = val;
             } else {
                 textbox.value = textbox.dataset.lastValid || '';
             }
@@ -158,19 +219,19 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
     if (numberOnly) {
         textbox.addEventListener('keydown', (e) => {
             const key = e.key;
-            const value = textbox.value;
+            const val = textbox.value;
             const cursorPos = textbox.selectionStart;
 
             if (['Backspace', 'Delete', 'ArrowLeft', 'ArrowRight', 'Tab', 'Home', 'End'].includes(key)) {
                 return;
             }
 
-            if (key === '.' && value.includes('.')) {
+            if (key === '.' && val.includes('.')) {
                 e.preventDefault();
                 return;
             }
 
-            if (key === '-' && (cursorPos !== 0 || value.includes('-'))) {
+            if (key === '-' && (cursorPos !== 0 || val.includes('-'))) {
                 e.preventDefault();
                 return;
             }
@@ -185,7 +246,7 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
         if (!textbox.value.trim()) {
             textbox.style.opacity = '0.5'; 
         }
-        if(passwordMode){
+        if (passwordMode) {
             realValue = textbox.value; 
             textbox.value = '******';
         }
@@ -193,7 +254,7 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
 
     textbox.addEventListener('focus', () => {
         textbox.style.opacity = '1'; 
-        if(passwordMode){
+        if (passwordMode) {
             textbox.value = realValue;
         }
     });
@@ -202,14 +263,14 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
 
     return {
         getValue: () => {
-            if(passwordMode)
+            if (passwordMode)
                 return realValue;
             return textbox.value;
         },
         setValue: (value) => {
             textbox.value = value;
             if (numberOnly) {
-                const validPattern = /^-?\d*\.?\d*$/;
+                const validPattern = /^-?\d*\.?\d*$/;   // NOSONAR S8786
                 if (validPattern.test(value)) {
                     textbox.dataset.lastValid = value;
                 } else {
@@ -217,7 +278,7 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
                 }
             }
             realValue = textbox.value;
-            if(passwordMode){
+            if (passwordMode) {
                 textbox.value = '******';
             }
             setTimeout(adjustHeight, 0);
@@ -229,10 +290,30 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
         setTitle: (titleText) => {
             textbox.placeholder = titleText; 
             textbox.title = titleText; 
-            if(textbox_header)
+            if (textbox_header)
                 textbox_header.textContent = titleText;
         },
-        flush(){
+
+        setAutoResize: (isAuto) => {
+            isAutoMode = Boolean(isAuto);
+            updateHandleVisibility();
+            adjustHeight();
+        },
+        getHeight: (inPixels = false) => {
+            if (inPixels) {
+                return textbox.offsetHeight;
+            }
+            return currentAllowedLines;
+        },
+        setHeight: (lines) => {
+            const targetLines = Number.parseInt(lines, 10);
+            if (!Number.isNaN(targetLines)) {
+                currentAllowedLines = Math.max(minLines, Math.min(maxLines, targetLines));
+                adjustHeight();
+            }
+        },
+
+        flush() {
             setTimeout(adjustHeight, 0);
         },
         getElement: () => textbox,  
@@ -270,9 +351,9 @@ export function setupInfoBox(containerId, initialTitle = '', initialContent = ''
         return;
     }
 
-    infoBoxContent.style.maxHeight =  `${maxHeight}px`;
-    infoBoxContent.overflowX = `hidden`;
-    infoBoxContent.overflowY = `auto`;
+    infoBoxContent.style.maxHeight = `${maxHeight}px`;
+    infoBoxContent.style.overflowX = `hidden`;
+    infoBoxContent.style.overflowY = `auto`;
 
     let currentContent = initialContent;
 
@@ -298,4 +379,26 @@ export function setupInfoBox(containerId, initialTitle = '', initialContent = ''
             return currentContent;
         }
     };
+}
+
+/**
+ * Dynamically adjust font size for textboxes and infoboxes
+ * @param {string|number} fontSize - Size value, e.g., '14px', '1.2rem', or number 14
+ */
+export function changeFontSize(fontSize, lineHeight = '1.4') {
+    const formattedFontSize = typeof fontSize === 'number' ? `${fontSize}px` : fontSize;
+
+    const selectors = [
+        '[class*="myTextbox-"][class*="-textarea"]',
+        '[class*="myInfoBox-"][class*="-content"]',
+        '[class*="myInfoBox-"][class*="-content"] pre'
+    ];
+
+    const elements = document.querySelectorAll(selectors.join(', '));
+    for (const el of elements) {
+        el.style.fontSize = formattedFontSize;
+        el.style.lineHeight = lineHeight;
+    }
+
+    globalThis.dispatchEvent(new Event('resize'));
 }

@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { fileToBase64 } from '../generate.js';
 
 let lastTaggerOptions = null;

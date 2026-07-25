@@ -1,5 +1,5 @@
-import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from '../../scripts/renderer/generate_backend.js';
-import { showDialog } from '../../scripts/renderer/components/myDialog.js';
+import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from '../../renderer/generate_backend.js';
+import { showDialog } from '../../renderer/components/myDialog.js';
 
 function setHTMLTitle(title) {
     document.title = title;

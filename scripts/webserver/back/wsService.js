@@ -14,21 +14,21 @@ import bcrypt from 'bcrypt';
 import { WebSocketServer } from 'ws';
 import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings, deleteSettings,
     updateMiraITUSettingFiles, loadMiraITUSettings, saveMiraITUSettings
- } from '../../scripts/main/globalSettings.js';
-import { getCachedFilesWithoutThumb, getCharacterThumb } from '../../scripts/main/cachedFiles.js';
+ } from '../../main/globalSettings.js';
+import { getCachedFilesWithoutThumb, getCharacterThumb, updateCharacterThumb } from '../../main/cachedFiles.js';
 import { getModelList, getModelListAll, getVAEList, getDiffusionModelList, getTextEncoderList,
     getLoRAList, getImageTaggerModels, updateModelAndLoRAList, getControlNetList,
-    getUpscalerList, getADetailerList, getONNXList } from '../../scripts/main/modelList.js';
-import { updateWildcards, loadWildcard } from '../../scripts/main/wildCards.js';
-import { tagReload, tagGet } from '../../scripts/main/tagAutoComplete_backend.js';
+    getUpscalerList, getADetailerList, getONNXList } from '../../main/modelList.js';
+import { updateWildcards, loadWildcard } from '../../main/wildCards.js';
+import { tagReload, tagGet } from '../../main/tagAutoComplete_backend.js';
 import { runComfyUI, runComfyUI_Regional, runComfyUI_ControlNet, runComfyUI_MiraITU, 
-    openWsComfyUI, closeWsComfyUI, cancelComfyUI, python_runComfyUI } from '../../scripts/main/generate_backend_comfyui.js';
+    openWsComfyUI, closeWsComfyUI, cancelComfyUI, python_runComfyUI } from '../../main/generate_backend_comfyui.js';
 import { runWebUI, runWebUI_Regional, cancelWebUI, startPollingWebUI, stopPollingWebUI, runWebUI_ControlNet, python_runWebUI,
-    getControlNetProcessorList, getADetailerModelList, getUpscalersModelList, resetModelLists } from '../../scripts/main/generate_backend_webui.js';
-import { remoteAI, localAI } from '../../scripts/main/remoteAI_backend.js';
-import { loadFile, readImage, readSafetensors, readBase64Image } from '../../scripts/main/fileHandlers.js';
-import { runImageTagger } from '../../scripts/main/imageTagger.js';
-import { getAppVersion, compressGzipThenBase64 } from '../../main-common.js';
+    getControlNetProcessorList, getADetailerModelList, getUpscalersModelList, resetModelLists } from '../../main/generate_backend_webui.js';
+import { remoteAI, localAI } from '../../main/remoteAI_backend.js';
+import { loadFile, readImage, readSafetensors, readBase64Image } from '../../main/fileHandlers.js';
+import { runImageTagger } from '../../main/imageTagger.js';
+import { getAppVersion, compressGzipThenBase64 } from '../../../main-common.js';
 
 const CAT = '[WSS]';
 
@@ -45,7 +45,7 @@ let USERS = {};
 // Logs
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
-const LOG_DIR = path.join(__dirname, '../../logs');
+const LOG_DIR = path.join(__dirname, '../../../logs');
 const LOG_FILE = path.join(LOG_DIR, 'auth.log');
 
 function ensureLogDir() {
@@ -112,9 +112,9 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
       return false;
     }
     // Check for certificate files
-    const certPath = process.env.SSL_CERT_PATH || path.join(__dirname, '../../html/ca/cert.pem');
-    const keyPath = process.env.SSL_KEY_PATH || path.join(__dirname, '../../html/ca/key.pem');
-    const usersDataPath = path.join(__dirname, '../../html/ca/user.csv');
+    const certPath = process.env.SSL_CERT_PATH || path.join(__dirname, '../../../html/ca/cert.pem');
+    const keyPath = process.env.SSL_KEY_PATH || path.join(__dirname, '../../../html/ca/key.pem');
+    const usersDataPath = path.join(__dirname, '../../../html/ca/user.csv');
     useHttps = false;
 
     try {
@@ -476,6 +476,7 @@ const methodHandlers = {
 
   // character thumb
   'getCharacterThumb': (params)=> getCharacterThumb(...params),
+  'updateCharacterThumb': (params)=> updateCharacterThumb(...params),
 
   // md5 hash
   'md5Hash': (params) => {

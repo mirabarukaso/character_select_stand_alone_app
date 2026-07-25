@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 
 async function decompressImageData(base64Data) {
     return new Promise((resolve) => {

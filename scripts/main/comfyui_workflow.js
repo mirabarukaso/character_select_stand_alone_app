@@ -66,16 +66,6 @@ export const WORKFLOW = {
       "title": "VAE Decode"
     }
   },
-  "13": {
-    "inputs": {
-      "steps": 30,
-      "cfg": 7
-    },
-    "class_type": "StepsAndCfg",
-    "_meta": {
-      "title": "Steps & Cfg"
-    }
-  },
   "17": {
     "inputs": {
       "Width": 1024,
@@ -133,10 +123,7 @@ export const WORKFLOW = {
     "inputs": {
       "seed": 3025955348,
       "steps": 20,
-      "cfg": [
-        "13",
-        1
-      ],
+      "cfg": 7,
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "denoise": 0.4,
@@ -214,14 +201,8 @@ export const WORKFLOW = {
       "filename": "%time_%seed",
       "path": "%date",
       "extension": "png",
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "modelname": "waiIllustriousSDXL_v160.safetensors",
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
@@ -318,14 +299,8 @@ export const WORKFLOW = {
     "inputs": {
       "add_noise": "enable",
       "noise_seed": 3025955348,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "start_at_step": 0,
@@ -357,14 +332,8 @@ export const WORKFLOW = {
     "inputs": {
       "add_noise": "disable",
       "noise_seed": 3025955348,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "start_at_step": 12,
@@ -558,16 +527,6 @@ export const WORKFLOW_REGIONAL = {
       "title": "VAE Decode"
     }
   },
-  "13": {
-    "inputs": {
-      "steps": 30,
-      "cfg": 7.000000000000002
-    },
-    "class_type": "StepsAndCfg",
-    "_meta": {
-      "title": "Steps & Cfg"
-    }
-  },
   "17": {
     "inputs": {
       "Width": 1024,
@@ -625,10 +584,7 @@ export const WORKFLOW_REGIONAL = {
     "inputs": {
       "seed": 715010500915488,
       "steps": 20,
-      "cfg": [
-        "13",
-        1
-      ],
+      "cfg": 7,
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "denoise": 0.4000000000000001,
@@ -706,14 +662,8 @@ export const WORKFLOW_REGIONAL = {
       "filename": "%time_%seed",
       "path": "%date",
       "extension": "png",
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "modelname": "waiNSFWIllustrious_v130.safetensors",
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
@@ -810,14 +760,8 @@ export const WORKFLOW_REGIONAL = {
     "inputs": {
       "add_noise": "enable",
       "noise_seed": 1094643513798864,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "start_at_step": 0,
@@ -849,14 +793,8 @@ export const WORKFLOW_REGIONAL = {
     "inputs": {
       "add_noise": "disable",
       "noise_seed": 790295579866824,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
       "start_at_step": 12,
@@ -1576,16 +1514,6 @@ export const WORKFLOW_UNET =
       "title": "VAE Decode"
     }
   },
-  "13": {
-    "inputs": {
-      "steps": 40,
-      "cfg": 5
-    },
-    "class_type": "StepsAndCfg",
-    "_meta": {
-      "title": "Steps & Cfg"
-    }
-  },
   "17": {
     "inputs": {
       "Width": 1024,
@@ -1604,14 +1532,8 @@ export const WORKFLOW_UNET =
       "filename": "%time_%seed",
       "path": "%date",
       "extension": "png",
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "modelname": "waiANIMA_v10.safetensors",
       "sampler_name": "er_sde",
       "scheduler": "normal",
@@ -1694,14 +1616,8 @@ export const WORKFLOW_UNET =
     "inputs": {
       "add_noise": "enable",
       "noise_seed": 1716173204,
-      "steps": [
-        "13",
-        0
-      ],
-      "cfg": [
-        "13",
-        1
-      ],
+      "steps": 20,
+      "cfg": 7,
       "sampler_name": "er_sde",
       "scheduler": "normal",
       "start_at_step": 0,

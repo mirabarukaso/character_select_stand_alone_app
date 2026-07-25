@@ -1,6 +1,6 @@
 import { mySimpleList } from '../components/myDropdown.js';
 import { setupTextbox } from '../components/myTextbox.js';
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 
 let instanceSlotManager = null;
 

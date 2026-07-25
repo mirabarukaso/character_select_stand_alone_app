@@ -146,6 +146,9 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.search_modelinsubfolder.setTitle(LANG.search_modelinsubfolder);    
     globalThis.generate.model_path_comfyui.setTitle(LANG.model_path_comfyui);
     globalThis.generate.model_path_webui.setTitle(LANG.model_path_webui);
+    globalThis.generate.image_save_path_comfyui.setTitle(LANG.image_save_path_comfyui);
+    globalThis.generate.image_save_path_webui.setTitle(LANG.image_save_path_webui);
+    globalThis.generate.image_save_embed_character_name.setTitle(LANG.image_save_embed_character_name);
     globalThis.generate.webui_auth.setTitle(LANG.webui_auth);
     globalThis.generate.webui_auth_enable.setTitle(LANG.webui_auth_enable);
     globalThis.generate.queueAutostart.setTitle(LANG.generate_auto_start);
@@ -161,6 +164,8 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.prompt.negative.setTitle(LANG.api_neg_prompt);
     globalThis.prompt.ai.setTitle(LANG.ai_prompt);
     globalThis.prompt.exclude.setTitle(LANG.prompt_ban);
+    globalThis.prompt.autoResize.setTitle(LANG.ptompt_textbox_autoresize);
+    globalThis.prompt.fontSize.setTitle(LANG.ptompt_textbox_fontsize);
 
     globalThis.hifix.model.setTitle(LANG.api_hf_upscaler_selected);
     globalThis.hifix.colorTransfer.setTitle(LANG.api_hf_colortransfer);
@@ -235,6 +240,9 @@ export function updateSettings() {
     globalThis.generate.search_modelinsubfolder.setValue(SETTINGS.search_modelinsubfolder);    
     globalThis.generate.model_path_comfyui.setValue(SETTINGS.model_path_comfyui);
     globalThis.generate.model_path_webui.setValue(SETTINGS.model_path_webui);
+    globalThis.generate.image_save_path_comfyui.setValue(SETTINGS.image_save_path_comfyui);
+    globalThis.generate.image_save_path_webui.setValue(SETTINGS.image_save_path_webui);
+    globalThis.generate.image_save_embed_character_name.setValue(SETTINGS.image_save_embed_character_name);
     globalThis.generate.webui_auth.setValue(SETTINGS.webui_auth);
     globalThis.generate.webui_auth_enable.updateDefaults(SETTINGS.webui_auth_enable);
     globalThis.generate.queueAutostart.setValue(SETTINGS.generate_auto_start);
@@ -318,6 +326,8 @@ export function updateSettings() {
     globalThis.prompt.negative.setValue(SETTINGS.api_neg_prompt);
     globalThis.prompt.ai.setValue(SETTINGS.ai_prompt);
     globalThis.prompt.exclude.setValue(SETTINGS.prompt_ban);
+    globalThis.prompt.autoResize.setValue(SETTINGS.ptompt_textbox_autoresize);
+    globalThis.prompt.fontSize.setValue(SETTINGS.ptompt_textbox_fontsize);
 
     globalThis.ai.interface.updateDefaults(SETTINGS.ai_interface);
     globalThis.ai.local_address.setValue(SETTINGS.ai_local_addr);

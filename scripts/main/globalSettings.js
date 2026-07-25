@@ -22,6 +22,10 @@ const defaultSettings = {
     
     "model_path_comfyui": "",
     "model_path_webui": "",
+    "image_save_path_comfyui": "%date",
+    "image_save_path_webui": "[date]",
+    "image_save_embed_character_name": false,
+
     "webui_auth" : "user:pass",
     "webui_auth_enable" : "OFF",
 
@@ -85,6 +89,9 @@ const defaultSettings = {
     "api_neg_prompt": "bad quality,worst quality,worst detail,sketch,censor",
     "ai_prompt": "",
     "prompt_ban" : "",
+    "ptompt_textbox_autoresize": true,
+    "ptompt_textbox_fontsize": 14,
+    "ptompt_textbox_heights": [3,3,3,3,3,3],
     
     "remote_ai_base_url": "https://api.groq.com/openai/v1/chat/completions",
     "remote_ai_model": "meta-llama/llama-4-maverick-17b-128e-instruct",

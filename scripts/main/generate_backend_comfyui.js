@@ -1,6 +1,6 @@
 import { ipcMain, BrowserWindow, net } from 'electron';
 import { WebSocket } from 'ws';
-import * as wsService from '../../webserver/back/wsService.js';
+import * as wsService from '../webserver/back/wsService.js';
 import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
 import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, 
   WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, VAE_LOADER} from './comfyui_workflow.js';
@@ -944,7 +944,7 @@ class ComfyUI {
   createWorkflow(generateData) {
     const {addr, auth, uuid, model, vpred, positive, negative, 
       width, height, cfg, step, seed, sampler, scheduler, refresh, 
-      hifix, refiner, controlnet, adetailer, vae} = generateData;
+      hifix, refiner, controlnet, adetailer, vae, img_prefix} = generateData;
 
     this.addr = addr;
     this.refresh = refresh;
@@ -1019,16 +1019,18 @@ class ComfyUI {
     workflow["29"].inputs.scheduler = scheduler;
     workflow["36"].inputs.scheduler = scheduler;
     workflow["37"].inputs.scheduler = scheduler;
-
-    // Set steps and cfg
-    workflow["13"].inputs.steps = step;
-    workflow["13"].inputs.cfg = cfg;
-                
+    
     // Set Image Saver seed
     workflow["29"].inputs.seed_value = seed;        
+    workflow["29"].inputs.steps = step;
+    workflow["29"].inputs.cfg = cfg;
+    workflow["29"].inputs.path = img_prefix;
+
     // Set Ksampler seed and steps
     workflow["36"].inputs.noise_seed = seed;
     workflow["36"].inputs.end_at_step = refiner_start_step;       
+    workflow["36"].inputs.steps = step;
+    workflow["36"].inputs.cfg = cfg;
     
     // Set Positive prompt
     workflow["32"].inputs.text = positive;        
@@ -1115,7 +1117,7 @@ class ComfyUI {
   createWorkflowUNet(generateData) {
     const {addr, auth, uuid, refresh, positive, negative, 
       width, height, cfg, step, seed, sampler, scheduler,  
-      unet, hifix} = generateData;
+      unet, hifix, img_prefix} = generateData;
 
     this.addr = addr;
     this.refresh = refresh;
@@ -1165,10 +1167,6 @@ class ComfyUI {
     // Set model name to Image Save
     workflow["29"].inputs.modelname = unet.model;
 
-    // Set steps and cfg
-    workflow["13"].inputs.steps = step;
-    workflow["13"].inputs.cfg = cfg;
-
     // Set width and height
     workflow["17"].inputs.Width = width;
     workflow["17"].inputs.Height = height;
@@ -1181,9 +1179,15 @@ class ComfyUI {
     // Set Sampler and Scheduler
     workflow["29"].inputs.sampler_name = sampler;
     workflow["29"].inputs.scheduler = scheduler;
+    workflow["29"].inputs.steps = step;
+    workflow["29"].inputs.cfg = cfg;
+    workflow["29"].inputs.path = img_prefix;
+
     // Set Ksampler Sampler and Scheduler
     workflow["36"].inputs.sampler_name = sampler;    
     workflow["36"].inputs.scheduler = scheduler;
+    workflow["36"].inputs.steps = step;
+    workflow["36"].inputs.cfg = cfg;
     
     // Set Positive prompt
     workflow["32"].inputs.text = positive;        
@@ -1237,7 +1241,7 @@ class ComfyUI {
   createWorkflowRegional(generateData) {      
     const {addr, auth, uuid, model, vpred, positive_left, positive_right, negative, 
       width, height, cfg, step, seed, sampler, scheduler, refresh, 
-      hifix, refiner, regional, controlnet, adetailer, vae} = generateData;
+      hifix, refiner, regional, controlnet, adetailer, vae, img_prefix} = generateData;
 
     this.addr = addr;
     this.refresh = refresh;
@@ -1312,15 +1316,21 @@ class ComfyUI {
     workflow["36"].inputs.scheduler = scheduler;
     workflow["37"].inputs.scheduler = scheduler;
 
-    // Set steps and cfg
-    workflow["13"].inputs.steps = step;
-    workflow["13"].inputs.cfg = cfg;
+    // refiner    
+    workflow["37"].inputs.steps = step;
+    workflow["37"].inputs.cfg = cfg;
                 
     // Set Image Saver seed
-    workflow["29"].inputs.seed_value = seed;        
+    workflow["29"].inputs.seed_value = seed;
+    workflow["29"].inputs.steps = step;
+    workflow["29"].inputs.cfg = cfg;
+    workflow["29"].inputs.path = img_prefix;
+
     // Set Ksampler seed and steps
     workflow["36"].inputs.noise_seed = seed;
-    workflow["36"].inputs.end_at_step = refiner_start_step;       
+    workflow["36"].inputs.end_at_step = refiner_start_step;
+    workflow["36"].inputs.steps = step;
+    workflow["36"].inputs.cfg = cfg;
     
     // Set Positive prompt
     workflow["32"].inputs.text = positive_left;

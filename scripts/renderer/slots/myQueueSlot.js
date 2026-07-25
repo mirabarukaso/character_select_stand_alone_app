@@ -1,6 +1,6 @@
 import { setupTextbox } from '../components/myTextbox.js';
 import { generateGUID } from './myLoRASlot.js';
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 let instanceQueueManager = null;
 
 async function cancelGenerate(slotClass) {

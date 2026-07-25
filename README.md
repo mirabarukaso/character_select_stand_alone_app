@@ -300,6 +300,11 @@ Supports `*.txt` wildcard files, copy your wildcards into `resources\app\data\wi
 By default, wildcards are randomly selected using the current seed. If `wildcard random seed` is `Checked`, a new random seed will be generated for every selection every time.      
 **Subfolder is not supported**     
 
+Wildcard tag requires DOUBLE(2) underline `__` on both head and tail        
+```
+__YourWildCardName__
+```
+
 In case you didn't like wildcards file or json/csv wildcard, try the following in your prompts:            
 ```
 { standing | sitting | on stomach | on back }

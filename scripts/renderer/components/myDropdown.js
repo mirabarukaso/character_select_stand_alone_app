@@ -179,7 +179,7 @@ export function myRegionalCharacterList(containerId, wai_characters, oc_characte
         containerId: containerId,
         dropdownCount: 4,
         labelPrefixList: ['character_left', 'character_right', 'original_character_left', 'original_character_right'],
-        textboxIds: ['cd-character1', 'cd-character2', 'cd-original-character-left', 'cd-original-character-right'],
+        textboxIds: ['rc-character1', 'rc-character2', 'rc-original-character-left', 'rc-original-character-right'],
         optionHandler: handleRegionalCharacterOptions,
         callback_func: callback_myCharacterList_updateThumb,
         enableSearch: true,
@@ -634,7 +634,10 @@ function createDropdown({
                 }
             };
     
-            const validOverlayIds = ['cd-character1-overlay', 'cd-character2-overlay', 'cd-character3-overlay'];
+            const validOverlayIds = [
+                'cd-character1-overlay', 'cd-character2-overlay', 'cd-character3-overlay',
+                'rc-character1-overlay', 'rc-character2-overlay', 'rc-character3-overlay'
+            ];
             const shouldAddOverlayEvents = enableOverlay && activeInput && validOverlayIds.includes(activeInput.id);
             let lastOptionKey = null;
             let lastUpdateTime = 0;
@@ -690,7 +693,9 @@ function createDropdown({
                                 const overlayHeight = overlayContainer.offsetHeight || 480;
         
                                 const inputId = activeInput.id;
-                                if (inputId === 'cd-character1-overlay' || inputId === 'cd-character2-overlay') {
+                                if (inputId === 'cd-character1-overlay' || inputId === 'cd-character2-overlay'
+                                    || inputId === 'rc-character1-overlay' || inputId === 'rc-character2-overlay'
+                                ) {
                                     left = optionsRect.left + optionsWidth + globalThis.scrollX + 30;
                                 } else if (inputId === 'cd-character3-overlay') {
                                     left = optionsRect.left + globalThis.scrollX - overlayWidth - 10;

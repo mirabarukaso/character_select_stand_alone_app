@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 let lastAIPromot = '';
 
 async function remoteGenerateWithPrompt(aiOptions = null) {

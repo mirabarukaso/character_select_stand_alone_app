@@ -1,7 +1,8 @@
 import { setBlur, setNormal, showDialog } from './myDialog.js';
-import { sendWebSocketMessage } from '../../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { setADetailerModelList } from '../slots/myADetailerSlot.js';
 import { addFavorites, delFavorites } from './favoriteCharacters.js';
+import { get_prompt_textBox_Heights } from './componentsManager.js';
 
 const CAT = '[myCollapsed]'
 
@@ -81,6 +82,9 @@ export async function setupSaveSettingsToggle() {
             const r1 = globalThis.characterListRegional.getTextValue(0);
             const r2 = globalThis.characterListRegional.getTextValue(1);
 
+            // save prompt textBox heights
+            globalThis.globalSettings.ptompt_textbox_heights = get_prompt_textBox_Heights();
+
             const globalSettings = structuredClone(globalThis.globalSettings);
             delete globalSettings["lastLoadedSettings"];
 
@@ -88,7 +92,7 @@ export async function setupSaveSettingsToggle() {
                 tag_angle, tag_camera, tag_background, tag_style, // 0, 1, 2, 3
                 c1, c2, c3, // 4, 5, 6
                 r1, r2      // 7, 8
-            ];
+            ];            
 
             let result;
             if (globalThis.inBrowser) {
@@ -109,7 +113,9 @@ export async function setupSaveSettingsToggle() {
             } else {
                 await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].save_settings_failed.replace('{0}', inputResult) });
             }
-        }
+        }        
+
+        globalThis.globalSettings.lastLoadedSettings = inputResult;
         setNormal();
     });
 
@@ -171,17 +177,17 @@ export async function setupModelReloadToggle() {
 
     refreshButton.addEventListener('click', async () => {
         const currentModelSelect = globalThis.dropdownList.model.getValue();
-        await reloadFiles();
+        await reloadFiles(true);
         globalThis.dropdownList.model.updateDefaults(currentModelSelect);
         globalThis.lora.reload();
         globalThis.controlnet.reload();
-        globalThis.aDetailer.reload();
+        globalThis.aDetailer.reload();        
     });
 
     return refreshButton;
 }
 
-export async function reloadFiles(){
+export async function reloadFiles(unCollapseTab = false){
     const SETTINGS = globalThis.globalSettings;
     const LANG = globalThis.cachedFiles.language[SETTINGS.language];
     const args = [
@@ -253,7 +259,11 @@ export async function reloadFiles(){
     globalThis.dropdownList.textencoder.setValue(LANG.api_text_encoder, globalThis.cachedFiles.textEncoderList);
 
     globalThis.dropdownList.settings.setValue('', globalThis.cachedFiles.settingList);
-    globalThis.refiner.model.setValue(LANG.api_refiner_model, globalThis.cachedFiles.modelListAll);    
+    globalThis.refiner.model.setValue(LANG.api_refiner_model, globalThis.cachedFiles.modelListAll);
+
+    if(globalThis.collapsedTabs.modelSettings.getCollapsed() && unCollapseTab) {
+        globalThis.collapsedTabs.modelSettings.setCollapsed(false);
+    }
 }
 
 export function setupFuctionKeys() {
