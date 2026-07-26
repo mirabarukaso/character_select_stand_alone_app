@@ -254,6 +254,8 @@ async function getCharacters(){
     let thumbImages = [];
     let characters = '';
     let negativeTags = '';
+    let character_name_for_image_prefix = '';
+
     for(let index=0; index < 4; index++) {
         let {tag, tag_assist, thumb, info, weight, characterName, neg_tags} = await createCharacters(index, seeds);
         if (index === 0 || index === 2){
@@ -277,8 +279,10 @@ async function getCharacters(){
         }
 
         information += `${info}`;
-        if(characterName)
+        if(characterName) {
             characters += (characters.length>0)?`\n${characterName}`:`${characterName}`;
+            character_name_for_image_prefix += `${characterName} `;
+        }
     }
 
     const brownColor = (globalThis.globalSettings.css_style==='dark')?'BurlyWood':'Brown';
@@ -291,7 +295,8 @@ async function getCharacters(){
         information: information,
         seed:random_seed,
         characters:characters,
-        negative_tags: negativeTags
+        negative_tags: negativeTags,
+        image_prefix: character_name_for_image_prefix.trim()
     }
 }
 
@@ -306,6 +311,7 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
     let negativePrompt = '';
     let thumbImage = null;
     let charactersName = '';
+    let img_prefix = '';
 
     if(runSame) {
         let seed = globalThis.generate.seed.getValue();
@@ -318,9 +324,9 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
         positivePromptRightColored = globalThis.generate.lastPosRColored;
         negativePrompt = globalThis.generate.lastNeg;
         charactersName = globalThis.generate.lastCharacter;
-
+        img_prefix = globalThis.generate.lastImagePrefix;
     } else {            
-        const {thumb, character_left, character_right, information, seed, characters, negative_tags} = await getCharacters();
+        const {thumb, character_left, character_right, information, seed, characters, negative_tags, image_prefix} = await getCharacters();
         randomSeed = seed;
         randomSeedr = Math.floor(seed / 3);
         finalInfo = information;
@@ -356,11 +362,12 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
         negativePrompt = mergedNegativePrompt;
         thumbImage = thumb;
         charactersName = characters;         
+        img_prefix = image_prefix;
     }
 
     return {finalInfo, randomSeed, positivePromptLeft, positivePromptRight, 
             positivePromptLeftColored, positivePromptRightColored, negativePrompt,
-            thumbImage, charactersName
+            thumbImage, charactersName, img_prefix
     }
 }
 
@@ -455,6 +462,7 @@ export async function generateRegionalImage(dataPack){
         globalThis.generate.lastPosRColored = createPromptResult.positivePromptRightColored;
         globalThis.generate.lastNeg = createPromptResult.negativePrompt;
         globalThis.generate.lastCharacter = createPromptResult.charactersName;
+        globalThis.generate.lastImagePrefix = createPromptResult.img_prefix;
         if(createPromptResult.thumbImage)
             globalThis.generate.lastThumb = createPromptResult.thumbImage;
 
@@ -510,7 +518,7 @@ export async function generateRegionalImage(dataPack){
             controlnet: createControlNet(),      
             adetailer: createADetailer(apiInterface),
             vae: {vae_override: vae_override, vae: vae},
-            img_prefix: getImageSavePrefix(apiInterface)
+            img_prefix: getImageSavePrefix(apiInterface, createPromptResult.img_prefix)
         }
         
         let finalInfo = `${createPromptResult.finalInfo}\n`;

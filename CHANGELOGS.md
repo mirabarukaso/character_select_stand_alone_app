@@ -1,3 +1,7 @@
+2026.07.26 v2.8.4      
+Change `Image Save Path Prefix` now supports `Random` #101          
+
+
 2026.07.26 v2.8.3     
 Add `Replace tags` in `Prompt & Tagger Ban List`          
 Add `Drag to resize` for `Prompt textbox`          
