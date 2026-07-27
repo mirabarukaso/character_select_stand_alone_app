@@ -29,7 +29,7 @@ If applicable, add screenshots, console outputs, or error logs to help explain y
  - Backend logs / errors (if applicable): Copy and paste here
 
 **Environment Information**
- - Backend [e.g. ComfyUI, A1111]
+ - Backend [e.g. ComfyUI, Forge Neo]
  - Browser (if applicable) [e.g. Chrome, Safari]
  - SAA Version [e.g. 1.13.2]
 

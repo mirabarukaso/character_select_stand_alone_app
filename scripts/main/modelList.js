@@ -199,7 +199,7 @@ function updateUpscalerList(model_path_comfyui, model_path_webui, search_subfold
         }
         UPSCALER_WEBUI = newList
     } else {
-        // For A1111
+        // For Forge Neo/A1111
         // Use static value
         UPSCALER_WEBUI = [
             "R-ESRGAN 4x+ Anime6B",

@@ -445,7 +445,7 @@ async function init(){
     globalThis.custom_message = {
         controlnet: false,
         adetailer: false,
-        a1111_regional: false
+        regional_forge_neo: false
     };    
 
     try {

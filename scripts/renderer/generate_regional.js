@@ -381,7 +381,7 @@ function createRegional(apiInterface) {
 
     let ratio =`${a},${(b===0)?0.01:b},${c}`;
     if(apiInterface === 'WebUI') {
-        ratio =`${a},${c}`;
+        ratio =`${(a+b)/2},${(c-b)/2}`;
     }
             
     const str_left = globalThis.regional.str_left.getFloat();
@@ -510,14 +510,27 @@ export async function generateRegionalImage(dataPack){
             step: globalThis.generate.step.getValue(),
             seed: createPromptResult.randomSeed,
             sampler: globalThis.generate.sampler.getValue(),
-            scheduler: globalThis.generate.scheduler.getValue(),            
+            scheduler: globalThis.generate.scheduler.getValue(),
             refresh:globalThis.generate.api_preview_refresh_time.getValue(),
             hifix: hifix,
             refiner: refiner,
             regional: regional,
-            controlnet: createControlNet(),      
-            adetailer: createADetailer(apiInterface),
             vae: {vae_override: vae_override, vae: vae},
+            ...(SETTINGS.api_model_type === 'Checkpoint' ? {                
+                controlnet: createControlNet(),
+                adetailer: createADetailer(apiInterface),                
+            } : {
+                unet: {
+                    enable: true,
+                    model: globalThis.dropdownList.model.getValue(),
+                    dtype: globalThis.dropdownList.diffusion_model_weight_dtype.getValue(),
+                    vae_model: globalThis.dropdownList.vae_unet.getValue(),
+                    clip_model: globalThis.dropdownList.textencoder.getValue(),
+                    clip_type: globalThis.dropdownList.textencoder_type.getValue(),
+                    clip_device: globalThis.dropdownList.textencoder_device.getValue(),
+                },
+            }),
+
             img_prefix: getImageSavePrefix(apiInterface, createPromptResult.img_prefix)
         }
         
@@ -529,9 +542,11 @@ export async function generateRegionalImage(dataPack){
             finalInfo += `CFG: [[color=${brownColor}]${generateData.cfg}[/color]]\t`;
             finalInfo += `Setp: [[color=${brownColor}]${generateData.step}[/color]]\n`;
             finalInfo += `Sampler: [[color=${brownColor}]${generateData.sampler}[/color]]\n`;
-            finalInfo += `Scheduler: [[color=${brownColor}]${generateData.scheduler}[/color]]\n`;
+            finalInfo += `Scheduler: [[color=${brownColor}]${generateData.scheduler}[/color]]\n`;            
             finalInfo += generateData.hifix.info;
-            finalInfo += generateData.refiner.info;
+            if(SETTINGS.api_model_type === 'Checkpoint') {
+                finalInfo += generateData.refiner.info;
+            }
             finalInfo += generateData.regional.info;
             finalInfo +=`\n`;
 

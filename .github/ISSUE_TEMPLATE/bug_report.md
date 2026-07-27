@@ -27,7 +27,7 @@ If applicable, add screenshots to help explain your problem.
  - If there's an Error: Copy and paste the full backend logs
 
 **Please complete the following information**
- - Backend [e.g. ComfyUI, A1111]
+ - Backend [e.g. ComfyUI, Forge Neo]
  - Browser (if using SAAC) [e.g. chrome, safari]
  - SAA Version [e.g. 1.13.2]
 

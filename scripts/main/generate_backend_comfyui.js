@@ -3,7 +3,8 @@ import { WebSocket } from 'ws';
 import * as wsService from '../webserver/back/wsService.js';
 import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
 import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, 
-  WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, VAE_LOADER} from './comfyui_workflow.js';
+  WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_REIONAL_UNET, 
+  WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, VAE_LOADER} from './comfyui_workflow.js';
 
 const CAT = '[ComfyUI]';
 const TIMEOUT = 5000; // 5 seconds timeout for backend response
@@ -1238,7 +1239,7 @@ class ComfyUI {
   }
 
   // eslint-disable-next-line sonarjs/cognitive-complexity
-  createWorkflowRegional(generateData) {      
+  createWorkflowRegional(generateData) {
     const {addr, auth, uuid, model, vpred, positive_left, positive_right, negative, 
       width, height, cfg, step, seed, sampler, scheduler, refresh, 
       hifix, refiner, regional, controlnet, adetailer, vae, img_prefix} = generateData;
@@ -1429,6 +1430,155 @@ class ComfyUI {
       hiresfix:   hifix.enable
     };
     workflow = applyADetailer(workflowCN, adetailer, workflowInfo);
+    return workflow;
+  }
+
+  // eslint-disable-next-line sonarjs/cognitive-complexity
+  createWorkflowRegionalUnet(generateData) {
+    const {addr, auth, uuid, positive_left, positive_right, negative, 
+      width, height, cfg, step, seed, sampler, scheduler, refresh, 
+      hifix, regional, img_prefix, unet} = generateData;
+
+    this.addr = addr;
+    this.refresh = refresh;
+    this.auth = auth;
+    this.uuid = uuid;
+    
+    let workflow = structuredClone(WORKFLOW_REIONAL_UNET);
+
+    // Set UNET model
+    if (unet.model.endsWith('.gguf')) {
+      workflow["59"] = {
+        "inputs": {
+          "gguf_name": unet.model,
+        },
+        "class_type": "LoaderGGUF",
+        "_meta": {
+          "title": "GGUF Loader"
+        }
+      };
+    } else {
+      workflow["59"].inputs.unet_name = unet.model;
+      workflow["59"].inputs.weight_dtype = unet.dtype;
+    }
+
+    // Set Text Encoder CLIP model
+    if (unet.clip_model.endsWith('.gguf')) {
+      workflow["60"] = {
+        "inputs": {
+          "clip_name": unet.clip_model,
+          "type": unet.clip_type,
+          "device": unet.clip_device
+        },
+        "class_type": "ClipLoaderGGUF",
+        "_meta": {
+          "title": "GGUF CLIP Loader"
+        }
+      };
+    } else {
+      workflow["60"].inputs.clip_name = unet.clip_model;
+      workflow["60"].inputs.type = unet.clip_type;
+      workflow["60"].inputs.device = unet.clip_device;
+    }
+
+    // Load VAE
+    workflow["61"].inputs.vae_name = unet.vae_model;
+
+    // Set model name to Image Save
+    workflow["29"].inputs.modelname = unet.model;
+
+    // Set Sampler and Scheduler
+    workflow["20"].inputs.sampler_name = sampler;
+    workflow["29"].inputs.sampler_name = sampler;
+    workflow["36"].inputs.sampler_name = sampler;
+    
+    workflow["20"].inputs.scheduler = scheduler;
+    workflow["29"].inputs.scheduler = scheduler;
+    workflow["36"].inputs.scheduler = scheduler;
+                
+    // Set Image Saver seed
+    workflow["29"].inputs.seed_value = seed;
+    workflow["29"].inputs.steps = step;
+    workflow["29"].inputs.cfg = cfg;
+    workflow["29"].inputs.path = img_prefix;
+    // Combine prompt
+    workflow["29"].inputs.positive = `${positive_left}\n\n${positive_right}`;
+    workflow["29"].inputs.negative = negative;
+
+    // Set Ksampler seed and steps
+    workflow["36"].inputs.noise_seed = seed;
+    workflow["36"].inputs.steps = step;
+    workflow["36"].inputs.cfg = cfg;
+    
+    // Set Positive prompt
+    workflow["32"].inputs.text = positive_left;
+    workflow["46"].inputs.text = positive_right;    
+    
+    // Set Negative prompt
+    workflow["33"].inputs.text = negative;
+    
+    // Set width and height
+    workflow["17"].inputs.Width = width;
+    workflow["17"].inputs.Height = height;
+
+    // Regional Condition Mask
+    // Set Mask Ratio
+    workflow["47"].inputs.Layout = regional.ratio;
+    // Set Left Mask Strength and Area
+    workflow["50"].inputs.strength = regional.str_left;
+    workflow["50"].inputs.set_cond_area = regional.option_left;
+
+    // Set Right Mask Strength and Area
+    workflow["52"].inputs.strength = regional.str_right;
+    workflow["52"].inputs.set_cond_area = regional.option_right;
+
+    if (hifix.enable) {
+      // Set Hires fix seed and denoise
+      workflow["20"].inputs.seed = hifix.seed;
+      workflow["20"].inputs.denoise = hifix.denoise;
+      workflow["20"].inputs.steps = hifix.steps;
+
+      // Latent or Model hifix
+      if (hifix?.model.includes('Latent')) {
+          const match = hifix.model.match(/\(([^)]+)\)/); // NOSONAR S8786
+          const latentMethod = match ? match[1].trim() : 'nearest-exact'; // Default nearest-exact
+
+          workflow["58"] = {
+            "inputs": {
+              "samples": [
+                "36",
+                0
+              ],
+              "upscale_method": latentMethod,
+              "scale_by": hifix.scale
+            },
+            "class_type": "LatentUpscaleBy",
+            "_meta": {
+              "title": "Upscale Latent By"
+            }
+          };
+          // Connect to 2nd KSampler
+          workflow["20"].inputs.latent_image = ["58", 0];        
+      } else {
+        // Set Hires fix parameters
+        workflow["17"].inputs.HiResMultiplier = hifix.scale;
+
+        // Set Hires fix model name
+        workflow["27"].inputs.model_name = `${hifix.model}`;
+      }
+
+      if(hifix.colorTransfer === 'None'){
+          // Image Save set to 2nd VAE Decode (Tiled)
+          workflow["29"].inputs.images = ["18", 0];
+      } else {
+          // Default to Image Color Transfer
+          workflow["28"].inputs.method = hifix.colorTransfer;
+      }  
+    } else {
+      // Image Save set to 1st VAE Decode
+      workflow["29"].inputs.images = ["6", 0];
+    }
+
     return workflow;
   }
 
@@ -2117,7 +2267,7 @@ async function runComfyUI(generateData) {
   let workflow;
   if (generateData.unet?.enable){
     workflow = backendComfyUI.createWorkflowUNet(generateData);
-    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow    
+    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow
   } else {
     workflow = backendComfyUI.createWorkflow(generateData);
     backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
@@ -2139,8 +2289,15 @@ async function runComfyUI_Regional(generateData) {
   setMutexBackendBusy(true); // Acquire the mutex lock
   cancelMark = false;
 
-  const workflow = backendComfyUI.createWorkflowRegional(generateData)
-  backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
+  let workflow;
+  if (generateData.unet?.enable) {
+    workflow = backendComfyUI.createWorkflowRegionalUnet(generateData);
+    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow
+  } else {
+    workflow = backendComfyUI.createWorkflowRegional(generateData);
+    backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow
+  }
+  
   if(backendComfyUI.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI Regional with uuid:', backendComfyUI.uuid);
   const result = await backendComfyUI.run(workflow);

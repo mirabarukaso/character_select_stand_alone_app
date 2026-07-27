@@ -148,12 +148,6 @@ export async function callback_api_model_type(index, selectedValue) {
         globalThis.dropdownList.model.setTitle(LANG.api_diffusion_model);
         globalThis.dropdownList.model.updateDefaults(SETTINGS.api_model_file_diffusion_select);
 
-        callback_regional_condition(false, false);
-        globalThis.generate.regionalCondition.setValue(false);
-        globalThis.generate.regionalCondition_dummy.setValue(false);
-        globalThis.generate.regionalCondition.setEnable(false);
-        globalThis.generate.regionalCondition_dummy.setEnable(false);
-
         globalThis.generate.refiner.setValue(false);
         globalThis.generate.refiner_dummy.setValue(false);
         globalThis.generate.refiner.setEnable(false);
@@ -338,10 +332,9 @@ export function callback_regional_condition(trigger, dummy = false) {
     const LANG = FILES.language[SETTINGS.language];
 
     const apiInterface = globalThis.generate.api_interface.getValue();    
-    if(apiInterface !== 'ComfyUI' && trigger && !globalThis.custom_message.a1111_regional) {
-        const errorMessage = LANG.regional_a1111;
-        globalThis.overlay.custom.createErrorOverlay(errorMessage, 'https://github.com/hako-mikan/sd-webui-regional-prompter');
-        globalThis.custom_message.a1111_regional = true;
+    if(apiInterface !== 'ComfyUI' && trigger && !globalThis.custom_message.regional_forge_neo) {
+        globalThis.overlay.custom.createErrorOverlay(LANG.regional_forge_neo, LANG.regional_forge_neo_link);
+        globalThis.custom_message.regional_forge_neo = true;
     }
 
     if (dummy) {
@@ -386,11 +379,9 @@ export function callback_controlnet(trigger)  {
         return;
     
     if(trigger && apiInterface === 'ComfyUI') {
-        globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_comfyui , 'Links:\nhttps://github.com/Fannovel16/comfyui_controlnet_aux\nhttps://github.com/sipherxyz/comfyui-art-venture');         
+        globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_comfyui , LANG.message_controlnet_comfyui_link);
     }
-    if(trigger && apiInterface === 'WebUI') {
-        globalThis.overlay.custom.createErrorOverlay(LANG.message_controlnet_webui , 'https://github.com/Mikubill/sd-webui-controlnet');         
-    }
+
     globalThis.custom_message.controlnet = true;
 }
 
@@ -406,10 +397,10 @@ export function callback_adetailer(trigger)  {
         return;
 
     if(trigger && apiInterface === 'ComfyUI') {        
-        globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_comfyui, 'https://github.com/ltdrdata/ComfyUI-Impact-Pack\nhttps://github.com/ltdrdata/ComfyUI-Impact-Subpack');
+        globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_comfyui, LANG.message_adetailer_comfyui_link);
     }    
     if(trigger && apiInterface === 'WebUI') {
-        globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_webui , 'https://github.com/Bing-su/adetailer');         
+        globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_webui , LANG.message_adetailer_webui_link);
     }
     globalThis.custom_message.adetailer = true;
 }

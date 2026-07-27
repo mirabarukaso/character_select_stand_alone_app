@@ -879,8 +879,15 @@ function check_character(character){
 
 export function getImageSavePrefix(apiInterface, character_prefix) {
     let embed_character = character_prefix;
-    if(!globalThis.globalSettings.image_save_embed_character_name) 
+    if(!globalThis.globalSettings.image_save_embed_character_name) {
         embed_character = '';
+
+        if (apiInterface === 'ComfyUI') {
+            return `%date`;
+        } else if (apiInterface === 'WebUI') {
+            return `[date]`;
+        }
+    }
 
     if (apiInterface === 'ComfyUI') {
         return `${embed_character}${globalThis.globalSettings.image_save_path_comfyui}`;

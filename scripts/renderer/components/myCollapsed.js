@@ -239,7 +239,7 @@ export async function reloadFiles(unCollapseTab = false){
     }
         
     if (SETTINGS.api_interface === 'WebUI') {
-        // reset few list for A1111
+        // reset few list for Forge Neo
         globalThis.cachedFiles.controlnetProcessorListWebUI = 'none';
         globalThis.cachedFiles.upscalerListWebUI = 'none';
         setADetailerModelList(globalThis.cachedFiles.aDetailerList, true);

@@ -1,7 +1,7 @@
 # Character Select SAA
-A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/WebUI(A1111 & Forge Neo) API support.    
+A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(WebUI) API support.    
 
-> [!IMPORTANT]
+> [!NOTE]
 > If you find a character that isn't show on the list but can be generated correctly, please don't hesitate to raise an issue to let me know.       
 >
 > The default thumbList is based on `waiIllustriousSDXL_v160`. There are two alternative thumbList: `waiANIMA_v10Base10` and `waiNSFWIllustrious_v120`. Will download automatically from `HuggingFace` once you have selected it. 
@@ -9,26 +9,27 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/WebUI(A1111
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=75%>   
 
-| Verified | [ComfyUI](https://github.com/comfyanonymous/ComfyUI)  | [A1111](https://github.com/AUTOMATIC1111/stable-diffusion-webui) | [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) |
-| --- | --- | --- | --- |
-| Release | 0.28.0 | 1.10.1 | 2.27 |
-| LoRA | Yes | Yes | Yes |
-| BREAK | No | Yes | Yes |
-| Refiner | Yes | Yes | Yes |
-| Image Color Transfer | Yes | No | No |
-| Regional Condition | Yes | Yes | Yes |
-| ControlNet/IPA | Yes | Yes | Yes |
-| ADetailer | Yes | Yes | Yes |
-| API authentication| No | Yes | Yes |
-| MiraITU | Yes | No | No |
-| UNET Model | Yes | No | Yes |
-| Custom VAE for SDXL | Yes | Yes | Yes |
-*NOT Support ComfyUI Desktop*
+| Verified | [ComfyUI](https://github.com/comfyanonymous/ComfyUI)  | [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) |
+| --- | --- | --- | 
+| Release | 0.28.0 | 2.27 |
+| Refiner (SDXL) | Yes | Yes |
+| Image Color Transfer (ALL) | Yes | No |
+| Regional Condition / Couple (SDXL/Anima) | Yes | Yes |
+| ControlNet/IPA (SDXL) | Yes | Yes |
+| ADetailer (SDXL) | Yes | Yes |
+| API authentication| No | Yes |
+| MiraITU | Yes | No |
 
-*Online Character Select* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
-
-For browser based SAAC, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)           
-For Python based CLI tool for OpenClaw [SAA Agent](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md) and [ClawHub](https://clawhub.ai/mirabarukaso/saa-agent)         
+> [!IMPORTANT]
+> Regional Condition on `Forge Neo` supports `SDXL and Anima`, on `ComfyUI` should support more `diffusion models` need to verify             
+>
+> *ComfyUI Desktop not support SAA*       
+> *Removed A1111 from support list due to a lack of maintenance, A1111 still working with SAA, but will not test on it*        
+> 
+> *Online Character Select* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
+>
+> For browser based SAAC, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)           
+> For Python based CLI tool for OpenClaw [SAA Agent](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md) and [ClawHub](https://clawhub.ai/mirabarukaso/saa-agent)         
 
 ## thumbList manually download guide
 <details>
@@ -99,7 +100,7 @@ npm install
 <details>
 <summary>Details about Diffusion Models</summary>       
 
-**For ComfyUI**, check [Comfy-Org@HF](https://huggingface.co/comfy-Org/)      
+*For ComfyUI*, check [Comfy-Org@HF](https://huggingface.co/comfy-Org/)      
 `GGUF model` requires custom node [gguf](https://github.com/calcuis/gguf) the small-case one.        
 ```
 |---models
@@ -109,7 +110,7 @@ npm install
 |   |---vae
 ```
 
-**For Forge Neo**, check [Download Models@Haoming02](https://github.com/Haoming02/sd-webui-forge-classic/wiki/Download-Models)      
+*For Forge Neo*, check [Download Models@Haoming02](https://github.com/Haoming02/sd-webui-forge-classic/wiki/Download-Models)      
 Forge also supports the `GGUF model`, but the `Diffusion models` use the same `Checkpoint` folder. Therefore, manage those models with correct folder yourself.       
 ```
 |---models
@@ -208,7 +209,7 @@ The good news is, you can run `Image tagger` during gegenerate
 <details>
 <summary>Details about ControlNet / IP Adapter</summary>      
 
-### Setup for ComfyUI
+### For ComfyUI
 Upgrade your [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) to `0.5.6.0 or above`         
 
 `ControlNet` requires [comfyui_controlnet_aux](https://github.com/Fannovel16/comfyui_controlnet_aux) 1.1.5 [latest](https://github.com/Fannovel16/comfyui_controlnet_aux/commit/e8b689a513c3e6b63edc44066560ca5919c0576e)        
@@ -220,17 +221,11 @@ Put your `IP Adapter` models in `ComfyUI\\models\\ipadapter`
 I didn't test too much on IPA, but for `SDXL/ilXL/NoobXL` recommends `CLIP-ViT-bigG-14-laion2B-39B-b160k.safetensors` with `ipa_styleIpadapterFor_NoobAI-XL_v10.safetensors`. You may also need `CLIP-ViT-H-14-laion2B-s32B-b79K.safetensors`           
 Only the first `IP Adapter` slot will accept by ComfyUI, others set to `On` will ignore.     
 
-### Setup for A1111 and Forge Neo
-For ComfyUI and A1111, `Post` directly feed the processed image to controlnet model without requiring Processor Model preprocessing. They accepts `none` as preProcessModel.       
-But Forge based controlnet DOES NOT support `none` as preProcessModel, it accepts `None`. 
-Unfortunately, it's impossible to determine whether it's A1111 or Forge from API perspective, so WebUI uses `On` by default in all cases. Choose the proper `none` or `None` for A1111 or Forge yourself.  
+### For Forge Neo
+For ComfyUI, `Post` directly feed the processed image to controlnet model without requiring Processor Model preprocessing. They accepts `none(null)` as preProcessModel.       
+But Forge based controlnet DOES NOT support `none(null)` as preProcessModel, it accepts `None(String)`. 
      
-*A1111:*    
-  Requires [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet) [Latest Commit 56cec5b](https://github.com/Mikubill/sd-webui-controlnet/commit/56cec5b2958edf3b1807b7e7b2b1b5186dbd2f81)      
-  Put your `ControlNet` and `IP Adapter` models in `stable-diffusion-webui\\extensions\\sd-webui-controlnet\\models`, the extension plugin path.       
-  Use `none`
-
-*Forge:*      
+*Forge Neo:*      
   Put your `ControlNet` and `IP Adapter` models in `models\\ControlNet`.        
   Use `None` and always `On`         
 
@@ -245,12 +240,12 @@ Unfortunately, it's impossible to determine whether it's A1111 or Forge from API
 8. In case of your IPA image is too big, the `Resolution` selection for `IP Adapter` will resize your input image to target size, `1024` is enough for most case.      
 9. The `Info` button is not working when `Pre-Process Model` select to  `IP Adapter`      
 
-All `Pre-processor` models are managed by  [comfyui_controlnet_aux](https://github.com/Fannovel16/comfyui_controlnet_aux)(ComfyUI) and [sd-webui-controlnet](https://github.com/Mikubill/sd-webui-controlnet)(A1111),  most models will download from Hugging Face.      
+All `Pre-processor` models are managed by  [comfyui_controlnet_aux](https://github.com/Fannovel16/comfyui_controlnet_aux)(ComfyUI),  most models will download from Hugging Face.      
 All `Post-processor` models, aka the `Apply ControlNet Model` you need download by yourself from `ComfyUI Model Manager` or Hugging Face.      
 </details>
 
 ## LoRA Slot 
-WebUI(A1111) supports it's default LoRA prompt style `<lora:xxxxx:1.0>`.    
+Forge Neo(WebUI) supports it's default LoRA prompt style `<lora:xxxxx:1.0>`.    
 ComfyUI supports more detailed configuration of LoRA, for more information please refer to [LoRA from Text](https://github.com/mirabarukaso/ComfyUI_Mira#lora).    
 Also support check LoRA info by click the 'i' button in LoRA Slot. And, if there's a same named PNG file with LoRA, the image will show in LoRA info page.       
 
@@ -271,8 +266,8 @@ Also support check LoRA info by click the 'i' button in LoRA Slot. And, if there
 Put your `ADetailer` models in `ComfyUI\\models\\ultralytics\\bbox`      
 Put your `SAM` models in `ComfyUI\\models\\sams`      
 
-*For A1111/Forge Neo*      
-`ADetailer` requires [ADetailer Plugin](https://github.com/Bing-su/adetailer/) [latest](https://github.com/Bing-su/adetailer/commit/3a599f5d4607d8f9d8b9fc5a15526197418dae1a)            
+*For Forge Neo*      
+`ADetailer` requires [ADetailer Neo](https://github.com/Haoming02/ADetailer-Neo) [latest](https://github.com/Haoming02/ADetailer-Neo/commits/main/)
 `Upscaler`, `Control Processor`, `ADetailer`  lists have to be read from the API.       
 The default ADetailer model list will be updated after the first generation. Simply start generating an image as normal.        
 Put your `ADetailer` models in `sd-webui-forge-neo\\models\\adetailer` or `stable-diffusion-webui\\models\\adetailer`       
@@ -313,21 +308,18 @@ In case you didn't like wildcards file or json/csv wildcard, try the following i
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/wildcards.png" width=35%>   
 
-## Regional Condition 
+## Regional Condition / Couple 
+> [!TIP]
+> Now supports Anima model          
+> 
+
 Try SAA Regional Condition with only 3 steps:     
 1. Click the `Regional Condition` Checkbox     
 2. Choose listed character or your OC      
 3. Start `common prompt` with `duo, masterpiece, best quality, amazing quality`(Don't forget quality words like me), have fun!     
 
-*For ComfyUI*      
-Get tired of [complex workflow](https://github.com/mirabarukaso/ComfyUI_Mira/issues/12#issuecomment-2727190727)?      
-
-*For A1111/Forge Neo*      
-`Regional Confition` requires [sd-webui-regional-prompter](https://github.com/hako-mikan/sd-webui-regional-prompter)          
-
-> [!NOTE]
-> `Image Left/Right Ratio` is the only working parameter for A1111         
-> The generated results may differ significantly from those using ComfyUI      
+*For Forge Neo*      
+`Regional Condition` requires [SD Forge Attention Couple](https://github.com/Haoming02/sd-forge-couple) [latest](https://github.com/Haoming02/sd-forge-couple/commits/main/)    
 
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/regionalCondition.png" width=35%>   
@@ -368,13 +360,15 @@ To apply the `Artist` tag in `Anima Model`, you need to add an `@` symbol at the
 </details>
 
 ## Image info
-Drag and drop your image into SAA window, supports Png/Jpeg/Webp.     
-Works both for WebUI(A1111) and ComfyUI(with image save node from ComfyUI_Mira).      
+<details>
+<summary>Drag and drop your image into SAA window, supports Png/Jpeg/Webp.</summary>             
+Works WebUI(Forge Neo and A1111) and ComfyUI(with image save node from ComfyUI_Mira).      
 Double click the image to close.     
 The `Send` button will override `Common Prompt`, `Negative Prompt`, `Width & Height`, `CFG`, `Setp` and `Seed`.    
 LoRA in `Common Prompt` also works if you have the same one. If you don't like LoRA in prompts, try `Send LoRA to Slot`.      
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/imageInfo.png" width=45%>   
+</details>
 
 ## Character List
 ### Favorite Character List
@@ -410,7 +404,7 @@ Once got result from Remote/Local AI, an information overlay will show in screen
 
 **Copy Image/Metadata**     
 Right click on `Gallery` to copy current image or copy the metadata to clipboard.     
-ComfyUI with Image Saver node will output an a1111 like metadata.      
+ComfyUI with Image Saver node will output an a1111-like format metadata.      
 Copy image based on convert base64 data back to png, but metadata trimed by chromium core, it's impossible to put them back with chromium API, a C based lib could solve that problem, but it's not worth to do. If you do need the original image, check from the relevant (ComfyUI/WebUI) output folder.      
 For SAAC: Drag and drop image from browser to local folder or `save as` from browser right click.        
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/copyImage.png" width=35%>
@@ -453,7 +447,7 @@ My setup:
 py ComfyUI\main.py --fast --use-sage-attention --cuda-malloc --windows-standalone-build --listen 0.0.0.0 --port 58188 --preview-method latent2rgb
 ```
 
-*For WebUI(A111/Forge neo)*     
+*For Forge Neo(WebUI)*     
 1. Enable `API mode` by add ` --api` in `COMMANDLINE_ARGS` (webui-user.bat)   
 2. Start WebUI       
 3. Select `Image API Interface` to `WebUI`   
@@ -463,7 +457,7 @@ py ComfyUI\main.py --fast --use-sage-attention --cuda-malloc --windows-standalon
 ## Custom path for some 3rd party mixed backend       
 > [!WARNING]
 > Enable custom path will override your model path settings.     
-> Not recommend for official WebUI(A1111/Forge) and ComfyUI.      
+> Not recommend for official WebUI(Forge Neo/A1111) and ComfyUI.      
 To enable a custom path, modify the file `data/custom_path.yaml`.       
 1. Set `use_custom_path` to `true`      
 2. Set `enable` to `false` to disable whole category        
@@ -482,9 +476,9 @@ There are two ways to solve this problem:
 ## Advanced security settings (API authentication)    
 > [!WARNING]
 > *DO NOT forward any UNSECURED local port to public internet*    
-> *WebUI(A1111) ONLY, DO NOT forward Comfyui API to public internet until they create a proper and secured way*    
+> *WebUI(Forge Neo) ONLY, DO NOT forward Comfyui API to public internet until they create a proper and secured way*    
 
-Check more WebUI(A1111) command args at [Command-Line-Arguments-and-Settings](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Command-Line-Arguments-and-Settings)     
+Check more WebUI(Forge Neo) command args at [Command-Line-Arguments-and-Settings](https://github.com/AUTOMATIC1111/stable-diffusion-webui/wiki/Command-Line-Arguments-and-Settings)     
 
 Copy your `webui-user.bat` to `webui-user-api.bat` then edit it with following args.     
 Replace `user:pass` to your `Username:Password`     
@@ -494,7 +488,7 @@ Replace `user:pass` to your `Username:Password`
 ```
 set COMMANDLINE_ARGS= --xformers --no-half-vae --api --api-auth user:pass --nowebui --port 58189
 ```
-Start your A1111 with new `webui-user-api.bat`    
+Start your Forge Neo with new `webui-user-api.bat`    
 Copy and paste your `Username:Password` to SAA->Settings->`WebUI API Auth`, then set `Enable` to `ON`    
 
 ------
@@ -507,11 +501,11 @@ Makesure all upscaler models located in `upscale_models` folder.
 Notes for ComfyUI:        
 Comfyui needs to download upscale models by yourself. Select `Manager`->`Model Manager` and filter with `upscale`, then download them.   
 
-Upscaler notes for A1111/Forge:        
-A1111 uses a name-based upscaler model list. The `static upscaler list` should work, and will update to API list after the first generate.             
+Upscaler notes for WebUI(Forge Neo/A1111):        
+WebUI uses a name-based upscaler model list. The `static upscaler list` should work, and will update to API list after the first generate.             
 
 Forge uses a file-based upscaler model list. But it's messy! 
-  **IMPORTANT: If the upscale_models folder is NOT exist, SAA will use static upscaler list as A1111**  
+  **IMPORTANT: If the upscale_models folder is NOT exist, SAA will use static upscaler list**  
   **If you're confused about how to do it, don't panic—just run generate once, and HiFix model list will update properly.**          
   The solution:   
   1. Create a folder called `upscale_models` inside the `models` folder and put all your upscaler models in it.              

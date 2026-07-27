@@ -205,9 +205,9 @@ class WebUI {
                 optionPayload[vae_key] = vae.vae;
 
             if(img_prefix !== '[date]') {
-                console.error(CAT, 'Override directories_filename_pattern with:', img_prefix);
-                optionPayload["directories_filename_pattern"] = img_prefix;
+                console.error(CAT, 'Override directories_filename_pattern with:', img_prefix);                
             }
+            optionPayload["directories_filename_pattern"] = img_prefix;
 
             const body = JSON.stringify(optionPayload);
             const apiUrl = `http://${this.addr}/sdapi/v1/options`;
@@ -267,16 +267,41 @@ class WebUI {
         });
     }
 
+    create_override_settings_Forge(model, unet, vae, img_prefix = '[date]') {
+        let override_settings = {};
+        if(model) {
+            if(model !== 'Default')
+                override_settings["sd_model_checkpoint"] = model;
+        }
+        
+        if (unet?.enable) {
+            override_settings["sd_model_checkpoint"] = vae.model; 
+            override_settings["forge_additional_modules"] = [unet.clip_model, unet.vae_model];
+        }
+
+        if (vae?.vae_override)
+            override_settings["forge_additional_modules"] = vae.vae;
+
+        if(img_prefix !== '[date]') {
+            console.error(CAT, 'Override directories_filename_pattern with:', img_prefix);                
+        }
+        override_settings["directories_filename_pattern"] = img_prefix;
+
+        return override_settings;
+    }
+
     async run (generateData) {
         return new Promise((resolve, reject) => {
             const {addr, auth, uuid, model, vpred, positive, negative, width, height, 
-                cfg, step, seed, sampler, scheduler, refresh, hifix, refiner, controlnet, adetailer} = generateData;
+                cfg, step, seed, sampler, scheduler, refresh, hifix, refiner, controlnet, adetailer, img_prefix} = generateData;
             this.addr = addr;
             this.refresh = refresh;
             this.lastProgress = -1;
             this.vpred = vpred;
             this.auth = auth;
             this.uuid = uuid;
+
+            const override_settings = this.create_override_settings_Forge(model, generateData?.unet, generateData?.vae, img_prefix);
 
             backendWebUI.startPolling();
 
@@ -292,7 +317,15 @@ class WebUI {
                 "seed": seed,
                 "cfg_scale": cfg,
                 "save_images": true,
-                "alwayson_scripts": {},
+                "alwayson_scripts": {},                
+            }
+
+            if(this.isForge) {
+                payload = {
+                    ...payload,
+                    "override_settings_restore_afterwards": true,
+                    "override_settings": override_settings,
+                }
             }
 
             if (hifix?.enable){
@@ -399,7 +432,7 @@ class WebUI {
         return new Promise((resolve, reject) => {
             const {addr, auth, uuid, model, vpred, positive_left, positive_right, negative, 
                     width, height, cfg, step, seed, sampler, scheduler, refresh, 
-                    hifix, refiner, regional, controlnet, adetailer} = generateData;
+                    hifix, refiner, regional, controlnet, adetailer, img_prefix} = generateData;
             this.addr = addr;
             this.refresh = refresh;
             this.lastProgress = -1;
@@ -407,8 +440,15 @@ class WebUI {
             this.auth = auth;
             this.uuid = uuid;
 
-            const positive = positive_left + "\nBREAK\n" + positive_right;
-            const ratio = regional.ratio;
+            const override_settings = this.create_override_settings_Forge(model, generateData?.unet, generateData?.vae, img_prefix);
+
+            // Forge Couple requires SINGLE line for each character with common prompt
+            const positive = positive_left.replaceAll('\n', '').trim() + "\n" + positive_right.replaceAll('\n', '').trim();
+            const ratioes = regional.ratio.split(',');
+            const ratio_left = Number.parseFloat(ratioes[0]);
+            const ratio_right = Number.parseFloat(ratioes[1]);
+            const weight_left = Number.parseFloat(regional.str_left);
+            const weight_right = Number.parseFloat(regional.str_right);
 
             backendWebUI.startPolling();            
 
@@ -425,30 +465,50 @@ class WebUI {
                 "cfg_scale": cfg,
                 "save_images": true,
                 "alwayson_scripts": {
-                    "Regional Prompter": {
+                    "forge couple": {
                         "args": [
-                            true,           // Active
-                            false,          // debug
-                            'Matrix',       // Mode (Matrix, Mask, Prompt)
-                            'Columns',      // Mode (Matrix)  (Horizontal, Vertical, Columns, Rows)
-                            'Mask',         // Mode (Mask) (Mask)
-                            'Prompt',       // Mode (Prompt) (Prompt, Prompt-Ex)
-                            ratio,          // Ratios
-                            "",             // Base Ratios
-                            false,          // Use Base
-                            false,          // Use Common
-                            false,          // Use Neg-Common
-                            'Attention',    // Calcmode (Attention, Latent)
-                            false,          // Not Change AND
-                            '0',            // LoRA Textencoder
-                            '0',            // LoRA U-Net
-                            '0',            // Threshold
-                            "",             // Mask
-                            '0',            // LoRA stop step
-                            '0',            // LoRA Hires stop step
-                            false,          // flip
+                            true,           // enable
+                            true,           // disable_hr
+                            'Advanced',     // Mode ("Basic" | "Advanced" | "Mask")
+                            "\n",           // separator \n
+                            'Vertical',     // direction ("Horizontal" | "Vertical")
+                            null,           // background
+                            null,           // background_weight
+                            [               // mapping
+                                [
+                                    0.0,        // x1
+                                    ratio_left, // x2
+                                    0.0,        // y1
+                                    1.0,        // y2
+                                    weight_left // weight
+                                ],
+                                [
+                                    ratio_right,   
+                                    1.0,
+                                    0.0,
+                                    1.0,
+                                    weight_right
+                                ]
+                            ],              // mapping
+                            "{ }",          // common_parser
+                            false,          // common_debug
+                            true,           // def_in_prompt
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
+                            null,
                         ]
                     },
+                },
+            }
+
+            if(this.isForge) {
+                payload = {
+                    ...payload,
+                    "override_settings_restore_afterwards": true,
+                    "override_settings": override_settings,
                 }
             }
 
@@ -951,8 +1011,16 @@ async function runWebUI(generateData){
 
     await refreshModelLists(generateData);
     
-    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
-        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, generateData?.unet, generateData.img_prefix);
+    let result = '';
+    if(!backendWebUI.isForge) {
+        // legacy A1111 set options
+        // Forge neo  use override_settings in run
+        result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
+            generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null, generateData.img_prefix);
+    } else {
+        result = '200';
+    }
+    
     if(result === '200') {
         try {
             if(backendWebUI.uuid !== 'none')
@@ -996,9 +1064,17 @@ async function runWebUI_Regional(generateData){
     cancelMark = false;
 
     await refreshModelLists(generateData);
-    
-    const result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
-        generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null, generateData.img_prefix);
+
+    let result = '';
+    if(!backendWebUI.isForge) {
+        // legacy A1111 set options
+        // Forge neo  use override_settings in run
+        result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
+            generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null, generateData.img_prefix);
+    } else {
+        result = '200';
+    }
+
     if(result === '200') {
         try {
             if(backendWebUI.uuid !== 'none')

@@ -1,4 +1,11 @@
-2026.07.26 v2.8.4      
+2026.07.27 v2.8.5               
+Add `Regional Condition` now supports `Diffusion` models           
+Bugfix, `Image Save Path Prefix` not restore to default value for `Forge Neo` when`Embedding` is `un-checked` #101       
+Change, Switch to `ADetailer Neo` and `SD Forge Attention Couple` for `Forge Neo`        
+Change, Remove `A1111` from support list due to a lack of maintenance over a long period        
+
+
+2026.07.26 v2.8.4       
 Change `Image Save Path Prefix` now supports `Random` #101          
 
 
