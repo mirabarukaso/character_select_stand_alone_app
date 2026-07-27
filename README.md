@@ -16,12 +16,13 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(W
 | Image Color Transfer (ALL) | Yes | No |
 | Regional Condition / Couple (SDXL/Anima) | Yes | Yes |
 | ControlNet/IPA (SDXL) | Yes | Yes |
-| ADetailer (SDXL) | Yes | Yes |
+| ADetailer (ALL) | Yes | Yes |
 | API authentication| No | Yes |
 | MiraITU | Yes | No |
 
 > [!IMPORTANT]
-> Regional Condition on `Forge Neo` supports `SDXL and Anima`, on `ComfyUI` should support more `diffusion models` need to verify             
+> `Regional Condition / Couple` and `ADetailer` on `Forge Neo` supports `SDXL and Anima`
+> on `ComfyUI` should support all SAA supports `diffusion models` need to verify          
 >
 > *ComfyUI Desktop not support SAA*       
 > *Removed A1111 from support list due to a lack of maintenance, A1111 still working with SAA, but will not test on it*        
@@ -254,14 +255,14 @@ Also support check LoRA info by click the 'i' button in LoRA Slot. And, if there
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/loraSlot.png" width=45%>   
 
 ## ADetailer
+> [!TIP]
+> If the settings are too confusing, just remember to adjust the gold parameter in the bottom-right corner (Denoise).
+
+*For ComfyUI*      
 > [!CAUTION]
 > Check before you download any .pt file from unknown/untrusted site!
 > https://github.com/ltdrdata/ComfyUI-Impact-Pack/issues/843
 
-> [!NOTE]
-> If the settings are too confusing, just remember to adjust the gold parameter in the bottom-right corner (Denoise).
-
-*For ComfyUI*      
 `ADetailer` requires [Impact Pack](https://github.com/ltdrdata/ComfyUI-Impact-Pack) 8.28.3 [latest](https://github.com/ltdrdata/ComfyUI-Impact-Pack/commit/429d0159ad429e64d2b3916e6e7be9c22d025c3c) and [Impact Subpack](https://github.com/ltdrdata/ComfyUI-Impact-Subpack) [latest](https://github.com/ltdrdata/ComfyUI-Impact-Subpack/commit/50c7b71a6a224734cc9b21963c6d1926816a97f1)       
 Put your `ADetailer` models in `ComfyUI\\models\\ultralytics\\bbox`      
 Put your `SAM` models in `ComfyUI\\models\\sams`      

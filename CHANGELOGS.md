@@ -1,3 +1,8 @@
+2026.07.28 v2.8.6               
+Add `ADetailer` now supports `Diffusion` models           
+Bugfix, `Diffusion VAE` mismach when switch settings with difference backend        
+
+
 2026.07.27 v2.8.5               
 Add `Regional Condition` now supports `Diffusion` models           
 Bugfix, `Image Save Path Prefix` not restore to default value for `Forge Neo` when`Embedding` is `un-checked` #101       

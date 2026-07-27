@@ -37,9 +37,7 @@ export async function callback_mySettingList(index, selectedValue) {
     globalThis.globalSettings = structuredClone(globalSettings);
 
     doSwap(globalThis.globalSettings.rightToleft);    
-    await reloadFiles()
-    updateLanguage(true, globalThis.inBrowser); 
-    updateSettings();
+    await reloadFiles()    
 
     // update thumbnail selection if it has changed
     if(lastThumbSelect !== globalThis.globalSettings.thumb_select){
@@ -48,12 +46,8 @@ export async function callback_mySettingList(index, selectedValue) {
     
     if(old_css !== globalThis.globalSettings.css_style)
         applyTheme(globalThis.globalSettings.css_style);
-    
-    // reLoad slots stuff: LoRA, aDetailer
-    flushSlots();
 
     const new_settings_name = value.slice(0, -5);
-
     // check favorite list
     const new_fav = compareAndMergeFavoriteLists(lastFavList, globalThis.globalSettings.fav_characters);
     if(new_fav) {
@@ -91,10 +85,7 @@ export async function callback_mySettingList(index, selectedValue) {
         else if(result === 1) // overwrite
             globalThis.globalSettings.fav_characters = lastFavList;            
         // replace  0
-    }
-
-    // Done
-    globalThis.initialized = true;
+    }    
 
     // The interface has changed!
     if(globalThis.globalSettings.api_interface !== lastApiInterface) {
@@ -102,8 +93,17 @@ export async function callback_mySettingList(index, selectedValue) {
         await callback_api_interface(0, [globalThis.globalSettings.api_interface]);
     }
 
+    updateLanguage(true, globalThis.inBrowser); 
+    updateSettings();
+
+    // reLoad slots stuff: LoRA, aDetailer
+    flushSlots();    
+
     callback_ptompt_textbox_fontsize(globalThis.globalSettings.ptompt_textbox_fontsize);
     callback_ptompt_textbox_autoresize(globalThis.globalSettings.ptompt_textbox_autoresize);    
+
+    // Done
+    globalThis.initialized = true;
     setNormal();
 
     globalThis.dropdownList.settings.updateDefaults(value);
@@ -142,7 +142,7 @@ export async function callback_api_model_type(index, selectedValue) {
 
         globalThis.generate.controlnet.setEnable(true);
 
-        globalThis.generate.adetailer.setEnable(true);
+        //globalThis.generate.adetailer.setEnable(true);
     } else {
         globalThis.dropdownList.model.setValue(LANG.api_diffusion_model, globalThis.cachedFiles.diffusionList);
         globalThis.dropdownList.model.setTitle(LANG.api_diffusion_model);
@@ -156,8 +156,8 @@ export async function callback_api_model_type(index, selectedValue) {
         globalThis.generate.controlnet.setValue(false);
         globalThis.generate.controlnet.setEnable(false);
 
-        globalThis.generate.adetailer.setValue(false);
-        globalThis.generate.adetailer.setEnable(false);
+        //globalThis.generate.adetailer.setValue(false);
+        //globalThis.generate.adetailer.setEnable(false);
     }
 }
 

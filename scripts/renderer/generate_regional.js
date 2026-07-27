@@ -516,9 +516,9 @@ export async function generateRegionalImage(dataPack){
             refiner: refiner,
             regional: regional,
             vae: {vae_override: vae_override, vae: vae},
+            adetailer: createADetailer(apiInterface),
             ...(SETTINGS.api_model_type === 'Checkpoint' ? {                
-                controlnet: createControlNet(),
-                adetailer: createADetailer(apiInterface),                
+                controlnet: createControlNet(),                
             } : {
                 unet: {
                     enable: true,

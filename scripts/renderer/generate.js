@@ -1005,15 +1005,15 @@ export async function generateImage(dataPack){
             step: globalThis.generate.step.getValue(),
             seed: createPromptResult.randomSeed,
             sampler: globalThis.generate.sampler.getValue(),
-            scheduler: globalThis.generate.scheduler.getValue(),            
+            scheduler: globalThis.generate.scheduler.getValue(),
+            hifix: hifix,
+            adetailer: createADetailer(apiInterface),
+            vae: {vae_override: vae_override, vae: vae},
             ...(SETTINGS.api_model_type === 'Checkpoint' ? {
                 model: globalThis.dropdownList.model.getValue(),
-                vpred: checkVpred(),
-                hifix: hifix,
+                vpred: checkVpred(),                
                 refiner: refiner,
-                controlnet: createControlNet(),
-                adetailer: createADetailer(apiInterface),
-                vae: {vae_override: vae_override, vae: vae},
+                controlnet: createControlNet(),                                
             } : {
                 unet: {
                     enable: true,
@@ -1024,7 +1024,6 @@ export async function generateImage(dataPack){
                     clip_type: globalThis.dropdownList.textencoder_type.getValue(),
                     clip_device: globalThis.dropdownList.textencoder_device.getValue(),
                 },
-                hifix: hifix,
             }),
 
             img_prefix: getImageSavePrefix(apiInterface, createPromptResult.img_prefix)

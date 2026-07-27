@@ -398,7 +398,7 @@ function applyControlnet(workflow, controlnet, workflowInfo){
   return {workflowCN:workflow, indexCN:index};
 }
 
-function applyADetailer(workflow, adetailers, workflowInfo){
+function applyADetailer(workflow, adetailers, workflowInfo) {
   const {startIndex, refiner, hiresfix} = workflowInfo;
   let index =startIndex + 1;
   const modelUSE = refiner?43:45; // 45: default   43: refiner
@@ -503,6 +503,145 @@ function applyADetailer(workflow, adetailers, workflowInfo){
         "vae": [
           `${modelUSE}`,
           2
+        ],
+        "positive": [
+          `${index + 2}`,
+          0
+        ],
+        "negative": [
+          `${index + 3}`,
+          0
+        ],
+        "bbox_detector": [
+          `${index + 1}`,
+          0
+        ],
+        "sam_model_opt": [
+          `${index}`,
+          0
+        ]
+      },
+      "class_type": "FaceDetailer",
+      "_meta": {
+        "title": "FaceDetailer"
+      }
+    };
+
+    // set output to imagesaver
+    workflow["29"].inputs.images = [`${index + 4}`, 0];
+
+    // move next
+    imageVAED = index + 4;
+    index = index + 4 + 1;    
+  }
+
+  return workflow;
+}
+
+function applyADetailerUnet(workflow, adetailers, workflowInfo) {
+  const {startIndex, model, clip, vae, hiresfix, colorTransfer=28, normalVae=6} = workflowInfo;
+  let index = startIndex + 1;
+  let imageVAED = hiresfix?colorTransfer:normalVae; 
+  const randomSeed = globalThis.crypto.getRandomValues(new Uint32Array(1))[0]; // 4294967296 = 2^32
+
+  for(const adetailer of adetailers) {
+    if(adetailer.mask_filter_method === 'Off')
+      continue;    
+
+    workflow[`${index}`] = {
+      "inputs": {
+        "model_name": adetailer.mask_filter_method,
+        "device_mode": "AUTO"
+      },
+      "class_type": "SAMLoader",
+      "_meta": {
+        "title": "SAMLoader (Impact)"
+      }
+    };
+
+    workflow[`${index + 1}`] = {
+      "inputs": {
+        "model_name": adetailer.model
+      },
+      "class_type": "UltralyticsDetectorProvider",
+      "_meta": {
+        "title": "UltralyticsDetectorProvider"
+      }
+    };
+
+    workflow[`${index + 2}`] = {
+      "inputs": {
+        "text": adetailer.prompt,
+        "clip": [
+          `${clip}`,
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Prompt)"
+      }
+    };
+
+    workflow[`${index + 3}`] = {
+      "inputs": {
+        "text": adetailer.negative_prompt,
+        "clip": [
+          `${clip}`,
+          0
+        ]
+      },
+      "class_type": "CLIPTextEncode",
+      "_meta": {
+        "title": "CLIP Text Encode (Prompt)"
+      }
+    };
+
+    workflow[`${index + 4}`] = {
+      "inputs": {
+        "guide_size": 512,
+        "guide_size_for": true,
+        "max_size": 1024,
+        "seed": randomSeed,
+        "steps": 20,
+        "cfg": 8,
+        "sampler_name": "euler_ancestral",
+        "scheduler": "normal",
+        "denoise": adetailer.denoise,
+        "feather": adetailer.mask_blur,
+        "noise_mask": true,
+        "force_inpaint": true,
+        "bbox_threshold": adetailer.confidence,
+        "bbox_dilation": adetailer.dilate_erode,
+        "bbox_crop_factor": 3,
+        "sam_detection_hint": `${adetailer.mask_merge_invert}`,
+        "sam_dilation": 0,
+        "sam_threshold": 0.93,
+        "sam_bbox_expansion": 0,
+        "sam_mask_hint_threshold": 0.7,
+        "sam_mask_hint_use_negative": "False",
+        "drop_size": 10,
+        "wildcard": "",
+        "cycle": 1,
+        "inpaint_model": false,
+        "noise_mask_feather": 20,
+        "tiled_encode": false,
+        "tiled_decode": false,
+        "image": [
+          `${imageVAED}`,
+          0
+        ],
+        "model": [
+          `${model}`,
+          0
+        ],
+        "clip": [
+          `${clip}`,
+          0
+        ],
+        "vae": [
+          `${vae}`,
+          0
         ],
         "positive": [
           `${index + 2}`,
@@ -1118,7 +1257,7 @@ class ComfyUI {
   createWorkflowUNet(generateData) {
     const {addr, auth, uuid, refresh, positive, negative, 
       width, height, cfg, step, seed, sampler, scheduler,  
-      unet, hifix, img_prefix} = generateData;
+      unet, hifix, adetailer, img_prefix} = generateData;
 
     this.addr = addr;
     this.refresh = refresh;
@@ -1235,6 +1374,17 @@ class ComfyUI {
       delete workflow["62"];
     }
 
+    // default pos and neg to ksampler
+    let workflowInfo = {
+      startIndex: 62,
+      model:      51,
+      clip:       50,
+      vae:        52,
+      colorTransfer: 58,
+      hiresfix:   hifix.enable
+    };
+
+    workflow = applyADetailerUnet(workflow, adetailer, workflowInfo);
     return workflow;
   }
 
@@ -1437,7 +1587,7 @@ class ComfyUI {
   createWorkflowRegionalUnet(generateData) {
     const {addr, auth, uuid, positive_left, positive_right, negative, 
       width, height, cfg, step, seed, sampler, scheduler, refresh, 
-      hifix, regional, img_prefix, unet} = generateData;
+      hifix, regional, adetailer, img_prefix, unet} = generateData;
 
     this.addr = addr;
     this.refresh = refresh;
@@ -1578,6 +1728,18 @@ class ComfyUI {
       // Image Save set to 1st VAE Decode
       workflow["29"].inputs.images = ["6", 0];
     }
+
+    // default pos and neg to ksampler
+    let workflowInfo = {
+      startIndex: 63,
+      model:      59,
+      clip:       60,
+      vae:        61,
+      colorTransfer: 28,
+      hiresfix:   hifix.enable
+    };
+
+    workflow = applyADetailerUnet(workflow, adetailer, workflowInfo);
 
     return workflow;
   }
