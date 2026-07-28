@@ -127,6 +127,7 @@
         "api_hf_incorrect_upscaler": "Incorrect Upscaler selected, reset to default {}",
         "api_hf_random_seed":"HF Random Seed (ComfyUI)",
         "api_hf_steps":"HF Steps",
+        "api_hf_message": "<span>[Width x Height x Scale] {0} x {1} x {2} = {3} x {4} = {5}M</span>",
         
         "api_refiner_enable":"Enable Refiner",
         "api_refiner_model":"Refiner Model",
@@ -438,6 +439,7 @@
         "api_hf_incorrect_upscaler": "选择了错误的高清模型，使用默认 {}",
         "api_hf_random_seed":"高修随机种子(ComfyUI)",
         "api_hf_steps":"高修步数",
+        "api_hf_message": "<span>[宽 x 高 x 高修倍率] {0} x {1} x {2} = {3} x {4} = {5}M</span>",
         
         "api_refiner_enable":"启用切换降噪 Refiner",
         "api_refiner_model":"切换降噪模型",

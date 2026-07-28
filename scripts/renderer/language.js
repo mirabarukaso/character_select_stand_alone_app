@@ -1,5 +1,7 @@
 import { callback_api_model_type, callback_regional_condition } from './callbacks.js';
- const CAT = '[Language]'
+import { hiresCalculate } from './tools/hiresCalculation.js';
+
+const CAT = '[Language]'
 
 export const SAMPLER_COMFYUI = ["euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2", "exp_heun_2_x0", "exp_heun_2_x0_sde", "dpm_2", "dpm_2_ancestral",
                   "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_2s_ancestral_cfg_pp", "dpmpp_sde", "dpmpp_sde_gpu",
@@ -12,7 +14,7 @@ export const  SAMPLER_WEBUI = ["DPM++ 2M", "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 3
     "Euler a", "Euler", "ER SDE", "LCM", "LMS", "Heun", "DPM2", "Res Multistep", "Kohaku LoNyu Yog", "Restart", "UniPC",
     "DIMM", "PLMS", "DPM++ 2M CFG++", "Euler a CFG++", "Euler CFG++"];
 export const SCHEDULER_WEBUI = ["Automatic", "Karras", "Exponential", "Polyexponential", "Normal", "Simple", "Uniform", "SGM Uniform",
-    "Linear Quadratic", "KL Optimal", "DDIM", "Align Your Steps", "Beta", "Turbo", "Bong Tangent", "FlowMatchEulerDiscrete"];
+    "Linear Quadratic", "KL Optimal", "DDIM", "Align Your Steps", "Beta", "Turbo", "Bong Tangent", "FlowMatchEulerDiscrete"];    
 
 function safeCheck(){
     if (!globalThis.cachedFiles.language || !globalThis.globalSettings.language) {
@@ -207,6 +209,8 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     }
 
     globalThis.imageInfo.updateHintText(LANG.image_info_drag_hint_top, LANG.image_info_drag_hint_bottom);
+
+    hiresCalculate();
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity

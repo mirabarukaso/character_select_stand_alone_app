@@ -29,6 +29,7 @@ import { extractHostPort } from './renderer/generate.js';
 import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE } from './types.js';
 import { flushSlots } from './renderer/slots/slotsManager.js';
 import { set_prompt_textBox_Heights } from './renderer/components/componentsManager.js';
+import { hiresCalculate } from './renderer/tools/hiresCalculation.js';
 
 function afterDOMinit() {
     (async () => {
@@ -155,8 +156,8 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         seed: setupSlider('generate-random-seed', LANG.random_seed, {min:-1, max:4294967295, step:1, defaultValue:SETTINGS.random_seed}, (value) =>{globalThis.globalSettings.random_seed = value;}),
         cfg: setupSlider('generate-cfg', LANG.cfg, {min:0, max:20, step:0.01, defaultValue:SETTINGS.cfg}, (value) =>{globalThis.globalSettings.cfg = value;}),
         step: setupSlider('generate-step', LANG.step, {min:1, max:100, step:1, defaultValue:SETTINGS.step}, (value) =>{globalThis.globalSettings.step = value;}),
-        width: setupSlider('generate-width', LANG.width, {min:512, max:2048, step:8, defaultValue:SETTINGS.width}, (value) =>{globalThis.globalSettings.width = value;}),
-        height: setupSlider('generate-height', LANG.height, {min:512, max:2048, step:8, defaultValue:SETTINGS.height}, (value) =>{globalThis.globalSettings.height = value;}),
+        width: setupSlider('generate-width', LANG.width, {min:512, max:2048, step:8, defaultValue:SETTINGS.width}, (value) =>{globalThis.globalSettings.width = value; hiresCalculate(); }),
+        height: setupSlider('generate-height', LANG.height, {min:512, max:2048, step:8, defaultValue:SETTINGS.height}, (value) =>{globalThis.globalSettings.height = value; hiresCalculate(); }),
         batch: setupSlider('generate-batch', LANG.batch, {min:1, max:2038, step:1, defaultValue:SETTINGS.batch}, (value) =>{globalThis.globalSettings.batch = value;}),
         hifix: setupCheckbox('generate-hires-fix', LANG.api_hf_enable, SETTINGS.api_hf_enable, true, (value) => { globalThis.globalSettings.api_hf_enable = value; globalThis.generate.hifix_dummy.setValue(value);}),
         hifix_dummy: setupCheckbox('generate-hires-fix-dummy', LANG.api_hf_enable, SETTINGS.api_hf_enable, true, (value) => { globalThis.globalSettings.api_hf_enable = value; globalThis.generate.hifix.setValue(value);}),
@@ -355,7 +356,7 @@ export async function createHifixRefiner(SETTINGS, FILES, LANG) {
         randomSeed: setupCheckbox('hires-fix-random-seed',LANG.api_hf_random_seed, SETTINGS.api_hf_random_seed, true, 
             (value) => { globalThis.globalSettings.api_hf_random_seed = value; }),
         scale: setupSlider('hires-fix-scale', LANG.api_hf_scale, {min:1, max:2, step:0.1, defaultValue:SETTINGS.api_hf_scale}, 
-            (value) => { globalThis.globalSettings.api_hf_scale = value; }),
+            (value) => { globalThis.globalSettings.api_hf_scale = value; hiresCalculate(); }),
         denoise: setupSlider('hires-fix-denoise', LANG.api_hf_denoise, {min:0.1, max:1, step:0.01, defaultValue:SETTINGS.api_hf_denoise}, 
             (value) => { globalThis.globalSettings.api_hf_denoise = value; }),
         steps: setupSlider('hires-fix-steps', LANG.api_hf_steps, {min:1, max:100, step:1, defaultValue:SETTINGS.api_hf_steps},

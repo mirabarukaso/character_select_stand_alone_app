@@ -83,10 +83,12 @@ export const sharedBodyHTML = `
 
           <div class="system-settings-container">
             <div class="system-settings-header">
+              <div class="hires-fix-resolution">
+                <span></span>
+              </div>
               <div></div>
-              <div></div>
-              <div class="system-settings-header-span">
-                <span id="system-settings-span"></span>
+              <div class="system-settings-header-span">                
+                <span id="system-settings-span">🛠</span>
                 <img id="system-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
               </div>
             </div>

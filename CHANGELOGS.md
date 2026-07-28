@@ -1,3 +1,8 @@
+2026.07.29 v2.8.7               
+Add `Hires Calculate`         
+Bugfix       
+
+
 2026.07.28 v2.8.6               
 Add `ADetailer` now supports `Diffusion` models           
 Bugfix, `Diffusion VAE` mismach when switch settings with difference backend        
