@@ -46,8 +46,7 @@ export function parseGenerationParameters(metadata) {
       return result;
     }
   
-    const { positivePrompt, negativePrompt, otherParams } = parsePrompts(metadata);        
-    return assignResults(result, positivePrompt, negativePrompt, otherParams);
+    return parsePrompts(metadata, result);
 }
 
 function extractBasicMetadata(metadata) {
@@ -71,39 +70,44 @@ function isValidGenerationParameters(metadata) {
     return false;
 }
 
-function parsePrompts(metadata) {
+function parsePrompts(metadata, result) {
     let paramString = '';
-    if (metadata.fileType === 'image/jpeg' || metadata.fileType === 'image/webp')
-    {
-        paramString = metadata.generationParameters.data;
+    if (metadata?.fileType === 'image/jpeg' || metadata?.fileType === 'image/webp') {
+        paramString = metadata?.generationParameters?.data || '';
+    } else if (metadata?.fileType === 'image/png') {
+        paramString = metadata?.generationParameters?.parameters || '';
     }
-    else if (metadata.fileType === 'image/png') {
-        paramString = metadata.generationParameters.parameters;
-    }        
-    
+
     const lines = paramString.split('\n').map(line => line.trim()).filter(Boolean);
-    let positivePrompt = [];
-    let negativePrompt = '';
+    let positivePromptLines = [];
+    let negativePromptLines = [];
     let otherParams = [];
     let inNegativePrompt = false;
 
     for (let i = 0; i < lines.length; i++) {
         const line = lines[i];
         if (line.startsWith('Negative prompt:')) {
-        inNegativePrompt = true;
-        negativePrompt = line.slice('Negative prompt:'.length).trim();
+            inNegativePrompt = true;
+            // get neg prompt and others
+            const content = line.slice('Negative prompt:'.length).trim();
+            if (content) negativePromptLines.push(content);
         } else if (line.startsWith('Steps:')) {
-        const remaining = lines.slice(i).join(', ');
-        otherParams = parseKeyValuePairs(remaining);
-        break;
+            const remaining = lines.slice(i).join(', ');
+            otherParams = typeof parseKeyValuePairs === 'function' ? parseKeyValuePairs(remaining) : remaining;
+            break;
         } else if (inNegativePrompt) {
-        negativePrompt += `, ${line}`;
+            negativePromptLines.push(line);
         } else {
-        positivePrompt.push(line);
+            positivePromptLines.push(line);
         }
     }
 
-    return { positivePrompt, negativePrompt, otherParams };
+    // as is
+    result.positivePrompt = positivePromptLines.join('\n');
+    result.negativePrompt = negativePromptLines.join('\n');
+    result.otherParams = otherParams.join('\n');
+    
+    return result;
 }
 
 function parseKeyValuePairs(input) {
@@ -138,16 +142,4 @@ function parseKeyValuePairs(input) {
         .filter(Boolean);
 }
 
-function assignResults(result, positivePrompt, negativePrompt, otherParams) {
-    if (positivePrompt.length > 0) {
-        result.positivePrompt = positivePrompt.join(', ');
-    }
-    if (negativePrompt) {
-        result.negativePrompt = negativePrompt;
-    }
-    if (otherParams.length > 0) {
-        result.otherParams = otherParams.join('\n');
-    }
-    return result;
-}
 
