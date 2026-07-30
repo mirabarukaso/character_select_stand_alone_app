@@ -41,6 +41,18 @@ const activeDropdownsRegistry = {
     }
 };
 
+// Call this after fav_characters is added to / removed from elsewhere in the app
+// (globalThis.globalSettings.fav_characters) so any currently-open dropdown list
+// re-renders its ✨ favorite marks immediately, instead of waiting for the next
+// time the list happens to be reopened.
+export function notifyFavoriteCharactersChanged() {
+    for (const instance of activeDropdownsRegistry.registry.values()) {
+        if (instance && typeof instance.refreshFavoriteMarks === 'function') {
+            instance.refreshFavoriteMarks();
+        }
+    }
+}
+
 function normalizeOptionText(value) {
     return String(value || '').trim().toLowerCase();
 }
@@ -269,7 +281,7 @@ export function myLanguageList(language) {
 
     const callback = (index, selectedValue) => {
         globalThis.globalSettings.language = selectedValue[0];
-        updateLanguage(false, globalThis.inBrowser);    
+        updateLanguage(false, globalThis.inBrowser);
     };
 
     const dropdown = createDropdown({
@@ -406,6 +418,11 @@ function createDropdown({
     let selectedKeys = new Array(dropdownCount).fill('');
     let selectedValues = new Array(dropdownCount).fill('');
     let numberValues = new Array(dropdownCount).fill('1.0');
+    // Tracks the parameters of the most recent _updateOptionsList render so that
+    // refreshFavoriteMarks() can redraw the currently-open list with fresh ✨ marks
+    // after fav_characters changes elsewhere.
+    let lastRenderedIndex = null;
+    let lastRenderedSearchText = null;
     
     // Create dropdown instance
     const dropdown = {
@@ -572,6 +589,11 @@ function createDropdown({
         
         // eslint-disable-next-line sonarjs/cognitive-complexity
         _updateOptionsList: function(activeIndex, searchText = null) {
+            // Remember the last render params so an external favorites-change
+            // notification can re-render this exact view (see refreshFavoriteMarks).
+            lastRenderedIndex = activeIndex;
+            lastRenderedSearchText = searchText;
+
             const existingItems = Array.from(optionsList.children);
             const fragment = document.createDocumentFragment();
             let currentOptions = [];
@@ -585,6 +607,9 @@ function createDropdown({
             } else {
                 currentOptions = filteredOptions[activeIndex];
             }
+
+            // Build the favorites lookup once per render instead of per item.
+            const favoriteSet = new Set(getSpecialSearchOptions());
     
             for (const [idx, option] of currentOptions.entries()) {
                 let item = existingItems[idx] || document.createElement('div');
@@ -598,7 +623,10 @@ function createDropdown({
                     textContent = option.key;
                 }
 
-                item.textContent = textContent;
+                const isFavorite = favoriteSet.has(normalizeOptionText(option.key)) ||
+                    favoriteSet.has(normalizeOptionText(option.value));
+                item.textContent = isFavorite ? `✨ ${textContent}` : textContent;
+                item.classList.toggle('mydropdown-item-favorite', isFavorite);
                 item.dataset.key = `${option.key}`; 
                 item.dataset.value = `${option.value || ''}`;
                 fragment.appendChild(item);
@@ -740,6 +768,16 @@ function createDropdown({
                 optionsList.addEventListener('mouseenter', optionsList._onMouseEnter, true);
                 optionsList.addEventListener('mouseleave', optionsList._onMouseLeave, true);
             }
+        },
+
+        // Re-renders the currently visible options list (if any) so that ✨ marks
+        // reflect the latest fav_characters state. Cheap no-op when this dropdown
+        // isn't open, so it's safe to call unconditionally from the global
+        // notifyFavoriteCharactersChanged() broadcast below.
+        refreshFavoriteMarks: function() {
+            if (lastRenderedIndex === null) return;
+            if (optionsList.style.display !== 'block') return;
+            this._updateOptionsList(lastRenderedIndex, lastRenderedSearchText);
         },
         
         _updateOptionsPosition: function(index) {

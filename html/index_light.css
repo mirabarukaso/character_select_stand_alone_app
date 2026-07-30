@@ -459,6 +459,15 @@ body {
     transition: background-color 0.2s ease;
 }
 
+.mydropdown-item.mydropdown-item-favorite {
+    color: #2e9716; 
+}
+
+.mydropdown-item.mydropdown-item-favorite:hover {
+    background-color: #5c392a;
+    color: #8cff00;
+}
+
 .mydropdown-number-input {
     width: 100%;
     min-width: 24px;

@@ -126,9 +126,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.landscape.setTitle(LANG.api_image_landscape);
     globalThis.generate.tag_assist.setTitle(LANG.tag_assist);
     globalThis.generate.wildcard_random.setTitle(LANG.wildcard_random);
-
-    globalThis.generate.sampler.setValue(LANG.api_model_sampler, globalThis.globalSettings.api_interface==='ComfyUI'?SAMPLER_COMFYUI:SAMPLER_WEBUI);
-    globalThis.generate.scheduler.setValue(LANG.api_model_scheduler, globalThis.globalSettings.api_interface==='ComfyUI'?SCHEDULER_COMFYUI:SCHEDULER_WEBUI);
+    
     globalThis.generate.sampler.setTitle(LANG.api_model_sampler);
     globalThis.generate.scheduler.setTitle(LANG.api_model_scheduler);
 

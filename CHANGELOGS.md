@@ -1,3 +1,7 @@
+2026.07.30 v2.8.8
+Add `Favorites List Mark ✨` and `Special color` for `Character List` #99             
+Bugfix
+
 2026.07.29 v2.8.7               
 Add `Hires Calculate`         
 Bugfix       

@@ -258,6 +258,12 @@ async function getCharacters(){
 
     for(let index=0; index < 4; index++) {
         let {tag, tag_assist, thumb, info, weight, characterName, neg_tags} = await createCharacters(index, seeds);
+        // Should not happen
+        if(tag.startsWith('✨ ')) {            
+            tag = tag.replace('✨ ', '');
+            console.log('remove fav mark ✨ for', tag);
+        }
+
         if (index === 0 || index === 2){
             character_left += parseCharacter(weight, tag);
             character_left += tag_assist;

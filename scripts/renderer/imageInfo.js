@@ -535,7 +535,7 @@ export function setupImageUploadOverlay() {
         const loraRegex = /<lora:[^>]+>/g;
         const loraMatches = extractedData.positivePrompt.match(loraRegex) || [];
         const allLora = loraMatches.join('\n');
-        const allPrompt = extractedData.positivePrompt.replaceAll(loraRegex, '').replaceAll(/,\s*,/g, ',').replaceAll(/(^,\s*)|(\s*,$)/g, '').trim();
+        const allPrompt = extractedData.positivePrompt.replaceAll(loraRegex, '').replaceAll(/,\s*,/g, ',').replaceAll(/(^,\s*)|(\s*,$)/g, '').trim(); //NOSONAR S8786
 
         globalThis.prompt.common.setValue(allPrompt || defaultPositivePrompt);
         globalThis.prompt.positive.setValue(allLora);

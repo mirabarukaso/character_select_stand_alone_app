@@ -1,4 +1,4 @@
-import { updateLanguage, updateSettings } from '../renderer/language.js'
+import { updateLanguage, updateSettings, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from '../renderer/language.js';
 import { setupButtonOverlay, customCommonOverlay } from '../renderer/customOverlay.js';
 import { toggleButtons, showCancelButtons } from '../renderer/components/myButtons.js';
 import { doSwap } from '../renderer/components/myCollapsed.js';
@@ -182,6 +182,8 @@ async function init() {
 
         // Update language and settings
         updateLanguage(true, globalThis.inBrowser); 
+        globalThis.generate.sampler.setValue(LANG.api_model_sampler, globalThis.globalSettings.api_interface==='ComfyUI'?SAMPLER_COMFYUI:SAMPLER_WEBUI);
+        globalThis.generate.scheduler.setValue(LANG.api_model_scheduler, globalThis.globalSettings.api_interface==='ComfyUI'?SCHEDULER_COMFYUI:SCHEDULER_WEBUI);
         updateSettings();
         
         // reLoad slots stuff: LoRA, aDetailer
