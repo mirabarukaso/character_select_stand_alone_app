@@ -381,7 +381,7 @@ LoRA in `Common Prompt` also works if you have the same one. If you don't like L
 
 *Merge/Overwrite/Replace*: So, when you switch settings files, you might find that the favourite lists aren't the same. An options dialogue box will pop up and ask you what you want to do next. It's a little annoying, but it will get better once you have merged all.         
 
-<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/favoriteList.png" width=65%>
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/favoriteList.png" width=25%>
 
 ### Preview and Search
 The Character List supports keywords search in both Chinese and English.      
