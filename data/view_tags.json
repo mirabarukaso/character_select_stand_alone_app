@@ -44,6 +44,9 @@
         "white background, simple background",
         "photo background",
         "abstract background",
+        "gradient background",
+        "gradient background, rounded corners, outside border",
+        "rounded corners, outside border",
         "screentones"
     ],
     "style":[
@@ -55,6 +58,7 @@
         "aged up",
         "anime coloring, anime screenshot",
         "chibi",
+        "petite",
         "colorful",
         "cyberpunk",
         "cyborg",
