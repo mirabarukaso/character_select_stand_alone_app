@@ -1,4 +1,8 @@
-2026.07.30 v2.8.8
+2026.08.14 v2.8.9     
+Bugfix, CFG parsed with INT  #103         
+
+
+2026.07.30 v2.8.8      
 Add `Favorites List Mark ✨` and `Special color` for `Character List` #99             
 Bugfix
 

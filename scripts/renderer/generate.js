@@ -1007,7 +1007,7 @@ export async function generateImage(dataPack){
             negative: createPromptResult.negativePrompt,
             width: width,
             height: height,
-            cfg: globalThis.generate.cfg.getValue(),
+            cfg: globalThis.generate.cfg.getFloat(),
             step: globalThis.generate.step.getValue(),
             seed: createPromptResult.randomSeed,
             sampler: globalThis.generate.sampler.getValue(),
