@@ -14,7 +14,8 @@
   },
   "devDependencies": {
     "adm-zip": "^0.6.0",
-    "electron": "^43.5.1"
+    "electron": "^43.5.1",
+    "qs": "^6.16.0"
   },
   "dependencies": {
     "async-mutex": "^0.5.0",
