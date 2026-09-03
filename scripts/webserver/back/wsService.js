@@ -140,7 +140,7 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
           contentSecurityPolicy: {
               directives: {
                   defaultSrc: ["'self'"],
-                  connectSrc: ["'self'", `wss://${wsAddr}:${wsPort}`, `ws://${wsAddr}:${wsPort}`], // Allow both WS and WSS
+                  connectSrc: ["'self'", `wss://${wsAddr}:${wsPort}`], // HTTPS mode: only allow secure WSS
                   scriptSrc: ["'self'"],
                   styleSrc: ["'self'"],
                   imgSrc: ["'self'", 'data:'],
@@ -180,55 +180,56 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
         });        
     });
     
-    if (useHttps) {
-        // Start HTTPS server
-        expressApp.post('/api/login', express.json(), async (req, res) => {
-            const clientIP = req.ip || req.socket.remoteAddress;
-            const blockUntil = blockedIPs.get(clientIP);
-            if (blockUntil && blockUntil > Date.now()) {
-                console.log(CAT, `IPBlocked - IP: ${clientIP}, Reason: Previous login failures. Block Until: ${new Date(blockUntil)}`);
-                writeLog(`IPBlocked - IP: ${clientIP}, Reason: Previous login failures. Block Until: ${new Date(blockUntil)}`);
-                return res.status(403).json({ error: 'IP temporarily blocked due to failed login attempts' });
-            }
-
-            const { username, password } = req.body;
-            const user = USERS[username];
-
-            if (!user || !await bcrypt.compare(password, user.passwordHash)) {
-                blockedIPs.set(clientIP, Date.now() + LOGIN_TIMEOUT);
-                writeLog(`LoginFailed - IP: ${clientIP}, Username: ${username}, Reason: Invalid credentials`);
-                console.log(CAT, `Login failed for IP ${clientIP}, blocked for ${LOGIN_TIMEOUT / 1000} seconds`);
-                return res.status(401).json({ error: 'Invalid username or password' });
-            }
-
-            const loginToken = crypto.randomUUID();
-            clients.set(loginToken, { ip: clientIP, username });
-            writeLog(`LoginSuccess (HTTPS) - IP: ${clientIP}, Username: ${username}`);
-            res.json({ token: loginToken });
-        });
-    
-
-        function loadUsersFromCSV(usersDataPath) {
-            const users = {};
-            if (fs.existsSync(usersDataPath)) {
-                const lines = fs.readFileSync(usersDataPath, 'utf-8').split(/\r?\n/);
-                for (const line of lines) {
-                    if (!line.trim()) continue;
-                    const [username, password] = line.split(',');
-                    if (username && password) {
-                        users[username.trim()] = { passwordHash: password.trim() };
-                    }
+    function loadUsersFromCSV(usersDataPath) {
+        const users = {};
+        if (fs.existsSync(usersDataPath)) {
+            const lines = fs.readFileSync(usersDataPath, 'utf-8').split(/\r?\n/);
+            for (const line of lines) {
+                if (!line.trim()) continue;
+                const [username, password] = line.split(',');
+                if (username && password) {
+                    users[username.trim()] = { passwordHash: password.trim() };
                 }
             }
-            return users;
+        }
+        return users;
+    }
+
+    // Login handler shared by HTTP and HTTPS servers - always requires valid credentials
+    expressApp.post('/api/login', express.json(), async (req, res) => {
+        const clientIP = req.ip || req.socket.remoteAddress;
+        const blockUntil = blockedIPs.get(clientIP);
+        if (blockUntil && blockUntil > Date.now()) {
+            console.log(CAT, `IPBlocked - IP: ${clientIP}, Reason: Previous login failures. Block Until: ${new Date(blockUntil)}`);
+            writeLog(`IPBlocked - IP: ${clientIP}, Reason: Previous login failures. Block Until: ${new Date(blockUntil)}`);
+            return res.status(403).json({ error: 'IP temporarily blocked due to failed login attempts' });
         }
 
+        const { username, password } = req.body;
+        const user = USERS[username];
+
+        if (!user || !await bcrypt.compare(password, user.passwordHash)) {
+            blockedIPs.set(clientIP, Date.now() + LOGIN_TIMEOUT);
+            writeLog(`LoginFailed - IP: ${clientIP}, Username: ${username}, Reason: Invalid credentials`);
+            console.log(CAT, `Login failed for IP ${clientIP}, blocked for ${LOGIN_TIMEOUT / 1000} seconds`);
+            return res.status(401).json({ error: 'Invalid username or password' });
+        }
+
+        const loginToken = crypto.randomUUID();
+        clients.set(loginToken, { ip: clientIP, username });
+        writeLog(`LoginSuccess (${useHttps ? 'HTTPS' : 'HTTP'}) - IP: ${clientIP}, Username: ${username}`);
+        res.json({ token: loginToken });
+    });
+
+    USERS = loadUsersFromCSV(usersDataPath);
+
+    if (useHttps) {
+        // Start HTTPS server
         try {
             const options = {
                 cert: fs.readFileSync(certPath),
                 key: fs.readFileSync(keyPath),
             };
-            USERS = loadUsersFromCSV(usersDataPath);
             server = https.createServer(options, expressApp).listen(wsPort, wsAddr, () => {
                 console.log(CAT, `HTTPS server running at https://${wsAddr}:${wsPort}`);
             });
@@ -238,16 +239,6 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
         }
     } else {
         // Start HTTP server
-        expressApp.post('/api/login', express.json(), async (req, res) => {
-            const clientIP = req.ip || req.socket.remoteAddress;
-            
-            // bypass username and password
-            const loginToken = crypto.randomUUID();
-            const username = 'saac_user';
-            clients.set(loginToken, { ip: clientIP, username });                        
-            writeLog(`LoginSuccess (HTTP) - IP: ${clientIP}`);
-            res.json({ token: loginToken });
-        });
 
         server = http.createServer(expressApp).listen(wsPort, wsAddr, () => {
             console.log(CAT, `HTTP server running at http://${wsAddr}:${wsPort}`);
