@@ -103,7 +103,7 @@ async function setupDownloadFiles() {
         { 'name': 'waiIllustriousSDXL_v160_characters', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_characters.csv'),  'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/wai_characters_v160.csv' },
         { 'name': 'waiIllustriousSDXL_v160_tag_assist', 'file_path': path.join(saveDir, 'waiIllustriousSDXL_v160_tag_assist.json'), 'url': 'https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/raw/main/waiIllustriousSDXL_v160_tag_assist.json' },
         // github outside
-        { 'name': 'danbooru_tag', 'file_path': path.join(saveDir, 'danbooru_e621_merged.csv'), 'url': 'https://raw.githubusercontent.com/DominikDoom/a1111-sd-webui-tagcomplete/refs/heads/main/tags/danbooru_e621_merged.csv' }
+        { 'name': 'danbooru_tag', 'file_path': path.join(saveDir, 'danbooru_e621_merged.csv'), 'url': 'https://raw.githubusercontent.com/DraconicDragon/dbr-e621-lists-archive/refs/heads/main/tag-lists/danbooru_e621_merged/danbooru_e621_merged_2026-04-01_pt20-ia-dd-ed-spc.csv' }
     ];
         
     try {
