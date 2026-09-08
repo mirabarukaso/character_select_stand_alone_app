@@ -9,6 +9,8 @@ import { processRandomString } from './tools/nestedBraceParsing.js';
 import { convertToMultipleOfNFloor, checkNumberInRange } from './tools/numbers.js';
 import { setQueueAutoStart } from './callbacks.js';
 import { filterPrompts } from './tools/promptFilter.js';
+import { isAutoRetryRunning, startAutoRetry } from './tools/autoRetry.js';
+
 
 export const REPLACE_AI_MARK = '_|REPLACE_AI_PROMPT|_';
 
@@ -1101,7 +1103,7 @@ export async function startQueue(){
         }
 
         // start generate        
-        const queueManager = generateData.queueManager;        
+        const queueManager = generateData.queueManager;
         let result = '';
         if(queueManager.genType === 'normal') {
             globalThis.thumbGallery.append(queueManager.thumb);
@@ -1154,20 +1156,39 @@ export async function startQueue(){
             if(ret !== 'success') {
                 // Disable auto start, the error may solved in future
                 setQueueAutoStart(false);
+                
+                if( retCopy.includes('is busy, cannot run new generation, please try again later.') && !isAutoRetryRunning()) {
+                    startAutoRetry(() => setQueueAutoStart(true));
+                }
             }
             break;
         }
 
-        generateData = globalThis.queueManager.pop();
+        if (globalThis.generate.skipCurrentClicked) {
+            globalThis.generate.skipCurrentClicked = false;
+            generateData = globalThis.queueManager.getFirstSlot();
+        } else {
+            generateData = globalThis.queueManager.pop();
+        }
 
         if(!globalThis.globalSettings.generate_auto_start)
             break;
     }
 
-    globalThis.mainGallery.hideLoading(ret, retCopy);
+    const deferBusyError = isAutoRetryRunning() && retCopy.includes('is busy, cannot run new generation, please try again later.');
+    if (!deferBusyError) {
+        globalThis.mainGallery.hideLoading(ret, retCopy);
+    } else {
+        const generateData = globalThis.queueManager.getFirstSlot();
+        const queueManager = generateData.queueManager;
+        const message = LANG.busy_retry_info.replace('{0}', queueManager.apiInterface);
+        globalThis.mainGallery.hideLoading(message, message);
+    }
     if(globalThis.queueManager.getSlotsCount() === 0)
         globalThis.generate.showCancelButtons(false);
     globalThis.inGenerating = false;
+
+    return { ret, retCopy };
 }
 
 async function seartGenerate(apiInterface, generateData){
@@ -1198,9 +1219,7 @@ async function runComfyUI(apiInterface, generateData){
         if(!image)  // same prompts from backend will return null
             return;
 
-        if(!keepGallery)
-            globalThis.mainGallery.clearGallery();
-        globalThis.mainGallery.appendImageData(image, `${generateData.seed}`, generateData.positive, keepGallery, globalThis.globalSettings.scroll_to_last);
+        globalThis.mainGallery.appendImageData(image, `${generateData.seed}`, generateData.positive, globalThis.globalSettings.scroll_to_last, generateData.queueManager?.finalInfo);
     }
 
     const SETTINGS = globalThis.globalSettings;
@@ -1208,7 +1227,6 @@ async function runComfyUI(apiInterface, generateData){
     const LANG = FILES.language[SETTINGS.language];
 
     globalThis.generate.nowAPI = apiInterface;
-    const keepGallery = globalThis.generate.keepGallery.getValue();
     let ret = 'success';
     let retCopy = '';
     let breakNow = false;
@@ -1282,7 +1300,6 @@ async function runWebUI(apiInterface, generateData) {
     const LANG = FILES.language[SETTINGS.language];
 
     globalThis.generate.nowAPI = apiInterface;
-    const keepGallery = globalThis.generate.keepGallery.getValue();
     let ret = 'success';
     let retCopy = '';
     let breakNow = false;
@@ -1309,9 +1326,7 @@ async function runWebUI(apiInterface, generateData) {
                         breakNow = true;
                     }
                 } else {
-                    if(!keepGallery)
-                        globalThis.mainGallery.clearGallery();
-                    globalThis.mainGallery.appendImageData(result, `${generateData.seed}`, generateData.positive, keepGallery, globalThis.globalSettings.scroll_to_last);
+                    globalThis.mainGallery.appendImageData(result, `${generateData.seed}`, generateData.positive, globalThis.globalSettings.scroll_to_last, generateData.queueManager?.finalInfo);
                 }
             }
         }

@@ -386,7 +386,7 @@ function createDropdown({
                         <img class="mydropdown-arrow" src="scripts/svg/mydropdown-arrow.svg">
                     </div>
                     <div class="mydropdown-number-wrapper">
-                        <input type="text" class="mydropdown-number-input" data-index="${i}" placeholder="1.0" pattern="[0-9]*\\.?[0-9]{0,2}" value="1.0">
+                        <input type="text" class="mydropdown-number-input" data-index="${i}" placeholder="1.0" pattern="${String.raw`[0-9]*\.?[0-9]{0,2}`}" value="1.0">
                     </div>
                 </div>
             `;

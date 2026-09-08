@@ -433,9 +433,12 @@ function updateRightClickMenu(){
     globalThis.rightClick.setTitle('copy_image_metadata_grid', LANG.right_menu_copy_image_metadata);    
     globalThis.rightClick.setTitle('copy_image_full_screen', LANG.right_menu_copy_image);
     globalThis.rightClick.setTitle('copy_image_metadata_full_screen', LANG.right_menu_copy_image_metadata);
+    globalThis.rightClick.setTitle('copy_image_gallery_focus', LANG.right_menu_copy_image);
+    globalThis.rightClick.setTitle('copy_image_metadata_gallery_focus', LANG.right_menu_copy_image_metadata);
     
     globalThis.rightClick.setTitle('remove_current_image', LANG.right_menu_remove_current_image);
     globalThis.rightClick.setTitle('remove_current_image_grid', LANG.right_menu_remove_current_image);
+    globalThis.rightClick.setTitle('remove_current_image_gallery_focus', LANG.right_menu_remove_current_image);
 
     globalThis.rightClick.setTitle('clear_gallery', LANG.right_menu_clear_gallery);
     globalThis.rightClick.setTitle('bcryptHash', LANG.right_menu_bcrypt_hash);
@@ -498,6 +501,26 @@ function registerDefaultMenuItems() {
     globalThis.rightClick.append('copy_image_metadata_full_screen', LANG.right_menu_copy_image_metadata, {
         selector: '.cg-fullscreen-overlay',
         func: async (element) => await menu_copyImageMetadata(element)
+    });
+
+    // in-gallery maximize (grid focus)
+    globalThis.rightClick.append('copy_image_gallery_focus', LANG.right_menu_copy_image, {
+        selector: '.cg-gallery-focus-overlay',
+        func: (element) => menu_copyImage(element)
+    });
+    globalThis.rightClick.append('copy_image_metadata_gallery_focus', LANG.right_menu_copy_image_metadata, {
+        selector: '.cg-gallery-focus-overlay',
+        func: async (element) => await menu_copyImageMetadata(element)
+    });
+    globalThis.rightClick.append('separator_gallery_focus', null, {
+        selector: '.cg-gallery-focus-overlay'
+    });
+    globalThis.rightClick.append('remove_current_image_gallery_focus', LANG.right_menu_remove_current_image, {
+        selector: '.cg-gallery-focus-overlay',
+        func: (element) => {
+            const img = element.querySelector('img');
+            globalThis.mainGallery.removeCurrentImage(img?.src);
+        }
     });
 
 

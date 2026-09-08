@@ -45,9 +45,9 @@ const generateFunctions = {
     if(okm.customOverlay_updatePreview)
       okm.customOverlay_updatePreview(base64);
   },
-  appendImage(base64, seed, tags) {
+  appendImage(base64, seed, tags, info) {
     if(okm.customOverlay_updatePreview)
-      okm.mainGallery_appendImageData(base64, seed, tags);
+      okm.mainGallery_appendImageData(base64, seed, tags, info);
   },
   updateProgress(progress, totalProgress) {
     if(okm.customOverlay_progressBar)
@@ -85,6 +85,11 @@ contextBridge.exposeInMainWorld('api', {
   loadSettingFile: async (fineName) => ipcRenderer.invoke('load-setting-file', fineName),
   saveSettingFile: async (fineName, settings) => ipcRenderer.invoke('save-setting-file', fineName, settings),
   deleteSettingFile: async (fineName) => ipcRenderer.invoke('delete-setting-file', fineName),
+  // UI layout
+  loadUiLayout: async (settingsName) => ipcRenderer.invoke('load-ui-layout', settingsName),
+  saveUiLayout: async (settingsName, layout, mode) => ipcRenderer.invoke('save-ui-layout', settingsName, layout, mode),
+  setUiLayoutMode: async (settingsName, mode, currentLayout) => ipcRenderer.invoke('set-ui-layout-mode', settingsName, mode, currentLayout),
+  setUiLayoutIndependent: async (settingsName, independent, currentLayout) => ipcRenderer.invoke('set-ui-layout-independent', settingsName, independent, currentLayout),
   // MiraITU settings
   loadMiraITUSettingFile: async (fineName) => ipcRenderer.invoke('load-miraitu-setting-file', fineName),
   saveMiraITUSettingFile: async (fineName, settings) => ipcRenderer.invoke('save-miraitu-setting-file', fineName, settings),
@@ -95,7 +100,7 @@ contextBridge.exposeInMainWorld('api', {
   // downloadFiles
   downloadURL: async () => ipcRenderer.invoke('download-url', url, filePath),
   // modelList
-  updateModelList: async (args) => ipcRenderer.invoke('update-model-list', args),
+  updateModelList: async (args, unlockMutex = false) => ipcRenderer.invoke('update-model-list', args, unlockMutex),
   getModelList: async (args) => ipcRenderer.invoke('get-model-list', args),
   getModelListAll: async (args) => ipcRenderer.invoke('get-model-list-all', args),
   getVAEList: async (args) => ipcRenderer.invoke('get-vae-list', args),

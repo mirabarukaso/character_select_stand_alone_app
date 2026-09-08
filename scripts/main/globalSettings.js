@@ -15,6 +15,9 @@ const defaultSettings = {
     "ws_addr": '0.0.0.0',
     "ws_port": 51028,
 
+    "busy_retry_seconds": 20,
+    "busy_retry_counts": 5,
+
     "setup_wizard": true,
     "language": "en-US",
     "css_style": "dark",
@@ -81,7 +84,6 @@ const defaultSettings = {
     "batch": 3,
     "api_image_landscape": false,
     "scroll_to_last": false,
-    "keep_gallery": true,
     
     "custom_prompt": "",
     "api_prompt": "masterpiece, best quality, amazing quality",
@@ -134,6 +136,9 @@ const defaultSettings = {
     "generate_auto_start": true,
     //4:3:2=9 views 0-3, characters 4-6, regional characters 7-8
     "weights4dropdownlist": [1,1,1,1, 1,1,1, 1,1], 
+
+    "gallery_preview": true,
+    "gallery_grid_size": 200,
 }
 
 function setupGlobalSettings() { 

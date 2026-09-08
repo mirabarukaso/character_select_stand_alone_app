@@ -177,7 +177,7 @@ export async function setupModelReloadToggle() {
 
     refreshButton.addEventListener('click', async () => {
         const currentModelSelect = globalThis.dropdownList.model.getValue();
-        await reloadFiles(true);
+        await reloadFiles(true, true);
         globalThis.dropdownList.model.updateDefaults(currentModelSelect);
         globalThis.lora.reload();
         globalThis.controlnet.reload();
@@ -187,7 +187,7 @@ export async function setupModelReloadToggle() {
     return refreshButton;
 }
 
-export async function reloadFiles(unCollapseTab = false){
+export async function reloadFiles(unCollapseTab = false, unlockMutex = false){
     const SETTINGS = globalThis.globalSettings;
     const LANG = globalThis.cachedFiles.language[SETTINGS.language];
     const args = [
@@ -200,7 +200,7 @@ export async function reloadFiles(unCollapseTab = false){
     ];
 
     if (globalThis.inBrowser) {
-        await sendWebSocketMessage({ type: 'API', method: 'updateModelList', params: [args] });
+        await sendWebSocketMessage({ type: 'API', method: 'updateModelList', params: [args, unlockMutex] });
         await sendWebSocketMessage({ type: 'API', method: 'updateWildcards'});
         await sendWebSocketMessage({ type: 'API', method: 'tagReload'});
 
@@ -218,7 +218,7 @@ export async function reloadFiles(unCollapseTab = false){
         if (SETTINGS.api_interface === 'WebUI')
             await sendWebSocketMessage({ type: 'API', method: 'resetModelListsWebUI'});
     } else {
-        await globalThis.api.updateModelList(args);
+        await globalThis.api.updateModelList(args, unlockMutex);
         await globalThis.api.updateWildcards();
         await globalThis.api.tagReload();
 

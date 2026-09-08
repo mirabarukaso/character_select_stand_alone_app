@@ -7,11 +7,11 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(W
 > The default thumbList is based on `waiIllustriousSDXL_v160`. There are two alternative thumbList: `waiANIMA_v10Base10` and `waiNSFWIllustrious_v120`. Will download automatically from `HuggingFace` once you have selected it. 
 > Create your own thumbList with [SAA Thumb Generator](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/thumb-generator/README.md)
 
-<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=75%>   
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%><img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall03.png" width=45%>
 
 | Verified | [ComfyUI](https://github.com/comfyanonymous/ComfyUI)  | [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) |
 | --- | --- | --- | 
-| Release | 0.28.0 | 2.27 |
+| Release | 0.34.0 | 2.29 |
 | Refiner (SDXL) | Yes | Yes |
 | Image Color Transfer (ALL) | Yes | No |
 | Regional Condition / Couple (SDXL/Anima) | Yes | Yes |
@@ -91,6 +91,21 @@ npm install
 ```
 ------
 # Highlights
+## UI Layout
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/uiLayout.png" width=25%>
+
+Drag a panel by its collapse dot (the small circle on the header) to reorder it up/down, or drop it on the other column to swap left/right.     
+Click the collapse dot to fold/unfold as before. To move a panel, hover the drag area for about 1 second until the border turns green, then drag. A quick pass or click will not start a layout move.     
+
+The generate bars (width/CFG and seed/run buttons) and the prompt box have no collapse dot. Hover empty space (especially the padding at the top) for about 1 second until the border turns green, then drag.     
+Don't drag sliders, dropdowns, buttons, or prompt text — those keep their normal behavior.     
+
+The layout icon next to `Save Settings` cycles how the layout is stored:      
+
+* Default color - Shared UI layout for all settings files     
+* Green - Independent UI layout for the current settings file only     
+* Orange - Restore the original default layout. Drag any panel afterwards to save it as an Independent layout (Green)     
+
 ## Diffusion Models (UNET/CLIP/VAE) for ComfyUI and Forge Neo 
 > [!NOTE]      
 > Test and Verified: Anima / Qwen Image / Z Image / Flux / Krea2

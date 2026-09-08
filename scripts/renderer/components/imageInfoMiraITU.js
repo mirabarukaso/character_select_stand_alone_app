@@ -2,11 +2,10 @@ import { createHtmlOptions } from './imageInfoTagger.js';
 import { toBlob, getImageSizeFromBlob } from './imageInfoUtils.js'
 import { TileHelper, CropImageHelper } from './helper.js';
 import { callback_generate_start } from '../callbacks.js';
-import { SAMPLER_COMFYUI, SCHEDULER_COMFYUI } from '../language.js';
 import { fileToBase64 } from '../generate.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { setBlur, setNormal, showDialog } from './myDialog.js';
-import { CLIP_TYPE } from '../../types.js';
+import { CLIP_TYPE, SAMPLER_COMFYUI, SCHEDULER_COMFYUI } from '../../types.js';
 
 let settingsFileName = 'settings.json';
 let lastTaggerOptions = null;

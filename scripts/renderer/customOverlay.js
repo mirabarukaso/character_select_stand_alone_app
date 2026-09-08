@@ -1,4 +1,5 @@
 import { parseTaggedContent } from './components/myTextbox.js';
+import { setupCheckbox } from './components/myCheckbox.js';
 
 let customOverlayCounter = 0;
 
@@ -37,6 +38,7 @@ export function setupButtonOverlay() {
     buttonContainer.style.gap = '12px';
 
     const minimizeButton = document.createElement('button');
+    minimizeButton.type = 'button';
     minimizeButton.className = 'cg-minimize-button';
     minimizeButton.style.backgroundColor = '#3498db';
     minimizeButton.style.width = '14px';
@@ -145,6 +147,10 @@ export function setupButtonOverlay() {
 
     buttonOverlay.appendChild(buttonContainer);
     buttonOverlay.appendChild(minimizeButton);
+
+    const galleryPreviewToggleContainer = document.createElement('div');
+    galleryPreviewToggleContainer.className = 'cg-gallery-preview-toggle';
+    buttonOverlay.appendChild(galleryPreviewToggleContainer);
     document.body.appendChild(buttonOverlay);
 
     buttonOverlay.style.width = '240px';
@@ -178,6 +184,71 @@ export function setupButtonOverlay() {
 
     let isMinimized = false;
     let dragHandler;
+    buttonOverlay.dataset.minimized = 'false';
+
+    const SETTINGS = globalThis.globalSettings;
+    const FILES = globalThis.cachedFiles;
+    const LANG = FILES.language[SETTINGS.language];
+
+    const restoreLoadingOverlayFromGalleryPreview = () => {
+        const previewContainer = document.querySelector('.cg-minimized-generation-preview-container');
+        const preview = previewContainer?.querySelector('.cg-minimized-generation-preview');
+        const isGenerating = globalThis.mainGallery?.isLoading || globalThis.inGenerating;
+        if ((!isGenerating && !preview) || document.getElementById('cg-loading-overlay')) {
+            return;
+        }
+
+        const loadingOverlay = customCommonOverlay().createLoadingOverlay(
+            globalThis.generate.loadingMessage
+        );
+        const buttonRect = buttonOverlay.getBoundingClientRect();
+        loadingOverlay.style.top = `${buttonRect.top}px`;
+        loadingOverlay.style.left = `${buttonRect.left}px`;
+        loadingOverlay.style.transform = 'none';
+        addDragFunctionality(loadingOverlay, () => buttonOverlay);
+        loadingOverlay.updateDragPosition?.(buttonRect.left, buttonRect.top);
+
+        const image = loadingOverlay.querySelector('img');
+        if (image && preview) {
+            image.src = preview.src;
+            image.style.maxWidth = '256px';
+            image.style.maxHeight = '384px';
+            image.style.objectFit = 'contain';
+        }
+        previewContainer?.remove();
+    };
+
+    globalThis.generate.galleryPreviewToggle = setupCheckbox(
+        'cg-gallery-preview-toggle', LANG.gallery_preview, globalThis.globalSettings.gallery_preview, false,
+        (enabled) => {
+            globalThis.globalSettings.gallery_preview = enabled;
+            if (enabled) {
+                const loadingOverlay = document.getElementById('cg-loading-overlay');
+                if (loadingOverlay) {
+                    loadingOverlay._cleanup?.();
+                    loadingOverlay.remove();
+                }
+                movePreviewControls(buttonOverlay);
+                buttonOverlay.style.display = 'flex';
+                return;
+            }
+
+            restoreLoadingOverlayFromGalleryPreview();
+        }
+    );
+
+    const updateGalleryPreviewTitle = () => {
+        const currentSettings = globalThis.globalSettings;
+        const currentFiles = globalThis.cachedFiles;
+        const currentLanguage = currentFiles.language[currentSettings.language];
+        const title = currentLanguage.gallery_preview;
+        const input = galleryPreviewToggleContainer.querySelector('input');
+        galleryPreviewToggleContainer.title = title;
+        input?.setAttribute('aria-label', title);
+        input?.setAttribute('title', title);
+        globalThis.generate.galleryPreviewToggle?.setTitle(title);
+    };
+    updateGalleryPreviewTitle();
 
     function enableDrag() {
         if (!dragHandler) {
@@ -200,6 +271,7 @@ export function setupButtonOverlay() {
     enableDrag();
 
     function setMinimizedState(overlay, container, button, isMin) {
+        overlay.dataset.minimized = String(isMin);
         if (isMin) {
             overlay.classList.add('minimized');
             overlay.style.top = '0px';
@@ -213,15 +285,30 @@ export function setupButtonOverlay() {
             container.style.display = 'none';
             button.style.top = '2px';
             button.style.left = '2px';
+            galleryPreviewToggleContainer.style.top = '2px';
+            galleryPreviewToggleContainer.style.left = 'auto';
+            galleryPreviewToggleContainer.style.right = '2px';
+            galleryPreviewToggleContainer.style.pointerEvents = 'none';
             disableDrag();
         } else {
             overlay.classList.remove('minimized');
+            overlay.dataset.minimized = 'false';
             overlay.style.width = '240px';
             overlay.style.height = 'auto';
             overlay.style.minHeight = '110px';
             overlay.style.padding = '20px 20px 5px';
             container.style.display = 'flex';
             container.style.padding = '20px';
+            galleryPreviewToggleContainer.style.top = '8px';
+            galleryPreviewToggleContainer.style.left = 'auto';
+            galleryPreviewToggleContainer.style.right = '8px';
+            galleryPreviewToggleContainer.style.pointerEvents = 'auto';
+
+            const preview = document.querySelector('.cg-minimized-generation-preview-container');
+            const isGenerating = globalThis.mainGallery?.isLoading || globalThis.inGenerating;
+            if (!globalThis.globalSettings.gallery_preview && (isGenerating || preview)) {
+                restoreLoadingOverlayFromGalleryPreview();
+            }
 
             const savedPosition = JSON.parse(localStorage.getItem('overlayPosition'));
             if (savedPosition?.top !== undefined && savedPosition.left !== undefined) {
@@ -243,6 +330,7 @@ export function setupButtonOverlay() {
             overlay.style.pointerEvents = 'auto';
             enableDrag();
             restrictOverlayPosition(overlay, defaultPosition);
+            toggleButtonOverlayVisibility();
         }
     }
 
@@ -252,10 +340,35 @@ export function setupButtonOverlay() {
         setMinimizedState(buttonOverlay, buttonContainer, minimizeButton, isMinimized);
     });
 
+    function movePreviewControls(target) {
+        if (!target) return;
+        target.appendChild(galleryPreviewToggleContainer);
+        const loadingImage = target.querySelector('#cg-loading-overlay-image');
+        if (loadingImage) {
+            loadingImage.style.marginTop = '16px';
+        }
+        galleryPreviewToggleContainer.style.pointerEvents = isMinimized ? 'none' : 'auto';
+        galleryPreviewToggleContainer.style.zIndex = '10002';
+        galleryPreviewToggleContainer.style.top = isMinimized ? '2px' : '8px';
+        galleryPreviewToggleContainer.style.left = 'auto';
+        galleryPreviewToggleContainer.style.right = isMinimized ? '2px' : '10px';
+    }
+
     function toggleButtonOverlayVisibility() {
-        const loadingOverlay = document.getElementById('cg-loading-overlay');
         const errorOverlay = document.getElementById('cg-error-overlay');
-        buttonOverlay.style.display = (loadingOverlay || errorOverlay) ? 'none' : 'flex';
+        const loadingOverlay = document.getElementById('cg-loading-overlay');
+        if (errorOverlay) {
+            buttonOverlay.style.display = 'none';
+        } else if (loadingOverlay) {
+            buttonOverlay.style.display = 'none';
+            movePreviewControls(loadingOverlay);
+        } else {
+            buttonOverlay.style.display = 'flex';
+            buttonOverlay.appendChild(buttonContainer);
+            buttonOverlay.appendChild(minimizeButton);
+            buttonOverlay.appendChild(galleryPreviewToggleContainer);
+            document.getElementById('cg-loading-overlay-image')?.style.removeProperty('margin-top');
+        }
         if (!isMinimized && buttonOverlay.style.display !== 'none') {
             const savedPosition = JSON.parse(localStorage.getItem('overlayPosition'));
             if (savedPosition?.top !== undefined && savedPosition.left !== undefined) {
@@ -294,6 +407,7 @@ export function setupButtonOverlay() {
             } else {
                 console.error('Failed to reload buttons - source buttons not found');
             }
+            updateGalleryPreviewTitle();
         }
     };
 }
@@ -327,6 +441,7 @@ export function addDragFunctionality(element, getSyncElement) {
     }
         
     let isDragging = false;
+    let movedDuringDrag = false;
     let startX, startY;
     let state = { translateX: 0, translateY: 0, cleanup: null };
     dragStates.set(element, state);
@@ -375,10 +490,12 @@ export function addDragFunctionality(element, getSyncElement) {
 
     const onMouseDown = (e) => {
         if (e.button !== 0) return;
+        if (e.target.closest('.cg-minimize-button, input')) return;
         e.preventDefault();
         e.stopPropagation();
 
         isDragging = true;
+        movedDuringDrag = false;
         startX = e.clientX - state.translateX;
         startY = e.clientY - state.translateY;
 
@@ -394,6 +511,7 @@ export function addDragFunctionality(element, getSyncElement) {
 
         state.translateX = e.clientX - startX;
         state.translateY = e.clientY - startY;
+        movedDuringDrag = true;
 
         throttledUpdate(updateTransform);
     };
@@ -403,6 +521,14 @@ export function addDragFunctionality(element, getSyncElement) {
         isDragging = false;
         element.style.cursor = 'grab';
         document.body.style.userSelect = '';
+
+        if (movedDuringDrag) {
+            element.addEventListener('click', (clickEvent) => {
+                clickEvent.preventDefault();
+                clickEvent.stopImmediatePropagation();
+            }, { capture: true, once: true });
+        }
+        movedDuringDrag = false;
 
         const rect = element.getBoundingClientRect();
         const isOutOfBounds = rect.top < 0 || rect.left < 0 ||
@@ -872,6 +998,11 @@ function createCustomOverlay(
                 imgWrapper.remove();
             };
 
+            img.addEventListener('dblclick', (e) => {
+                e.stopPropagation();
+                closeOverlay();
+            });
+
             imgWrapper.appendChild(img);
             imageContainer.appendChild(imgWrapper);
         }
@@ -891,17 +1022,21 @@ function createCustomOverlay(
 
     textbox.appendChild(fragment);
 
-    const closeButton = document.createElement('button');
-    closeButton.className = 'cg-close-button';
-
-    closeButton.addEventListener('click', (e) => {
-        e.stopPropagation();
+    function closeOverlay() {
         overlay.remove();
         document.removeEventListener('mousemove', overlay._onMouseMove);
         document.removeEventListener('mouseup', overlay._onMouseUp);
         document.removeEventListener('mousemove', overlay._onResizeMove);
         document.removeEventListener('mouseup', overlay._onResizeUp);
         if (overlay._cleanup) overlay._cleanup();
+    }
+
+    const closeButton = document.createElement('button');
+    closeButton.className = 'cg-close-button';
+
+    closeButton.addEventListener('click', (e) => {
+        e.stopPropagation();
+        closeOverlay();
     });
     overlay.appendChild(closeButton);
 

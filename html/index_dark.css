@@ -13,15 +13,17 @@ body {
     border-radius: none;
     border: none;
     position: absolute;
-    width: calc(100vw - 100px); 
-    height: calc(100vh - 122px);
+    inset: 0;
+    width: 100%;
+    height: 100%;
     min-width: 1280px;
     min-height: 720px;
-    align-items: center;
+    align-items: stretch;
 }
 
 #settings-save-icon, #settings-delete-icon, #model-refresh-icon, 
-#global-refresh-icon, #global-settings-swap-layout-icon, #global-settings-theme-icon {
+#global-refresh-icon, #global-settings-swap-layout-icon, #global-settings-theme-icon,
+#ui-layout-independent-icon {
     width: 24px;
     height: 24px;
     filter: invert(93%) sepia(0%) saturate(0%) hue-rotate(0deg) brightness(103%) contrast(103%);
@@ -29,14 +31,20 @@ body {
 }
 
 #settings-save-icon:hover, #settings-delete-icon:hover, #model-refresh-icon:hover, 
-#global-refresh-icon:hover, #global-settings-swap-layout-icon:hover, #global-settings-theme-icon:hover {
+#global-refresh-icon:hover, #global-settings-swap-layout-icon:hover, #global-settings-theme-icon:hover,
+#ui-layout-independent-icon:hover {
     opacity: 1;
 }
 
 #settings-save-toggle, #settings-delete-toggle, #model-refresh-toggle, #global-refresh-toggle, 
-#global-settings-theme-toggle, #global-settings-swap-layout-toggle {
+#global-settings-theme-toggle, #global-settings-swap-layout-toggle, #ui-layout-independent-toggle {
     background: none;
     border: none;
+}
+
+#ui-layout-independent-toggle.factory #ui-layout-independent-icon {
+    filter: invert(62%) sepia(84%) saturate(1408%) hue-rotate(1deg) brightness(102%) contrast(103%);
+    opacity: 1;
 }
 
 /* Suggestion Box */
@@ -110,6 +118,10 @@ body {
 
 .dropdown-character-regional {
     border: #933 2px solid !important;
+}
+
+.queue-container.queue-generate-paused {
+    border-color: #933;
 }
 
 .mydropdown-select{
@@ -234,6 +246,13 @@ body {
     background: #e74c3c;
 }
 
+/* Info Button for Gallery */
+#cg-info-button {
+    right: 10px;
+    top: 90px;
+    background: #2ecc71;
+}
+
 /* Switch Mode Button for Thumb */
 #cg-thumb-switch-mode-button {
     position: absolute; 
@@ -265,17 +284,35 @@ body {
 
 .gallery-main-header, .gallery-thumb-header {
     display: grid;    
-    padding-left: 10px;
+    padding-left: 4px;
     margin-bottom: 2px;
     margin-right: 2px;
 }
 
 .gallery-main-header {
-    grid-template-columns: 4fr 4fr 2fr 1fr 1fr; 
+    grid-template-columns: 2.5fr 2.2fr 2fr 2.6fr 0.8fr; 
+}
+
+.gallery-grid-size {
+    display: flex;
+    align-items: center;
+    min-width: 0;
+    padding: 0 8px 0 4px;
+    visibility: hidden;
+    pointer-events: none;
+}
+
+.gallery-main-header.is-grid-mode .gallery-grid-size {
+    visibility: visible;
+    pointer-events: auto;
+}
+
+.gallery-grid-size .mySlider-gallery-grid-size-bar {
+    width: 100%;
 }
 
 .gallery-thumb-header {
-    grid-template-columns: 2fr 2.5fr 2fr 2.5fr 0.25fr; 
+    grid-template-columns: 2.5fr 2fr 2fr 2.5fr 0.25fr; 
 }
 
 .system-settings-header, .jsonlist-header {
@@ -420,6 +457,35 @@ body {
     box-sizing: border-box;
 }
 
+.mydropdown-native-container {
+    position: relative;
+    width: 100%;
+}
+
+.mydropdown-native-select {
+    width: 100%;
+    min-height: 28px;
+    padding: 4px 28px 4px 8px;
+    border: 1px solid #70757d;
+    border-radius: 5px;
+    background: #24272c;
+    color: #eee;
+    box-sizing: border-box;
+    cursor: pointer;
+    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.mydropdown-native-select:hover {
+    border-color: #1ce088;
+    background: #2d3338;
+}
+
+.mydropdown-native-select:focus-visible {
+    outline: none;
+    border-color: #1ce088;
+    box-shadow: 0 0 0 3px rgba(28, 224, 136, 0.22);
+}
+
 .mydropdown-arrow {
     position: absolute;
     right: 8px;
@@ -547,6 +613,14 @@ body {
     gap: 16px;
 }
 
+.system-settings-main-3 {
+    display: grid; 
+    grid-template-columns: 1fr 1fr; 
+    padding: 4px;
+    margin: 4px;
+    gap: 16px;
+}
+
 .system-settings-ai-select {
     text-align: left; 
     justify-content: flex-start;
@@ -554,39 +628,31 @@ body {
 
 /* generate buttons */
 #generate-buttons-container{
-    padding: 0;    
+    padding: 6px 8px;
     box-sizing: border-box;
     background: none;
     border: none;
     border-radius: none;
     position: relative;
     display: flex;
-    flex-direction: row;
+    flex-direction: column;
+    gap: 8px;
 }
 
 #generate-buttons-1, #generate-buttons-2 {
     top: 0;
     left: 0;
     width: 100%;
-    display: none;
-}
-
-#generate-buttons-1 {
     display: flex;
     flex-direction: row;
-    gap: 8px;
-}
-
-#generate-buttons-2 {
-    display: none;
-    flex-direction: row;
-    gap: 8px;
+    gap: 14px;
 }
 
 .generate-button-single, 
 .generate-button-batch, 
 .generate-button-same,
 .generate-button-skip, 
+.generate-button-skip-current,
 .generate-button-cancel {
     margin: 2px; 
     position: relative;
@@ -599,12 +665,12 @@ body {
     transition: background-color 0.3s ease;
 }
 
-.generate-button-single{
+.generate-button-single, .generate-button-cancel {
     flex: 2;
 }
 
-.generate-button-batch,.generate-button-same,
-.generate-button-skip, .generate-button-cancel {
+.generate-button-batch, .generate-button-same,
+.generate-button-skip, .generate-button-skip-current {
     flex: 1;
 }
 
@@ -773,21 +839,156 @@ body {
 
 /* check box */
 [class^="myCheckbox-"][class*="-span"] {
-    flex: 1; 
+    flex: 1;
     color: #ccc;
     text-align: right;
+    cursor: pointer;
+    border-radius: 4px;
+    transition: background-color 0.16s ease, color 0.16s ease;
+}
+
+[class^="myCheckbox-"][class*="-span"]:hover {
+    color: #eee;
+    background-color: #2d3338;
+}
+
+*:has(> [class^="myCheckbox-"][class*="-input"]:hover) > [class^="myCheckbox-"][class*="-span"],
+*:has(> [class^="myCheckbox-"][class*="-span"]:hover) > [class^="myCheckbox-"][class*="-input"] {
+    color: #eee;
+    background-color: #2d3338;
 }
 
 [class^="myCheckbox-"][class*="-input"] {
     flex: 0;
-    width: 10px;
-    height: 10px;
+    align-self: center;
+    vertical-align: middle;
+    position: relative;
+    top: -1px;
+    width: 28px;
+    height: 16px;
+    margin-right: 6px;
+    appearance: none;
+    -webkit-appearance: none;
+    box-sizing: border-box;
+    border: 1px solid #70757d;
+    border-radius: 999px;
+    background: #24272c;
+    background-image: radial-gradient(circle at 7px 7px, #cfd4d8 0 4px, transparent 4.5px);
+    background-repeat: no-repeat;
+    cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, transform 0.16s ease;
+}
+
+[class^="myCheckbox-"][class*="-input"]:hover {
+    border-color: #1ce088;
+    background: #2d3338;
+    background-image: radial-gradient(circle at 7px 7px, #fff 0 4px, transparent 4.5px);
+}
+
+*:has(> [class^="myCheckbox-"][class*="-span"]:hover) > [class^="myCheckbox-"][class*="-input"] {
+    border-color: #1ce088;
+    background-color: #2d3338;
+}
+
+[class^="myCheckbox-"][class*="-input"]:checked {
+    border-color: #1ce088;
+    background-color: #1ce088;
+    background-image: radial-gradient(circle at 21px 7px, #000 0 4px, transparent 4.5px);
+}
+
+*:has(> [class^="myCheckbox-"][class*="-span"]:hover) > [class^="myCheckbox-"][class*="-input"]:checked {
+    border-color: #1ce088;
+    background-color: #1ce088;
+}
+
+[class^="myCheckbox-"][class*="-input"]:focus-visible {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(28, 224, 136, 0.22);
+}
+
+[class^="myCheckbox-"][class*="-input"]:active {
+    transform: scale(0.92);
+}
+
+[class^="myRadiobox-"][class*="-group"] {
+    display: flex;
+    flex-wrap: nowrap;
+    align-items: center;
+    gap: 0;
+}
+
+[class^="myRadiobox-"][class*="-span"] {
+    margin-right: 6px;
+}
+
+[class^="myRadiobox-"][class*="-item"] {
+    position: relative;
+    display: inline-flex;
+    align-items: center;
+    box-sizing: border-box;
+    min-height: 24px;
+    padding: 2px 12px;
+    border: 2px solid #70757d;
+    border-radius: 0;
+    background: #24272c;
+    color: #ccc;
+    cursor: pointer;
+    transition: background-color 0.16s ease, border-color 0.16s ease, box-shadow 0.16s ease, color 0.16s ease, transform 0.16s ease;
+}
+
+[class^="myRadiobox-"][class*="-item"]:not(:first-of-type) {
+    margin-left: -1px;
+}
+
+[class^="myRadiobox-"][class*="-item"]:first-of-type {
+    border-radius: 6px 0 0 6px;
+}
+
+[class^="myRadiobox-"][class*="-item"]:last-of-type {
+    border-radius: 0 6px 6px 0;
+}
+
+[class^="myRadiobox-"][class*="-item"]:hover {
+    border-color: #1ce088;
+    background: #2d3338;
+    color: #eee;
+    z-index: 1;
+}
+
+[class^="myRadiobox-"][class*="-item"]:has(> [class^="myRadiobox-"][class*="-input"]:checked) {    
+    border: 1px solid #70757d;
+    background: #1ce088;
+    color: #000;
+    z-index: 2;
+}
+
+[class^="myRadiobox-"][class*="-item"]:has(> [class^="myRadiobox-"][class*="-input"]:checked) > [class^="myRadiobox-"][class*="-label"] {
+    color: #000;
+}
+
+[class^="myRadiobox-"][class*="-item"]:has(> [class^="myRadiobox-"][class*="-input"]:focus-visible) {
+    outline: none;
+    box-shadow: 0 0 0 3px rgba(28, 224, 136, 0.22);
+}
+
+[class^="myRadiobox-"][class*="-item"]:active {
+    transform: scale(0.97);
 }
 
 [class^="myRadiobox-"][class*="-input"] {
-    flex: 0;
-    width: 10px;
-    height: 10px;
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    margin: -1px;
+    overflow: hidden;
+    clip: rect(0 0 0 0);
+    clip-path: inset(50%);
+    white-space: nowrap;
+}
+
+[class^="myRadiobox-"][class*="-label"] {
+    line-height: 1.2;
+    user-select: none;
 }
 
 /* myDialog */

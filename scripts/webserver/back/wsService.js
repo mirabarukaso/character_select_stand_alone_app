@@ -29,6 +29,7 @@ import { remoteAI, localAI } from '../../main/remoteAI_backend.js';
 import { loadFile, readImage, readSafetensors, readBase64Image } from '../../main/fileHandlers.js';
 import { runImageTagger } from '../../main/imageTagger.js';
 import { getAppVersion, compressGzipThenBase64 } from '../../../main-common.js';
+import { loadUiLayout, saveUiLayout, setUiLayoutMode, setUiLayoutIndependent } from '../../main/uiLayout_backend.js';
 
 const CAT = '[WSS]';
 
@@ -443,6 +444,11 @@ const methodHandlers = {
   'getSettingFiles': ()=> getSettingFiles(),
   'updateSettingFiles': ()=> updateSettingFiles(),
 
+  'loadUiLayout': (params)=> loadUiLayout(...params),
+  'saveUiLayout': (params)=> saveUiLayout(...params),
+  'setUiLayoutMode': (params)=> setUiLayoutMode(...params),
+  'setUiLayoutIndependent': (params)=> setUiLayoutIndependent(...params),
+
   'updateMiraITUSettingFiles': ()=> updateMiraITUSettingFiles(),
   'loadMiraITUSettingFile': (params)=> loadMiraITUSettings(...params),
   'saveMiraITUSettingFile': (params)=> saveMiraITUSettings(...params),
@@ -460,7 +466,7 @@ const methodHandlers = {
   'getADetailerList': (params)=> getADetailerList(...params),
   'getONNXList': (params)=> getONNXList(...params),
   'getImageTaggerModels': ()=> getImageTaggerModels(),
-  'updateModelList': (params)=> updateModelAndLoRAList(...params),
+  'updateModelList': (params)=> updateModelAndLoRAList(params[0], params[1] === true),
 
   // wildcards
   'updateWildcards': ()=> updateWildcards(),

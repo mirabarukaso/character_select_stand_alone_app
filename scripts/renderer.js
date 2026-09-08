@@ -1,13 +1,14 @@
-import { updateLanguage, updateSettings, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from './renderer/language.js';
+import { updateLanguage, updateSettings } from './renderer/language.js';
 import { setupGallery } from './renderer/customGallery.js';
 import { setupThumbOverlay, setupThumb } from './renderer/customThumbGallery.js';
 import { setupSuggestionSystem } from './renderer/tagAutoComplete.js';
 import { setupButtonOverlay, customCommonOverlay } from './renderer/customOverlay.js';
 import { myCharacterList, myRegionalCharacterList, myViewsList, myLanguageList, mySimpleList } from './renderer/components/myDropdown.js';
 import { callback_mySettingList, callback_api_model_select, callback_api_model_type, callback_api_interface, 
-    callback_generate_start, callback_generate_skip, callback_generate_cancel,callback_keep_gallery,
+    callback_generate_start, callback_generate_skip, callback_generate_skip_current, callback_generate_cancel,
     callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart,
-    callback_thumb_select, callback_ptompt_textbox_autoresize, callback_ptompt_textbox_fontsize
+    callback_thumb_select, callback_ptompt_textbox_autoresize, callback_ptompt_textbox_fontsize, 
+    callback_ai_promot_role
  } from './renderer/callbacks.js';
 import { setupSlider } from './renderer/components/mySlider.js';
 import { setupCheckbox, setupRadiobox } from './renderer/components/myCheckbox.js';
@@ -26,10 +27,12 @@ import { setupImageUploadOverlay } from './renderer/imageInfo.js';
 import { setupThemeToggle } from './renderer/theme.js';
 import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/components/myRightClickMenu.js';
 import { extractHostPort } from './renderer/generate.js';
-import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE } from './types.js';
+import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from './types.js';
 import { flushSlots } from './renderer/slots/slotsManager.js';
 import { set_prompt_textBox_Heights } from './renderer/components/componentsManager.js';
 import { hiresCalculate } from './renderer/tools/hiresCalculation.js';
+import { resetAutoRetry } from './renderer/tools/autoRetry.js';
+import { setupUiLayout } from './renderer/uiLayout.js';
 
 function afterDOMinit() {
     (async () => {
@@ -135,12 +138,15 @@ export async function setupLeftRight(SETTINGS, FILES, LANG) {
         aDetailer: setupCollapsed('adetailer', true),
         queueManager: setupCollapsed('queue', false),
     }
+
+    await setupUiLayout();
 }
 
 export async function createGenerate(SETTINGS, FILES, LANG) {
     console.log('Creating globalThis.generate');
     globalThis.generate = {
         skipClicked: false,
+        skipCurrentClicked: false,
         cancelClicked: false,
         nowAPI: 'none',
         lastPos: 'solo, masterpiece, best quality, amazing quality',
@@ -151,7 +157,9 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         regionalCondition: setupCheckbox('regional-condition-trigger', LANG.regional_condition, SETTINGS.regional_condition, true, (value) => { callback_regional_condition(value, false); }),
         regionalCondition_dummy: setupCheckbox('regional-condition-trigger-dummy', LANG.regional_condition, SETTINGS.regional_condition, true, (value) => { callback_regional_condition(value, true); }),
         scrollToLatest: setupCheckbox('gallery-main-latest', LANG.scroll_to_last, SETTINGS.scroll_to_last, true, (value) => { globalThis.globalSettings.scroll_to_last = value; }),
-        keepGallery: setupCheckbox('gallery-main-keep', LANG.keep_gallery, SETTINGS.keep_gallery, true, callback_keep_gallery),
+        gridSize: setupSlider('gallery-grid-size', LANG.gallery_grid_size_hint,
+            {min:80, max:400, step:10, defaultValue: SETTINGS.gallery_grid_size ?? 200},
+            (value) => { globalThis.mainGallery.applyGridSize?.(value); }, true),
 
         seed: setupSlider('generate-random-seed', LANG.random_seed, {min:-1, max:4294967295, step:1, defaultValue:SETTINGS.random_seed}, (value) =>{globalThis.globalSettings.random_seed = value;}),
         cfg: setupSlider('generate-cfg', LANG.cfg, {min:0, max:20, step:0.01, defaultValue:SETTINGS.cfg}, (value) =>{globalThis.globalSettings.cfg = value;}),
@@ -177,7 +185,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hoverColor: 'rgb(194,65,12)',
                 disabledColor: 'rgb(136, 121, 115)',
                 width: '100%',
-                height: '32px',
+                height: '100%',
                 hidden: false,
                 clickable: true              
             }, async () =>{
@@ -188,7 +196,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hoverColor: 'rgb(153,27,27)',
                 disabledColor: 'rgb(134, 103, 103)',
                 width: '100%',
-                height: '32px',
+                height: '100%',
                 hidden: false,
                 clickable: true              
             }, async () =>{
@@ -199,33 +207,44 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 hoverColor: 'rgb(40,48,66)',
                 disabledColor: 'rgb(112, 123, 148)',
                 width: '100%',
-                height: '32px',
+                height: '100%',
                 hidden: false,
                 clickable: true              
             }, async () =>{
                 await callback_generate_start('normal', {loops:globalThis.generate.batch.getValue(), runSame:true});
             }),            
-        generate_skip: setupButtons('generate-button-skip', LANG.run_skip_button, {
-                defaultColor: 'rgb(82,82,91)',
-                hoverColor: 'rgb(63,63,70)',
-                disabledColor: 'rgb(175, 175, 182)',
-                width: '100%',
-                height: '26px',
-                hidden: false,
-                clickable: true              
-            }, () =>{
-                callback_generate_skip();
-            }),
         generate_cancel: setupButtons('generate-button-cancel', LANG.run_cancel_button, {
                 defaultColor: 'rgb(82,82,91)',
                 hoverColor: 'rgb(63,63,70)',
                 disabledColor: 'rgb(175, 175, 182)',
                 width: '100%',
-                height: '26px',
+                height: '100%',
                 hidden: false,
                 clickable: true              
             }, () =>{
                 callback_generate_cancel();
+            }),
+        generate_skip: setupButtons('generate-button-skip', LANG.run_skip_button, {
+                defaultColor: 'rgb(82,82,91)',
+                hoverColor: 'rgb(63,63,70)',
+                disabledColor: 'rgb(175, 175, 182)',
+                width: '100%',
+                height: '100%',
+                hidden: false,
+                clickable: true              
+            }, () =>{
+                callback_generate_skip();
+            }),
+        generate_skip_current: setupButtons('generate-button-skip-current', LANG.run_skip_current_button, {
+                defaultColor: 'rgb(82,82,91)',
+                hoverColor: 'rgb(63,63,70)',
+                disabledColor: 'rgb(175, 175, 182)',
+                width: '100%',
+                height: '100%',
+                hidden: false,
+                clickable: true              
+            }, () =>{
+                callback_generate_skip_current();
             }),
         api_interface: mySimpleList('system-settings-api-interface', LANG.api_interface, ['None', 'ComfyUI', 'WebUI'], callback_api_interface, 5, false, true),
         api_address: setupTextbox('system-settings-api-address', LANG.api_addr, {
@@ -287,7 +306,12 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
             }, true, (value) => { globalThis.globalSettings.remote_ai_webui_auth = value;}, true),  
         webui_auth_enable: mySimpleList('system-settings-api-webui-auth-enable', LANG.remote_ai_webui_auth_enable, ['OFF', 'ON'], 
             (value) => {globalThis.globalSettings.remote_ai_webui_auth_enable = value; }, 5, false, true),
-        
+
+        busy_retry_seconds: setupSlider('system-settings-busy-retry-seconds', LANG.busy_retry_seconds, {min:5, max:120, step:5, defaultValue:SETTINGS.busy_retry_seconds},
+            (value) => { globalThis.globalSettings.busy_retry_seconds = value; resetAutoRetry(value, globalThis.globalSettings.busy_retry_counts); }),
+        busy_retry_counts: setupSlider('system-settings-busy-retry-counts', LANG.busy_retry_counts, {min:0, max:10, step:1, defaultValue:SETTINGS.busy_retry_counts},
+            (value) => { globalThis.globalSettings.busy_retry_counts = value; resetAutoRetry(globalThis.globalSettings.busy_retry_seconds, value); }),
+
         queueAutostart:setupCheckbox('queue-autostart-generate', LANG.generate_auto_start, SETTINGS.generate_auto_start,
             true, async (value) => {
                 await callback_queue_autostart(value, false);
@@ -400,7 +424,7 @@ export async function createAI(SETTINGS, FILES, LANG) {
     console.log('Creating globalThis.ai');
     globalThis.ai ={
         ai_select: setupRadiobox("system-settings-ai-select", LANG.batch_generate_rule, LANG.ai_select, LANG.ai_select_title, SETTINGS.ai_prompt_role, 
-            (value) => { globalThis.globalSettings.ai_prompt_role = value; }),
+            callback_ai_promot_role),
         ai_prompt_preview: setupCheckbox('system-settings-ai-preview', LANG.ai_prompt_preview, SETTINGS.ai_prompt_preview, true,
             (value) => { globalThis.globalSettings.ai_prompt_preview = value; }),
 

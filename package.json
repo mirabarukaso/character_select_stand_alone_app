@@ -5,7 +5,7 @@
   "keywords": [],
   "main": "./main.js",
   "type": "module",
-  "version": "2.8.9",
+  "version": "2.9.0",
   "author": "oOkami",
   "scripts": {
     "start": "electron .",
@@ -14,7 +14,7 @@
   },
   "devDependencies": {
     "adm-zip": "^0.6.0",
-    "electron": "^43.5.1",
+    "electron": "^44.2.0",
     "qs": "^6.16.0"
   },
   "dependencies": {
@@ -29,7 +29,7 @@
     "onnxruntime-node": "^1.29.0",
     "qs": "^6.16.0",
     "sharp": "^0.35.4",
-    "undici": "^8.10.1",
+    "undici": "^8.10.2",
     "ws": "^8.21.3"
   },
   "overrides": {

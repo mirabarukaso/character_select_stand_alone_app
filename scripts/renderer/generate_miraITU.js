@@ -1,5 +1,6 @@
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { extractHostPort, extractAPISecure, toggleQueueColor, generateRandomSeed, startQueue, checkVpred } from './generate.js';
+
 import { resizeImageToControlNetResolution } from './components/imageInfoUtils.js';
 
 export async function generateMiraITU(dataPack){
@@ -104,16 +105,13 @@ async function runComfyUI(apiInterface, generateData){
         if(!image)  // same prompts from backend will return null
             return;
 
-        if(!keepGallery)
-            globalThis.mainGallery.clearGallery();
-
         const ogResolution = `${generateData.taggerOptions.imageWidth}x${generateData.taggerOptions.imageHeight}`;
         const tgtResolution = `${generateData.taggerOptions.imageWidth*generateData.taggerOptions.upscaleRatio}x${generateData.taggerOptions.imageHeight*generateData.taggerOptions.upscaleRatio}`;
         let tag = `by MiraITU: ${generateData.seed}\n${ogResolution} -> ${tgtResolution}\n`;
         if(generateData.taggerOptions.prebakeDryRun) {
             tag = `by MiraITU: ${generateData.seed}\n`;
         }
-        globalThis.mainGallery.appendImageData(image, `${generateData.seed}`, tag, keepGallery, globalThis.globalSettings.scroll_to_last);
+        globalThis.mainGallery.appendImageData(image, `${generateData.seed}`, tag, globalThis.globalSettings.scroll_to_last);
     }
 
     const SETTINGS = globalThis.globalSettings;
@@ -121,7 +119,6 @@ async function runComfyUI(apiInterface, generateData){
     const LANG = FILES.language[SETTINGS.language];
 
     globalThis.generate.nowAPI = apiInterface;
-    const keepGallery = globalThis.generate.keepGallery.getValue();
     let ret = 'success';
     let retCopy = '';
     let breakNow = false;

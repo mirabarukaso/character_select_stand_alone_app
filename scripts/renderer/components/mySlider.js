@@ -19,12 +19,13 @@ export function setupSlider(containerId, spanText = 'mySlider', options = {},  c
             <span class="mySlider-${containerId}-span" ${noTitle?'hidden':''}>${spanText}</span>
             <input class="mySlider-${containerId}-value" type="number" min="${min}" max="${max}" step="${step}" value="${defaultValue}" ${noTitle?'hidden':''}>
         </div>
-        <input class="mySlider-${containerId}-bar" title=${spanText} type="range" min="${min}" max="${max}" step="${step}" value="${defaultValue}">
+        <input class="mySlider-${containerId}-bar" title="${spanText}" type="range" min="${min}" max="${max}" step="${step}" value="${defaultValue}">
     `;
 
     const sliderBar = container.querySelector(`.mySlider-${containerId}-bar`);
     const sliderText = container.querySelector(`.mySlider-${containerId}-value`);
     const sliderSpan = container.querySelector(`.mySlider-${containerId}-span`);
+    container.title = spanText;
 
     // Determine if the value should be treated as an integer based on step
     const isIntegerStep = Number.isInteger(step);
@@ -75,6 +76,7 @@ export function setupSlider(containerId, spanText = 'mySlider', options = {},  c
         setTitle: (text) => {
             sliderSpan.textContent = text;
             sliderBar.title = text;
+            container.title = text;
         }
     };
 }

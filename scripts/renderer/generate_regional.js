@@ -7,6 +7,7 @@ import { processRandomString } from './tools/nestedBraceParsing.js';
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { filterPrompts } from './tools/promptFilter.js';
 
+
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function getCustomJSON(loop=-1){
     let BeforeOfPromptsL = '';
@@ -608,9 +609,7 @@ async function runComfyUI(apiInterface, generateData){
         if(!image)  // same prompts from backend will return null
             return;
 
-        if(!keepGallery)
-            globalThis.mainGallery.clearGallery();
-        globalThis.mainGallery.appendImageData(image, `${generateData.seed}`, `${generateData.positive_left}\n${generateData.positive_right}`, keepGallery, globalThis.globalSettings.scroll_to_last);
+        globalThis.mainGallery.appendImageData(image, `${generateData.seed}`, `${generateData.positive_left}\n${generateData.positive_right}`, globalThis.globalSettings.scroll_to_last, generateData.queueManager?.finalInfo);
     }
 
     const SETTINGS = globalThis.globalSettings;
@@ -618,7 +617,6 @@ async function runComfyUI(apiInterface, generateData){
     const LANG = FILES.language[SETTINGS.language];
 
     globalThis.generate.nowAPI = apiInterface;
-    const keepGallery = globalThis.generate.keepGallery.getValue();
     let ret = 'success';
     let retCopy = '';
     let breakNow = false;
@@ -692,7 +690,6 @@ async function runWebUI(apiInterface, generateData) {
     const LANG = FILES.language[SETTINGS.language];
 
     globalThis.generate.nowAPI = apiInterface;
-    const keepGallery = globalThis.generate.keepGallery.getValue();
     let ret = 'success';
     let retCopy = '';
     let breakNow = false;
@@ -719,9 +716,7 @@ async function runWebUI(apiInterface, generateData) {
                         breakNow = true;
                     }
                 } else {
-                    if(!keepGallery)
-                        globalThis.mainGallery.clearGallery();
-                    globalThis.mainGallery.appendImageData(result, `${generateData.seed}`, `${generateData.positive_left}\nBREAK\n${generateData.positive_right}`, keepGallery, globalThis.globalSettings.scroll_to_last);
+                    globalThis.mainGallery.appendImageData(result, `${generateData.seed}`, `${generateData.positive_left}\nBREAK\n${generateData.positive_right}`, globalThis.globalSettings.scroll_to_last, generateData.queueManager?.finalInfo);
                 }
             }
         }

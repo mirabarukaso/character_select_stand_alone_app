@@ -1,3 +1,16 @@
+2026.09.09 v2.9.0     
+Add, `UI Layout` drag the `Collapse Arrow` or `Empty area` to modify UI layout     
+Add, `Info` button for current image in gallery       
+Add, minimized preview image in `Gallery` when `Generate overlay` is minimized or `Preview in Gallery` is enabled (by default from 2.9.0)       
+Add experimental (SAA/SAAC), `Auto Retry` in `Settings` when ComfyUI/Forge Neo `is busy`, generate will perform auto retry             
+Change, refined gallery with new `Grid Mode` and `Full Width Mode`       
+Change, auto hide `AI Prompt` when `AI rule` is `None`          
+Change, modernized `Check box` and `Radio button`      
+Change, move `Cancel buttons` above `Generate buttons`      
+Update `Sampler` and `Scheduler` to ComfyUI 0.34.0 and Forge Neo 2.29        
+Minor bugs fix          
+
+
 2026.08.14 v2.8.9     
 Bugfix, CFG parsed with INT  #103         
 

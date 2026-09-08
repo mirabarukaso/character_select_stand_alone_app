@@ -678,8 +678,8 @@ function scanMultipleDirectories(paths, search_subfolder, extName, replaceSlash 
 }
 
 function setupModelList(settings) {
-    ipcMain.handle('update-model-list', (event, args) => {                
-        updateModelAndLoRAList(args);
+    ipcMain.handle('update-model-list', (event, args, unlockMutex = false) => {                
+        updateModelAndLoRAList(args, unlockMutex);
     });
 
     ipcMain.handle('get-model-list', async (event, args) => {
@@ -888,7 +888,7 @@ function getONNXList(apiInterface) {
     }    
 }
 
-function updateModelAndLoRAList(args) {
+function updateModelAndLoRAList(args, unlockMutex = false) {
     // reload custom paths
     loadCustomConfig();
 
@@ -909,10 +909,12 @@ function updateModelAndLoRAList(args) {
     updateONNXList(args[0], true);
     updateImageTaggerList();
 
-    // This is the Skeleton Key to unlock the Mutex Lock
-    // In case ...
-    console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
-    setMutexBackendBusy(false);
+    // Skeleton Key: only the Reload Model button should unlock a stuck generate mutex.
+    // Loading a settings file must not steal an in-flight SAA/SAAC generation.
+    if (unlockMutex) {
+        console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
+        setMutexBackendBusy(false);
+    }
 }
 
 

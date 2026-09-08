@@ -1,4 +1,4 @@
-import { updateLanguage, updateSettings, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from '../renderer/language.js';
+import { updateLanguage, updateSettings} from '../renderer/language.js';
 import { setupButtonOverlay, customCommonOverlay } from '../renderer/customOverlay.js';
 import { toggleButtons, showCancelButtons } from '../renderer/components/myButtons.js';
 import { doSwap } from '../renderer/components/myCollapsed.js';
@@ -14,6 +14,7 @@ import { initWebSocket, isSecuredConnection, sendWebSocketMessage, registerCallb
 import { flushSlots } from '../renderer/slots/slotsManager.js';
 import { set_prompt_textBox_Heights } from '../renderer/components/componentsManager.js';
 import { setupHeader, setupLeftRight, createGenerate, createPrompt, createHifixRefiner, createRegional, createAI } from '../renderer.js';
+import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
 
 // Run the init function when the DOM is fully loaded
 function afterDOMinit() {    

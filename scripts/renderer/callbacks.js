@@ -3,8 +3,7 @@ import { generateImage, startQueue } from './generate.js';
 import { generateRegionalImage } from './generate_regional.js';
 import { generateMiraITU } from './generate_miraITU.js';
 import { doSwap, reloadFiles } from './components/myCollapsed.js';
-import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI, 
-    updateLanguage, updateSettings, setDropdownLanguage } from './language.js';
+import { updateLanguage, updateSettings, setDropdownLanguage } from './language.js';
 import { setBlur, setNormal, showDialog } from './components/myDialog.js';
 import { applyTheme } from './theme.js';
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
@@ -13,6 +12,9 @@ import { flushSlots } from './slots/slotsManager.js';
 import { compareAndMergeFavoriteLists } from './components/favoriteCharacters.js';
 import { changeFontSize } from './components/myTextbox.js';
 import { set_prompt_textBox_Heights } from './components/componentsManager.js';
+import { applySavedLayout } from './uiLayout.js';
+import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
+import { cancelAutoRetry, isAutoRetryRunning } from './tools/autoRetry.js';
 
 export async function callback_mySettingList(index, selectedValue) {    
     if(!globalThis.initialized)
@@ -108,6 +110,7 @@ export async function callback_mySettingList(index, selectedValue) {
 
     globalThis.dropdownList.settings.updateDefaults(value);
     globalThis.globalSettings.lastLoadedSettings = new_settings_name;
+    await applySavedLayout();
 }
 
 export async function callback_api_model_select(index, selectedValue) {
@@ -269,8 +272,10 @@ export async function callback_generate_start(runType='normal', dataPack=null){
     globalThis.generate.generate_same.setClickable(false);
 
     globalThis.generate.skipClicked = false;
+    globalThis.generate.skipCurrentClicked = false;
     globalThis.generate.cancelClicked = false;
     globalThis.generate.generate_skip.setClickable(true);
+    globalThis.generate.generate_skip_current.setClickable(true);
     globalThis.generate.generate_cancel.setClickable(true);
 
     if (runType === 'normal') {
@@ -284,6 +289,30 @@ export async function callback_generate_start(runType='normal', dataPack=null){
     }
 }
 
+function shouldCallBackendCancel() {
+    return !isAutoRetryRunning() && Boolean(globalThis.globalSettings.generate_auto_start);
+}
+
+async function cancelBackendIfNeeded() {
+    if (!shouldCallBackendCancel()) {
+        return false;
+    }
+
+    const apiInterface = globalThis.generate.nowAPI;
+    if (globalThis.inBrowser) {
+        if (apiInterface === 'ComfyUI') {
+            await sendWebSocketMessage({ type: 'API', method: 'cancelComfyUI' });
+        } else if (apiInterface === 'WebUI') {
+            await sendWebSocketMessage({ type: 'API', method: 'cancelWebUI' });
+        }
+    } else if (apiInterface === 'ComfyUI') {
+        await globalThis.api.cancelComfyUI();
+    } else if (apiInterface === 'WebUI') {
+        await globalThis.api.cancelWebUI();
+    }
+    return true;
+}
+
 export function callback_generate_skip() {
     globalThis.generate.generate_skip.setClickable(false);
     globalThis.generate.skipClicked = true;
@@ -294,36 +323,38 @@ export function callback_generate_skip() {
     setQueueAutoStart(bak_autoStart);
 }
 
+export async function callback_generate_skip_current() {
+    globalThis.generate.generate_skip_current.setClickable(false);
+
+    const backendCancelled = await cancelBackendIfNeeded();
+    if (backendCancelled) {
+        globalThis.generate.generate_skip_current.setClickable(true);
+        return;
+    }
+
+    if (globalThis.inGenerating) {
+        globalThis.generate.skipCurrentClicked = true;
+    }
+    globalThis.queueManager.removeAt(0);
+    if (globalThis.queueManager.getSlotsCount() === 0) {
+        cancelAutoRetry();
+        globalThis.generate.showCancelButtons(false);
+        globalThis.mainGallery.hideLoading('success', '');
+        return;
+    }
+    globalThis.generate.generate_skip_current.setClickable(true);
+}
+
 export async function callback_generate_cancel() {
     globalThis.generate.generate_skip.setClickable(false);
+    globalThis.generate.generate_skip_current.setClickable(false);
     globalThis.generate.generate_cancel.setClickable(false);
     globalThis.generate.cancelClicked = true;
+    cancelAutoRetry();
     globalThis.queueManager.removeAll();
     globalThis.generate.showCancelButtons(false);
 
-    if (globalThis.inBrowser) {        
-        const apiInterface = globalThis.generate.nowAPI;
-        if(apiInterface === 'ComfyUI') {
-            await sendWebSocketMessage({ type: 'API', method: 'cancelComfyUI' });
-        } else if(apiInterface === 'WebUI') {
-            await sendWebSocketMessage({ type: 'API', method: 'cancelWebUI' });
-        }
-    } else {
-        const apiInterface = globalThis.generate.nowAPI;
-        if(apiInterface === 'ComfyUI') {
-            await globalThis.api.cancelComfyUI();
-        } else if(apiInterface === 'WebUI') {
-            await globalThis.api.cancelWebUI();
-        }
-    }
-}
-
-export function callback_keep_gallery(keepGallery) {
-    if(!keepGallery) {
-        globalThis.mainGallery.clearGallery();
-    }
-
-    globalThis.globalSettings.keep_gallery = keepGallery;
+    await cancelBackendIfNeeded();
 }
 
 export function callback_regional_condition(trigger, dummy = false) {
@@ -405,6 +436,13 @@ export function callback_adetailer(trigger)  {
     globalThis.custom_message.adetailer = true;
 }
 
+export function updateQueuePausedBorder() {
+    const queueContainer = document.querySelector('.queue-container');
+    if (queueContainer) {
+        queueContainer.classList.toggle('queue-generate-paused', !globalThis.globalSettings.generate_auto_start);
+    }
+}
+
 export async function callback_queue_autostart(trigger, isDummy=false) {
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
@@ -416,24 +454,28 @@ export async function callback_queue_autostart(trigger, isDummy=false) {
         globalThis.generate.queueAutostart_dummy.setValue(trigger);
     }
 
-    if(trigger) {
+    if(trigger) {        
         globalThis.generate.skipClicked = false;
+        globalThis.generate.skipCurrentClicked = false;
         globalThis.generate.cancelClicked = false;
         globalThis.generate.generate_skip.setClickable(true);
+        globalThis.generate.generate_skip_current.setClickable(true);
         globalThis.generate.generate_cancel.setClickable(true);
         globalThis.generate.generate_single.setTitle(LANG.run_button);
+        cancelAutoRetry();
     } else {
         globalThis.generate.generate_single.setTitle(LANG.run_button_paused);
     }
 
     globalThis.globalSettings.generate_auto_start = trigger;
+    updateQueuePausedBorder();
     globalThis.overlay.buttons.reload();
     if(trigger && globalThis.queueManager.getSlotsCount()>0) {
         await startQueue();
     }
 }
 
-export function setQueueAutoStart(trigger) {
+export async function setQueueAutoStart(trigger) {
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
@@ -446,7 +488,14 @@ export function setQueueAutoStart(trigger) {
     globalThis.globalSettings.generate_auto_start=trigger;
     globalThis.generate.queueAutostart.setValue(trigger);
     globalThis.generate.queueAutostart_dummy.setValue(trigger);
+    updateQueuePausedBorder();
     globalThis.overlay.buttons.reload();
+
+    if(trigger && globalThis.queueManager.getSlotsCount() > 0 && !globalThis.inGenerating) {
+        return await startQueue();
+    }
+
+    return { ret: 'success', retCopy: '' };
 }
 
 export async function callback_thumb_select(index, selectedValue) {
@@ -539,3 +588,20 @@ export function callback_ptompt_textbox_fontsize(value) {
 
     changeFontSize(value);
 }
+
+export function callback_ai_promot_role(value) {
+    globalThis.globalSettings.ai_prompt_role = value;
+    const at_text = document.querySelector('.prompt-ai');
+    if(!at_text) {
+        console.error('Failed to find .prompt-ai element in the DOM.');
+        globalThis.globalSettings.ai_prompt_role = 0;   // reset to none
+        return;
+    }
+
+    if(value === 0){                    
+        at_text.style.display = 'none';
+    } else {
+        at_text.style.display = 'block';
+    }
+}
+

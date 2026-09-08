@@ -751,6 +751,11 @@ class ComfyUI {
   }
 
   async openWS(prompt_id, skipFirst = true, index='29'){
+    if (this.webSocket && (this.webSocket.readyState === WebSocket.OPEN || this.webSocket.readyState === WebSocket.CONNECTING)) {
+      console.warn(CAT, 'ComfyUI WebSocket already open, refusing to replace in-flight generation');
+      return 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+    }
+
     return new Promise((resolve) => {
       this.prompt_id = prompt_id;
       this.preview = 0;
@@ -948,8 +953,12 @@ class ComfyUI {
   }
 
   closeWS(){
-    this.webSocket.close();
-    this.webSocke = null; 
+    try {
+      this.webSocket?.close();
+    } catch (err) {
+      console.error(CAT, 'WebSocket close error:', err);
+    }
+    this.webSocket = null;
   }
 
   async getImage(index='29', prompt_id = null) {
@@ -1104,7 +1113,6 @@ class ComfyUI {
     }
 
     // vPred
-    console.log(CAT, 'vPred value:', vpred, 'model name:', model);
     if((vpred === 0 && (model.includes('vPred') || model.includes('VPR'))) || vpred === 1 || vpred === 2) {            
       workflow["35"].inputs.sampling = "v_prediction";
       workflow["44"].inputs.sampling = "v_prediction";

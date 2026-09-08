@@ -1,20 +1,9 @@
-import { callback_api_model_type, callback_regional_condition } from './callbacks.js';
+import { callback_api_model_type, callback_regional_condition, callback_ai_promot_role, updateQueuePausedBorder } from './callbacks.js';
 import { hiresCalculate } from './tools/hiresCalculation.js';
+import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
+import { updateUiLayoutLanguage } from './uiLayout.js';
 
 const CAT = '[Language]'
-
-export const SAMPLER_COMFYUI = ["euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2", "exp_heun_2_x0", "exp_heun_2_x0_sde", "dpm_2", "dpm_2_ancestral",
-                  "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_2s_ancestral_cfg_pp", "dpmpp_sde", "dpmpp_sde_gpu",
-                  "dpmpp_2m", "dpmpp_2m_cfg_pp", "dpmpp_2m_sde", "dpmpp_2m_sde_gpu", "dpmpp_2m_sde_heun", "dpmpp_2m_sde_heun_gpu", "dpmpp_3m_sde", "dpmpp_3m_sde_gpu", "ddpm", "lcm",
-                  "ipndm", "ipndm_v", "deis", "res_multistep", "res_multistep_cfg_pp", "res_multistep_ancestral", "res_multistep_ancestral_cfg_pp",
-                  "gradient_estimation", "gradient_estimation_cfg_pp", "er_sde", "seeds_2", "seeds_3", "sa_solver", "sa_solver_pece"];
-export const SCHEDULER_COMFYUI = ["normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform", "beta", "linear_quadratic", "kl_optimal"] ;
-
-export const  SAMPLER_WEBUI = ["DPM++ 2M", "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 3M SDE", "DPM++ 2s a RF",
-    "Euler a", "Euler", "ER SDE", "LCM", "LMS", "Heun", "DPM2", "Res Multistep", "Kohaku LoNyu Yog", "Restart", "UniPC",
-    "DIMM", "PLMS", "DPM++ 2M CFG++", "Euler a CFG++", "Euler CFG++"];
-export const SCHEDULER_WEBUI = ["Automatic", "Karras", "Exponential", "Polyexponential", "Normal", "Simple", "Uniform", "SGM Uniform",
-    "Linear Quadratic", "KL Optimal", "DDIM", "Align Your Steps", "Beta", "Turbo", "Bong Tangent", "FlowMatchEulerDiscrete"];    
 
 function safeCheck(){
     if (!globalThis.cachedFiles.language || !globalThis.globalSettings.language) {
@@ -78,6 +67,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.headerIcon.refresh.title = LANG.title_global_refresh;
     globalThis.headerIcon.swap.title = LANG.title_swap_layout;
     globalThis.headerIcon.theme.title = LANG.title_theme;
+    updateUiLayoutLanguage();
 
     globalThis.dropdownList.thumb_select.setTitle(LANG.thumb_select);
 
@@ -133,8 +123,9 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.generate_single.setTitle(globalThis.globalSettings.generate_auto_start?LANG.run_button:LANG.run_button_paused);
     globalThis.generate.generate_batch.setTitle(LANG.run_random_button);
     globalThis.generate.generate_same.setTitle(LANG.run_same_button);
-    globalThis.generate.generate_skip.setTitle(LANG.run_skip_button);
     globalThis.generate.generate_cancel.setTitle(LANG.run_cancel_button);
+    globalThis.generate.generate_skip.setTitle(LANG.run_skip_button);
+    globalThis.generate.generate_skip_current.setTitle(LANG.run_skip_current_button);
 
     globalThis.generate.api_interface.setTitle(LANG.api_interface);
     globalThis.generate.api_address.setTitle(LANG.api_addr);
@@ -151,11 +142,13 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.image_save_embed_character_name.setTitle(LANG.image_save_embed_character_name);
     globalThis.generate.webui_auth.setTitle(LANG.webui_auth);
     globalThis.generate.webui_auth_enable.setTitle(LANG.webui_auth_enable);
+    globalThis.generate.busy_retry_seconds.setTitle(LANG.busy_retry_seconds);
+    globalThis.generate.busy_retry_counts.setTitle(LANG.busy_retry_counts);
     globalThis.generate.queueAutostart.setTitle(LANG.generate_auto_start);
     globalThis.generate.queueAutostart_dummy.setTitle(LANG.generate_auto_start);
 
     globalThis.generate.scrollToLatest.setTitle(LANG.scroll_to_last);
-    globalThis.generate.keepGallery.setTitle(LANG.keep_gallery);
+    globalThis.generate.gridSize.setTitle(LANG.gallery_grid_size_hint);
     globalThis.infoBox.image.setTitle(LANG.output_info);
 
     globalThis.prompt.common.setTitle(LANG.custom_prompt);
@@ -247,8 +240,11 @@ export function updateSettings() {
     globalThis.generate.image_save_embed_character_name.setValue(SETTINGS.image_save_embed_character_name);
     globalThis.generate.webui_auth.setValue(SETTINGS.webui_auth);
     globalThis.generate.webui_auth_enable.updateDefaults(SETTINGS.webui_auth_enable);
+    globalThis.generate.busy_retry_seconds.setValue(SETTINGS.busy_retry_seconds);
+    globalThis.generate.busy_retry_counts.setValue(SETTINGS.busy_retry_counts);
     globalThis.generate.queueAutostart.setValue(SETTINGS.generate_auto_start);
     globalThis.generate.queueAutostart_dummy.setValue(SETTINGS.generate_auto_start);
+    updateQueuePausedBorder();
 
     globalThis.characterList.updateDefaults(SETTINGS.character1, SETTINGS.character2, SETTINGS.character3, 'None');
     globalThis.characterList.setTextValue(0, SETTINGS.weights4dropdownlist[4]);
@@ -320,7 +316,7 @@ export function updateSettings() {
     globalThis.generate.batch.setValue(SETTINGS.batch);    
     globalThis.generate.landscape.setValue(SETTINGS.api_image_landscape);
     globalThis.generate.scrollToLatest.setValue(SETTINGS.scroll_to_last);
-    globalThis.generate.keepGallery.setValue(SETTINGS.keep_gallery);
+    globalThis.generate.gridSize.setValue(SETTINGS.gallery_grid_size ?? 200);
 
     globalThis.prompt.common.setValue(SETTINGS.custom_prompt);
     globalThis.prompt.positive.setValue(SETTINGS.api_prompt);
@@ -362,4 +358,7 @@ export function updateSettings() {
 
     callback_api_model_type(0, [globalThis.dropdownList.model_type.getValue()]); //Model Type
     callback_regional_condition(globalThis.generate.regionalCondition.getValue(), false); //Regional Condition
+    callback_ai_promot_role(globalThis.globalSettings.ai_prompt_role);  //AI Prompt Role
+    
+    globalThis.generate.galleryPreviewToggle?.setValue(globalThis.globalSettings.gallery_preview);  // Update the gallery preview toggle checkbox to reflect the current setting
 }

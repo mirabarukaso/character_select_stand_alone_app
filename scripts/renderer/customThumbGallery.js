@@ -96,10 +96,8 @@ function ensureSwitchModeButton(container, toggleFunction, id, images_length) {
         
         function handleOverlayAnimation(overlay) {
             requestAnimationFrame(() => {
-                setTimeout(() => {
-                    overlay.classList.remove('visible');
-                    removeOverlayAfterDelay(overlay, 300);
-                }, 10000); // assume 10 seconds for the animation to finish
+                overlay.classList.remove('visible');
+                removeOverlayAfterDelay(overlay, 300);
             });
         }
         

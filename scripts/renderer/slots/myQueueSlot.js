@@ -1,6 +1,7 @@
 import { setupTextbox } from '../components/myTextbox.js';
 import { generateGUID } from './myLoRASlot.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { cancelAutoRetry } from '../tools/autoRetry.js';
 let instanceQueueManager = null;
 
 async function cancelGenerate(slotClass) {
@@ -29,7 +30,7 @@ async function deleteSlot(slotClass) {
     if(index === 0 && !instanceQueueManager.cancelFirst) {        
         instanceQueueManager.cancelFirst = true;
        
-        if(globalThis.mainGallery.isLoading) {            
+        if(globalThis.mainGallery.isLoading && globalThis.generate.queueAutostart.getValue()) {            
             await cancelGenerate(slotClass);
         } else {
             instanceQueueManager.removeAt(0);
@@ -43,6 +44,8 @@ async function deleteSlot(slotClass) {
     }
 
     if(instanceQueueManager.getSlotsCount() === 0) {
+        cancelAutoRetry();
+        globalThis.mainGallery.hideLoading('success', '');
         globalThis.generate.showCancelButtons(false);
     }
 }

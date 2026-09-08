@@ -20,6 +20,7 @@ import { setupGenerateBackendWebUI } from './scripts/main/generate_backend_webui
 import { setupCachedFiles } from './scripts/main/cachedFiles.js';
 import { setupWildcardsHandlers } from './scripts/main/wildCards.js';
 import { setupTagger } from './scripts/main/imageTagger.js';
+import { setupUiLayoutHandlers } from './scripts/main/uiLayout_backend.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -41,7 +42,7 @@ function createWindow () {
   mainWindow = new BrowserWindow({
     autoHideMenuBar: true,  // Hide menu
     width: 1300,
-    height: 1200,
+    height: 1286,
     icon: path.join(__dirname, './html/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, './scripts/preload.js'),
@@ -78,6 +79,7 @@ async function initializeApp() {
 
   setupFileHandlers();  
   const SETTINGS = setupGlobalSettings();
+  setupUiLayoutHandlers();
   SETTINGS.version = version;
   
   setupModelList(SETTINGS);

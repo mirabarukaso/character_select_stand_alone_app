@@ -9,6 +9,7 @@ data/waiNSFWIllustrious_v120_characters.csv
 data/danbooru.csv
 data/danbooru_e621_merged.csv
 settings/*.json
+settings/ui_layout/*.json
 data/wildcards/wildcardPoses.txt
 data/wildcards/wildcardMyFurries.txt
 scripts/python/saa-agent/__pycache__

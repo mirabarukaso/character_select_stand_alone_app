@@ -96,27 +96,20 @@ export function setupButtons(containerId, buttonText = 'Button', options = {}, c
     };
 }
 
-let showButtons2 = true;
-export function toggleButtons() {
-    const buttons2 = document.getElementById('generate-buttons-2');
+let showButtons2 = false;
 
-    if (showButtons2) {
-        buttons2.style.display = 'flex';
-    } else {
-        buttons2.style.display = 'none';
+function setCancelButtonsVisible(trigger) {
+    const frame = document.getElementById('generate-settings-static-right');
+    if (frame) {
+        frame.classList.toggle('show-cancel', Boolean(trigger));
     }
+    showButtons2 = Boolean(trigger);
+}
 
-    showButtons2 = !showButtons2;
+export function toggleButtons() {
+    setCancelButtonsVisible(!showButtons2);
 }
 
 export function showCancelButtons(trigger) {
-    const buttons2 = document.getElementById('generate-buttons-2');
-
-    if (trigger) {
-        buttons2.style.display = 'flex';
-    } else {
-        buttons2.style.display = 'none';
-    }
-
-    showButtons2 = trigger;
+    setCancelButtonsVisible(trigger);
 }
