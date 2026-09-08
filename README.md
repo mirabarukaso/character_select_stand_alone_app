@@ -67,7 +67,7 @@ Navigate to my [HF dataset](https://huggingface.co/datasets/flagrantia/character
 > 
 > For ComfyUI, you need latest [ComfyUI_Mira](https://github.com/mirabarukaso/ComfyUI_Mira) for SAA.     
 >
-> *One-Click package v2.8.0*    
+> *One-Click package v2.9.0*    
 > The full package [embeded_env_for_SAA](https://huggingface.co/datasets/flagrantia/character_select_stand_alone_app/resolve/main/embeded_env_for_SAA.zip)      
 
 Clone this repo into your local folder     
