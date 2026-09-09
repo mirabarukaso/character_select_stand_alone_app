@@ -13,7 +13,7 @@ const GLOBAL_FILE = '_global.json';
 // predecessor that already exists in that column, or at the
 // column start when the new id is a default-column prefix.
 export const DEFAULT_UI_LAYOUT = {
-    version: 1,
+    version: 2,
     left: [
         'generate-settings-static-left',
         'gallery-main',
@@ -34,10 +34,10 @@ export const DEFAULT_UI_LAYOUT = {
         'adetailer',
         'queue'
     ],
-    full: []
+    full: ['character']
 };
 
-const KNOWN_PANELS = new Set([...DEFAULT_UI_LAYOUT.left, ...DEFAULT_UI_LAYOUT.right]);
+const KNOWN_PANELS = new Set([...DEFAULT_UI_LAYOUT.left, ...DEFAULT_UI_LAYOUT.right, 'character']);
 
 function sanitizeLayoutName(name) {
     const raw = String(name || 'settings').replace(/\.json$/i, '');
@@ -79,17 +79,88 @@ function writeLayoutFile(filePath, data) {
     }
 }
 
-function normalizePanelList(list, used) {
+function normalizeTabHost(entry, used) {
+    if (!entry || entry.type !== 'tab-host' || !Array.isArray(entry.pages)) {
+        return null;
+    }
+    const pages = [];
+    const titles = {};
+    for (const id of entry.pages) {
+        if (typeof id !== 'string' || !KNOWN_PANELS.has(id) || used.has(id)) {
+            continue;
+        }
+        pages.push(id);
+        used.add(id);
+        if (entry.titles && typeof entry.titles[id] === 'string' && entry.titles[id].trim()
+            && entry.titles[id].trim() !== id) {
+            titles[id] = entry.titles[id].trim();
+        }
+    }
+    if (pages.length === 0) {
+        return null;
+    }
+    const result = {
+        type: 'tab-host',
+        active: pages.includes(entry.active) ? entry.active : pages[0],
+        titles,
+        pages
+    };
+    if (entry.folded) {
+        result.folded = true;
+    }
+    return result;
+}
+
+function stripCharacterEntries(list) {
+    const result = [];
+    for (const item of list) {
+        if (item === 'character') {
+            continue;
+        }
+        if (item && item.type === 'tab-host') {
+            const pages = (item.pages || []).filter((id) => id !== 'character');
+            if (pages.length === 0) {
+                continue;
+            }
+            if (pages.length === 1) {
+                result.push(pages[0]);
+                continue;
+            }
+            result.push({
+                ...item,
+                pages,
+                active: pages.includes(item.active) ? item.active : pages[0]
+            });
+            continue;
+        }
+        result.push(item);
+    }
+    return result;
+}
+
+function normalizePanelList(list, used, allowTabs = true) {
     const result = [];
     if (!Array.isArray(list)) {
         return result;
     }
-    for (const id of list) {
-        if (typeof id !== 'string' || !KNOWN_PANELS.has(id) || used.has(id)) {
+    for (const item of list) {
+        if (typeof item === 'string') {
+            if (!KNOWN_PANELS.has(item) || used.has(item)) {
+                continue;
+            }
+            result.push(item);
+            used.add(item);
             continue;
         }
-        result.push(id);
-        used.add(id);
+        const host = normalizeTabHost(item, used);
+        if (!host) {
+            continue;
+        }
+        if (allowTabs && host.pages.length > 1) {
+            result.push(host);
+        } else {
+            result.push(...host.pages);
+        }
     }
     return result;
 }
@@ -108,7 +179,8 @@ function insertMissingInDefaultOrder(current, defaultList, used) {
             if (prev === id) {
                 break;
             }
-            const idx = result.indexOf(prev);
+            const idx = result.findIndex((item) => item === prev
+                || (item && item.type === 'tab-host' && item.pages?.includes(prev)));
             if (idx !== -1) {
                 insertAt = idx + 1;
                 foundPrev = true;
@@ -127,18 +199,27 @@ function insertMissingInDefaultOrder(current, defaultList, used) {
 function normalizeLayout(raw) {
     const source = raw && typeof raw === 'object' ? raw : {};
     const used = new Set();
-    const leftSaved = normalizePanelList(source.left, used);
-    const rightSaved = normalizePanelList(source.right, used);
-    const fullSaved = normalizePanelList(source.full, used);
-    const left = insertMissingInDefaultOrder(leftSaved, DEFAULT_UI_LAYOUT.left, used);
-    const right = insertMissingInDefaultOrder(rightSaved, DEFAULT_UI_LAYOUT.right, used);
+    const leftSaved = normalizePanelList(source.left, used, true);
+    const rightSaved = normalizePanelList(source.right, used, true);
+    const fullSaved = normalizePanelList(source.full, used, false);
+    const left = stripCharacterEntries(insertMissingInDefaultOrder(leftSaved, DEFAULT_UI_LAYOUT.left, used));
+    const right = stripCharacterEntries(insertMissingInDefaultOrder(rightSaved, DEFAULT_UI_LAYOUT.right, used));
+
+    used.add('character');
+    const full = ['character', ...fullSaved.filter((item) => item !== 'character')];
 
     const layout = {
-        version: 1,
+        version: 2,
         left,
         right,
-        full: fullSaved
+        full
     };
+    if (typeof source.fullMaxHeight === 'number' && source.fullMaxHeight > 0) {
+        layout.fullMaxHeight = Math.round(source.fullMaxHeight);
+    }
+    if (typeof source.galleryHeight === 'number' && source.galleryHeight >= 384 && source.galleryHeight <= 872) {
+        layout.galleryHeight = Math.round(source.galleryHeight);
+    }
     if (typeof source.enabled === 'boolean') {
         layout.enabled = source.enabled;
     }
@@ -168,7 +249,7 @@ function resolveMode(data) {
 
 function factoryLayout() {
     return {
-        version: 1,
+        version: 2,
         left: [...DEFAULT_UI_LAYOUT.left],
         right: [...DEFAULT_UI_LAYOUT.right],
         full: [...DEFAULT_UI_LAYOUT.full]
@@ -179,7 +260,7 @@ function listsEqual(a, b) {
     if (!Array.isArray(a) || !Array.isArray(b) || a.length !== b.length) {
         return false;
     }
-    return a.every((id, index) => id === b[index]);
+    return JSON.stringify(a) === JSON.stringify(b);
 }
 
 function needsMigration(raw, normalized) {
@@ -196,12 +277,18 @@ function persistNormalizedLayout(filePath, original, normalized, extra = {}) {
         return normalized;
     }
     const stored = {
-        version: 1,
+        version: 2,
         ...extra,
         left: normalized.left,
         right: normalized.right,
         full: normalized.full || []
     };
+    if (typeof normalized.fullMaxHeight === 'number') {
+        stored.fullMaxHeight = normalized.fullMaxHeight;
+    }
+    if (typeof normalized.galleryHeight === 'number') {
+        stored.galleryHeight = normalized.galleryHeight;
+    }
     if (typeof extra.enabled !== 'boolean' && typeof original?.enabled === 'boolean') {
         stored.enabled = original.enabled;
     }
@@ -221,7 +308,7 @@ function loadGlobalLayout() {
         persistNormalizedLayout(filePath, stored, normalized);
     } else {
         writeLayoutFile(filePath, {
-            version: 1,
+            version: 2,
             left: normalized.left,
             right: normalized.right
         });
@@ -296,7 +383,7 @@ export function saveUiLayout(settingsName, layout, mode) {
         const sidecarPath = layoutFilePath(`${name}.json`);
         const existing = readLayoutFile(sidecarPath);
         const stored = {
-            version: 1,
+            version: 2,
             mode: 'factory',
             enabled: false
         };
@@ -347,7 +434,7 @@ export function setUiLayoutMode(settingsName, mode, currentLayout) {
 
     if (resolvedMode === 'factory') {
         const stored = {
-            version: 1,
+            version: 2,
             mode: 'factory',
             enabled: false
         };
@@ -372,6 +459,26 @@ export function setUiLayoutMode(settingsName, mode, currentLayout) {
     return packResult('global', loadGlobalLayout());
 }
 
+export function deleteUiLayout(settingsName) {
+    const name = sanitizeLayoutName(settingsName);
+    if (!name || name === '_global') {
+        console.warn(CAT, `Refusing to delete reserved layout: ${name || '(empty)'}`);
+        return false;
+    }
+    const sidecarPath = layoutFilePath(`${name}.json`);
+    if (!fs.existsSync(sidecarPath)) {
+        return true;
+    }
+    try {
+        fs.unlinkSync(sidecarPath);
+        console.log(CAT, `Deleted independent layout sidecar: ${sidecarPath}`);
+        return true;
+    } catch (error) {
+        console.error(CAT, `Failed to delete ${sidecarPath}:`, error.message);
+        return false;
+    }
+}
+
 export function setUiLayoutIndependent(settingsName, independent, currentLayout) {
     return setUiLayoutMode(settingsName, independent ? 'independent' : 'global', currentLayout);
 }
@@ -388,6 +495,9 @@ export function setupUiLayoutHandlers() {
     });
     ipcMain.handle('set-ui-layout-independent', async (event, settingsName, independent, currentLayout) => {
         return setUiLayoutIndependent(settingsName, independent, currentLayout);
+    });
+    ipcMain.handle('delete-ui-layout', async (event, settingsName) => {
+        return deleteUiLayout(settingsName);
     });
 }
 

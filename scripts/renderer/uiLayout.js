@@ -1,9 +1,33 @@
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
+import {
+    CHARACTER_ID,
+    collectColumnLayout,
+    ensureHostForPanel,
+    extractPanelFromHost,
+    getHostPageIds,
+    getHostPages,
+    getTabHost,
+    hostZoneAllowed,
+    isLastHostPage,
+    isTabHost,
+    mergePanelIntoHost,
+    mountHostFromEntry,
+    movePageInHost,
+    panelZoneAllowed,
+    refreshHostChrome,
+    setHostActive,
+    unwrapHost,
+    zoneOfColumn
+} from './uiLayoutTabs.js';
 
 const CAT = '[UiLayout]';
 const DRAG_THRESHOLD = 6;
 const SCROLL_EDGE = 56;
 const SCROLL_STEP = 18;
+const GALLERY_MAIN_HEIGHT = 872;
+const GALLERY_COMPRESS_MIN = 384;
+const FULL_WIDTH_CSS_MAX = GALLERY_MAIN_HEIGHT + 84;
+const SPLIT_MIN_HEIGHT = 196;
 
 const PANEL_IDS = [
     'generate-settings-static-left',
@@ -52,6 +76,8 @@ let suppressHandleClick = false;
 let dragState = null;
 let independentBusy = false;
 let handlesBound = false;
+let fullRegionHeight = null;
+let splitDrag = null;
 
 function getSettingsName() {
     const name = globalThis.globalSettings?.lastLoadedSettings;
@@ -141,6 +167,11 @@ function applyDropHint(panel, on) {
     if (!panel) {
         return;
     }
+    const host = isTabHost(panel) ? panel : getTabHost(panel);
+    if (host) {
+        host.classList.toggle('layout-tab-hint', Boolean(on) && !dragState);
+        return;
+    }
     panel.classList.toggle('layout-drop-hint', Boolean(on) && !dragState);
 }
 
@@ -184,16 +215,65 @@ function cancelDropHint(panel) {
 }
 
 export function readCurrentLayout() {
-    const collect = (side) => [...(getColumn(side)?.children || [])]
-        .map((el) => el.dataset?.layoutId)
-        .filter(Boolean);
-
-    return {
-        version: 1,
-        left: collect('left'),
-        right: collect('right'),
-        full: collect('full-width')
+    const layout = {
+        version: 2,
+        left: collectColumnLayout(getColumn('left')),
+        right: collectColumnLayout(getColumn('right')),
+        full: collectColumnLayout(getFullWidthColumn())
     };
+    if (typeof fullRegionHeight === 'number') {
+        layout.fullMaxHeight = fullRegionHeight;
+    }
+    const galleryHeight = readGalleryHeight();
+    if (isGalleryInFullWidth() && galleryHeight < GALLERY_MAIN_HEIGHT) {
+        layout.galleryHeight = galleryHeight;
+    }
+    return layout;
+}
+
+function placeLayoutEntry(column, entry, panelMap, placed) {
+    if (!column || !entry) {
+        return;
+    }
+    if (typeof entry === 'string') {
+        if (entry === CHARACTER_ID) {
+            return;
+        }
+        const el = panelMap[entry];
+        if (!el) {
+            return;
+        }
+        column.appendChild(el);
+        placed.add(entry);
+        return;
+    }
+    if (entry.type !== 'tab-host') {
+        return;
+    }
+    if (layoutMode === 'factory' || column.id === 'full-width') {
+        for (const id of entry.pages || []) {
+            placeLayoutEntry(column, id, panelMap, placed);
+        }
+        return;
+    }
+    const host = mountHostFromEntry(entry, panelMap);
+    if (!host) {
+        return;
+    }
+    if (getHostPageIds(host).length <= 1) {
+        const only = getHostPages(host)[0];
+        column.appendChild(only || host);
+        unwrapHost(host);
+        if (only?.dataset.layoutId) {
+            placed.add(only.dataset.layoutId);
+        }
+        return;
+    }
+    column.appendChild(host);
+    bindHostDrag(host);
+    for (const id of getHostPageIds(host)) {
+        placed.add(id);
+    }
 }
 
 export function applyLayout(layout) {
@@ -204,38 +284,89 @@ export function applyLayout(layout) {
         return;
     }
 
+    for (const host of document.querySelectorAll('.layout-tab-host')) {
+        unwrapHost(host);
+    }
+
     const panels = {};
     for (const el of document.querySelectorAll('[data-layout-id]')) {
         panels[el.dataset.layoutId] = el;
     }
 
     const placed = new Set();
-    const fill = (column, ids) => {
-        if (!column) {
-            return;
+    for (const entry of layout.left || []) {
+        placeLayoutEntry(leftCol, entry, panels, placed);
+    }
+    for (const entry of layout.right || []) {
+        placeLayoutEntry(rightCol, entry, panels, placed);
+    }
+    for (const entry of layout.full || []) {
+        if (entry === CHARACTER_ID) {
+            continue;
         }
-        for (const id of ids || []) {
-            const el = panels[id];
-            if (!el) {
-                continue;
-            }
-            column.appendChild(el);
-            placed.add(id);
-        }
-    };
-
-    fill(leftCol, layout.left);
-    fill(rightCol, layout.right);
-    fill(fullCol, layout.full);
+        placeLayoutEntry(fullCol, entry, panels, placed);
+    }
+    pinCharacterToTop();
+    placed.add(CHARACTER_ID);
 
     for (const [id, el] of Object.entries(panels)) {
         if (placed.has(id)) {
+            continue;
+        }
+        const host = getTabHost(el);
+        if (host && (leftCol.contains(host) || rightCol.contains(host) || fullCol?.contains(host))) {
             continue;
         }
         const parent = el.parentElement;
         if (parent === leftCol || parent === rightCol || parent === fullCol) {
             parent.appendChild(el);
         }
+    }
+    pinCharacterToTop();
+
+    if (layoutMode === 'factory') {
+        for (const host of document.querySelectorAll('.layout-tab-host')) {
+            unwrapHost(host);
+        }
+        applyFactoryCollapsed();
+        setFullRegionHeight(null);
+        resetGalleryHeight();
+        syncFullWidthBehavior();
+        return;
+    }
+    ensureSeedHosts();
+    for (const host of document.querySelectorAll('.layout-tab-host')) {
+        refreshHostChrome(host);
+    }
+    if (typeof layout.galleryHeight === 'number' && isGalleryInFullWidth()) {
+        setGalleryHeight(layout.galleryHeight);
+    } else if (!isGalleryInFullWidth()) {
+        resetGalleryHeight();
+    }
+    if (typeof layout.fullMaxHeight === 'number' && hasFullWidthStack()) {
+        setFullRegionHeight(layout.fullMaxHeight);
+    } else {
+        setFullRegionHeight(null);
+    }
+    syncFullWidthBehavior();
+
+    if (typeof globalThis.mainGallery?.updateMetaButtonsLayout === 'function') {
+        requestAnimationFrame(() => globalThis.mainGallery.updateMetaButtonsLayout());
+    }
+}
+
+const FACTORY_EXPANDED_KEYS = new Set(['gallery', 'queueManager', 'infoBox']);
+
+function applyFactoryCollapsed() {
+    const tabs = globalThis.collapsedTabs;
+    if (!tabs) {
+        return;
+    }
+    for (const [key, control] of Object.entries(tabs)) {
+        if (typeof control?.setCollapsed !== 'function') {
+            continue;
+        }
+        control.setCollapsed(!FACTORY_EXPANDED_KEYS.has(key));
     }
 }
 
@@ -275,6 +406,9 @@ export function updateUiLayoutLanguage() {
         }
         handle.title = LANG.title_ui_layout_drag || 'Click to collapse, drag to rearrange';
     }
+    for (const host of document.querySelectorAll('.layout-tab-host')) {
+        refreshHostChrome(host);
+    }
     refreshLayoutModeToggle();
 }
 
@@ -296,6 +430,26 @@ async function persistLayout() {
     await layoutApi('saveUiLayout', [getSettingsName(), readCurrentLayout(), layoutMode]);
 }
 
+/** Persist current on-screen layout as the independent sidecar for a settings name. */
+export async function persistIndependentLayoutFor(settingsName) {
+    if (layoutMode !== 'independent') {
+        return false;
+    }
+    const name = (settingsName && String(settingsName).trim())
+        ? String(settingsName).trim()
+        : getSettingsName();
+    return await layoutApi('saveUiLayout', [name, readCurrentLayout(), 'independent']);
+}
+
+/** Remove the independent layout sidecar for a settings name (orphan cleanup on config delete). */
+export async function deleteIndependentLayoutFor(settingsName) {
+    const name = String(settingsName || '').replace(/\.json$/i, '').trim();
+    if (!name || name === '_global') {
+        return false;
+    }
+    return await layoutApi('deleteUiLayout', [name]);
+}
+
 function createPlaceholder(height) {
     const placeholder = document.createElement('div');
     placeholder.className = 'layout-drop-placeholder';
@@ -313,6 +467,14 @@ function clearFloatStyles(panel) {
     panel.style.pointerEvents = '';
     panel.style.margin = '';
     panel.style.opacity = '';
+}
+
+function centerDrop(rect, y) {
+    if (!rect || rect.height <= 0) {
+        return false;
+    }
+    const rel = (y - rect.top) / rect.height;
+    return rel >= 0.25 && rel <= 0.75;
 }
 
 function findColumnAt(x, y) {
@@ -335,8 +497,46 @@ function findColumnAt(x, y) {
     return null;
 }
 
+function pinCharacterToTop() {
+    const full = getFullWidthColumn();
+    const character = getPanel(CHARACTER_ID);
+    if (!full || !character) {
+        return;
+    }
+    if (character.parentElement !== full) {
+        full.prepend(character);
+        return;
+    }
+    if (full.firstElementChild !== character) {
+        full.prepend(character);
+    }
+}
+
 function firstDroppableChild(column) {
+    if (column?.id === 'full-width') {
+        const character = getPanel(CHARACTER_ID);
+        if (character && character.parentElement === column) {
+            return character.nextElementSibling;
+        }
+    }
     return column?.firstElementChild || null;
+}
+
+function clampFullWidthBefore(column, beforeEl) {
+    if (column?.id !== 'full-width') {
+        return beforeEl;
+    }
+    const character = getPanel(CHARACTER_ID);
+    if (!character || character.parentElement !== column) {
+        return beforeEl;
+    }
+    if (!beforeEl || beforeEl === character) {
+        return character.nextElementSibling;
+    }
+    if (character.compareDocumentPosition(beforeEl) & Node.DOCUMENT_POSITION_PRECEDING) {
+        return character.nextElementSibling;
+    }
+    return beforeEl;
 }
 
 function placePlaceholder(column, beforeEl, placeholder, draggingEl) {
@@ -348,6 +548,7 @@ function placePlaceholder(column, beforeEl, placeholder, draggingEl) {
     if (target === draggingEl) {
         target = draggingEl.nextElementSibling;
     }
+    target = clampFullWidthBefore(column, target);
     if (target !== placeholder) {
         if (target) {
             target.before(placeholder);
@@ -359,12 +560,143 @@ function placePlaceholder(column, beforeEl, placeholder, draggingEl) {
     setFullWidthDropHint(column.id === 'full-width');
 }
 
+function columnOf(el) {
+    return el?.closest?.('#left, #right, #full-width') || null;
+}
+
+function findMergeHost(x, y, dragging) {
+    if (isTabHost(dragging)) {
+        return null;
+    }
+    const hits = document.elementsFromPoint(x, y) || [];
+    for (const hit of hits) {
+        if (!hit?.closest) {
+            continue;
+        }
+        if (hit === dragging || dragging.contains(hit)) {
+            continue;
+        }
+        const host = hit.closest('.layout-tab-host');
+        if (host && host !== dragging && !host.contains(dragging)) {
+            const onBar = Boolean(hit.closest('.layout-tab-bar'));
+            if (onBar || centerDrop(host.getBoundingClientRect(), y)) {
+                const column = columnOf(host);
+                if (column && column.id !== 'full-width') {
+                    return host;
+                }
+            }
+        }
+        const panel = hit.closest('[data-layout-id]');
+        if (panel && panel !== dragging && !getTabHost(panel)
+            && centerDrop(panel.getBoundingClientRect(), y)) {
+            const column = columnOf(panel);
+            if (column && column.id !== 'full-width'
+                && panelZoneAllowed(dragging.dataset.layoutId, zoneOfColumn(column))
+                && panelZoneAllowed(panel.dataset.layoutId, zoneOfColumn(column))) {
+                return panel;
+            }
+        }
+    }
+    return null;
+}
+
+function clearLabelDropMarks() {
+    for (const label of document.querySelectorAll('.layout-tab-drop-before, .layout-tab-drop-after')) {
+        label.classList.remove('layout-tab-drop-before', 'layout-tab-drop-after');
+    }
+}
+
+function markLabelDrop(host, beforePanel) {
+    clearLabelDropMarks();
+    if (!host) {
+        return;
+    }
+    const labels = [...host.querySelectorAll(':scope > .layout-tab-bar .layout-tab-label')];
+    if (labels.length === 0) {
+        return;
+    }
+    if (!beforePanel) {
+        labels.at(-1)?.classList.add('layout-tab-drop-after');
+        return;
+    }
+    const label = labels.find((item) => item.dataset.tabPage === beforePanel.dataset.layoutId);
+    label?.classList.add('layout-tab-drop-before');
+}
+
+function getReorderBeforePanel(host, x, y) {
+    const bar = host?.querySelector(':scope > .layout-tab-bar');
+    if (!bar) {
+        return undefined;
+    }
+    const rect = bar.getBoundingClientRect();
+    if (x < rect.left || x > rect.right || y < rect.top - 10 || y > rect.bottom + 10) {
+        return undefined;
+    }
+    const pages = getHostPages(host);
+    const labels = [...bar.querySelectorAll('.layout-tab-label')];
+    for (const label of labels) {
+        const box = label.getBoundingClientRect();
+        if (x < box.left + box.width / 2) {
+            return pages.find((item) => item.dataset.layoutId === label.dataset.tabPage) || null;
+        }
+    }
+    return null;
+}
+
+function layoutItemAt(el) {
+    if (!el?.closest) {
+        return null;
+    }
+    const host = el.closest('.layout-tab-host');
+    if (host) {
+        return host;
+    }
+    return el.closest('[data-layout-id]');
+}
+
 // eslint-disable-next-line sonarjs/cognitive-complexity
 function updatePlaceholderFromPoint(x, y) {
     if (!dragState) {
         return;
     }
-    const { panel, placeholder } = dragState;
+    const { panel, placeholder, labelDrag, sourceHost } = dragState;
+    if (labelDrag && sourceHost?.isConnected) {
+        const beforePanel = getReorderBeforePanel(sourceHost, x, y);
+        if (beforePanel !== undefined) {
+            if (dragState.mergeHost) {
+                dragState.mergeHost.classList.remove('layout-tab-hint');
+            }
+            dragState.mergeHost = null;
+            dragState.reordering = true;
+            dragState.reorderBefore = beforePanel;
+            placeholder.style.visibility = 'hidden';
+            markLabelDrop(sourceHost, beforePanel);
+            return;
+        }
+    }
+    dragState.reordering = false;
+    dragState.reorderBefore = undefined;
+    clearLabelDropMarks();
+
+    const mergeHost = findMergeHost(x, y, panel);
+    const mergeColumn = columnOf(mergeHost);
+    const canMerge = mergeHost && mergeHost !== panel && mergeHost !== getTabHost(panel)
+        && mergeColumn && mergeColumn.id !== 'full-width'
+        && (isTabHost(panel)
+            ? hostZoneAllowed(panel, zoneOfColumn(mergeColumn))
+            : panelZoneAllowed(panel.dataset.layoutId, zoneOfColumn(mergeColumn)));
+    if (dragState.mergeHost && dragState.mergeHost !== mergeHost) {
+        dragState.mergeHost.classList.remove('layout-tab-hint');
+    }
+    dragState.mergeHost = canMerge ? mergeHost : null;
+    placeholder.classList.toggle('layout-drop-merge', Boolean(dragState.mergeHost));
+    if (dragState.mergeHost) {
+        dragState.mergeHost.classList.add('layout-tab-hint');
+        placeholder.style.visibility = 'hidden';
+        return;
+    }
+    placeholder.style.visibility = '';
+
     const skip = new Set([panel, placeholder]);
     const hits = document.elementsFromPoint(x, y) || [];
 
@@ -372,16 +704,12 @@ function updatePlaceholderFromPoint(x, y) {
         if (skip.has(hit) || placeholder.contains(hit) || panel.contains(hit)) {
             continue;
         }
-        if (hit.closest?.('.dropdown-character, .dropdown-character-regional')) {
-            const full = getFullWidthColumn();
-            placePlaceholder(full, firstDroppableChild(full), placeholder, panel);
-            return;
-        }
-        const overPanel = hit.closest?.('[data-layout-id]');
-        if (overPanel && overPanel !== panel) {
-            const rect = overPanel.getBoundingClientRect();
+        const overItem = layoutItemAt(hit);
+        if (overItem && overItem !== panel) {
+            const rect = overItem.getBoundingClientRect();
             const before = y < rect.top + rect.height / 2;
-            placePlaceholder(overPanel.parentElement, before ? overPanel : overPanel.nextElementSibling, placeholder, panel);
+            const column = overItem.parentElement;
+            placePlaceholder(column, before ? overItem : overItem.nextElementSibling, placeholder, panel);
             return;
         }
     }
@@ -434,10 +762,35 @@ function autoScrollColumns(x, y) {
     }
 }
 
-function startDrag(panel, event) {
+function resolveDragTarget(panel, forceExtract = false) {
+    if (isTabHost(panel)) {
+        return panel;
+    }
+    if (!forceExtract && isLastHostPage(panel)) {
+        return getTabHost(panel) || panel;
+    }
+    return panel;
+}
+
+function startDrag(panel, event, options = {}) {
+    const forceExtract = Boolean(options.forceExtract);
+    const labelDrag = Boolean(options.labelDrag);
+    panel = resolveDragTarget(panel, forceExtract || labelDrag);
+    const sourceHost = getTabHost(panel);
+    if (!labelDrag && !isTabHost(panel) && sourceHost) {
+        extractPanelFromHost(panel, null, forceExtract);
+    }
+    if (!panel.parentElement) {
+        return;
+    }
     const rect = panel.getBoundingClientRect();
     const placeholder = createPlaceholder(rect.height);
-    panel.parentElement.insertBefore(placeholder, panel);
+    if (labelDrag && sourceHost) {
+        sourceHost.after(placeholder);
+        placeholder.style.visibility = 'hidden';
+    } else {
+        panel.before(placeholder);
+    }
 
     panel.classList.add('layout-dragging');
     panel.style.position = 'fixed';
@@ -455,10 +808,16 @@ function startDrag(panel, event) {
     dragState = {
         panel,
         placeholder,
+        mergeHost: null,
+        forceExtract,
+        labelDrag,
+        sourceHost,
+        reordering: false,
+        reorderBefore: undefined,
         offsetX: event.clientX - rect.left,
         offsetY: event.clientY - rect.top,
         originWidth: rect.width,
-        originParent: placeholder.parentElement,
+        originParent: sourceHost?.parentElement || placeholder.parentElement,
         lastX: event.clientX,
         lastY: event.clientY,
         scrollRaf: requestAnimationFrame(tickDragScroll)
@@ -486,32 +845,111 @@ function tickDragScroll() {
     dragState.scrollRaf = requestAnimationFrame(tickDragScroll);
 }
 
+function dropAllowed(panel, column) {
+    const zone = zoneOfColumn(column);
+    if (!zone) {
+        return false;
+    }
+    if (panel?.dataset?.layoutId === CHARACTER_ID) {
+        return false;
+    }
+    if (isTabHost(panel)) {
+        return hostZoneAllowed(panel, zone);
+    }
+    return panelZoneAllowed(panel.dataset.layoutId, zone);
+}
+
+function mergeDraggedIntoHost(panel, host) {
+    if (isTabHost(panel)) {
+        return;
+    }
+    mergePanelIntoHost(host, panel, true);
+    bindHostDrag(host);
+}
+
 async function endDrag() {
     if (!dragState) {
         return;
     }
-    const { panel, placeholder, scrollRaf } = dragState;
+    const {
+        panel, placeholder, scrollRaf, mergeHost, originParent,
+        forceExtract, labelDrag, sourceHost, reordering, reorderBefore
+    } = dragState;
     if (scrollRaf) {
         cancelAnimationFrame(scrollRaf);
     }
 
-    if (placeholder.parentElement) {
-        placeholder.parentElement.insertBefore(panel, placeholder);
-        placeholder.remove();
+    if (mergeHost?.isConnected) {
+        mergeHost.classList.remove('layout-tab-hint');
     }
-    clearFloatStyles(panel);
+    clearLabelDropMarks();
+
+    if (reordering && sourceHost?.isConnected) {
+        placeholder.remove();
+        clearFloatStyles(panel);
+        movePageInHost(sourceHost, panel, reorderBefore);
+    } else {
+        let mergeTarget = mergeHost && mergeHost.isConnected ? mergeHost : null;
+        if (mergeTarget && !isTabHost(mergeTarget) && columnOf(mergeTarget)?.id !== 'full-width') {
+            mergeTarget = ensureHostForPanel(mergeTarget);
+        }
+        if (mergeTarget && isTabHost(mergeTarget)
+            && mergeTarget !== panel && mergeTarget !== getTabHost(panel)
+            && columnOf(mergeTarget)?.id !== 'full-width') {
+            placeholder.remove();
+            mergeDraggedIntoHost(panel, mergeTarget);
+            clearFloatStyles(panel);
+        } else if (placeholder.parentElement) {
+            const column = placeholder.parentElement;
+            if (!dropAllowed(panel, column)) {
+                originParent?.appendChild(placeholder);
+            }
+            if (!isTabHost(panel) && getTabHost(panel)
+                && (labelDrag || forceExtract || !isLastHostPage(panel))
+                && placeholder.parentElement !== getTabHost(panel)
+                && !getTabHost(panel)?.contains(placeholder)) {
+                extractPanelFromHost(panel, placeholder, labelDrag || forceExtract);
+            }
+            placeholder.parentElement.insertBefore(panel, placeholder);
+            placeholder.remove();
+            if (isTabHost(panel) && panel.parentElement?.id === 'full-width') {
+                unwrapHost(panel);
+            }
+            const host = getTabHost(panel);
+            if (host) {
+                bindHostDrag(host);
+            }
+            clearFloatStyles(panel);
+        } else {
+            clearFloatStyles(panel);
+        }
+    }
+    if (isTabHost(panel)) {
+        panel.classList.remove('layout-tab-hint');
+    }
     document.body.classList.remove('layout-is-dragging');
     setFullWidthDropHint(false);
     dragState = null;
+    syncFullWidthBehavior();
     await persistLayout();
 }
 
 function isDragArmed(panel) {
-    return Boolean(panel?.classList.contains('layout-drop-hint'));
+    if (panel?.classList.contains('layout-drop-hint')) {
+        return true;
+    }
+    const host = isTabHost(panel) ? panel : getTabHost(panel);
+    return Boolean(host?.classList.contains('layout-tab-hint'));
 }
 
-function beginPotentialDrag(panel, event, suppressClick) {
-    if (event.button !== 0 || dragState || !isDragArmed(panel)) {
+function beginPotentialDrag(panel, event, suppressClick, options = {}) {
+    if (event.button !== 0 || dragState) {
+        return;
+    }
+    if (panel?.dataset?.layoutId === CHARACTER_ID) {
+        return;
+    }
+    if (!options.forceExtract && !options.armed && !isDragArmed(panel)) {
         return;
     }
 
@@ -527,7 +965,7 @@ function beginPotentialDrag(panel, event, suppressClick) {
             if (suppressClick) {
                 suppressHandleClick = true;
             }
-            startDrag(panel, moveEvent);
+            startDrag(panel, moveEvent, options);
         }
         if (dragging) {
             moveDrag(moveEvent);
@@ -635,6 +1073,442 @@ async function cycleLayoutMode() {
     }
 }
 
+const boundHosts = new WeakSet();
+
+function bindHostDrag(host) {
+    if (!host || boundHosts.has(host)) {
+        return;
+    }
+    boundHosts.add(host);
+    const bar = host.querySelector(':scope > .layout-tab-bar');
+    if (!bar) {
+        return;
+    }
+    bar.addEventListener('pointerenter', () => scheduleDropHint(host));
+    bar.addEventListener('pointerleave', () => cancelDropHint(host));
+    bar.addEventListener('pointerdown', (event) => {
+        if (event.target.closest('.layout-tab-collapse')) {
+            return;
+        }
+        const label = event.target.closest('.layout-tab-label');
+        if (label) {
+            if (label.isContentEditable) {
+                return;
+            }
+            const pagePanel = getHostPages(host).find((item) => item.dataset.layoutId === label.dataset.tabPage);
+            if (pagePanel) {
+                setHostActive(host, label.dataset.tabPage);
+                beginPotentialDrag(pagePanel, event, true, { forceExtract: true, labelDrag: true });
+            }
+            return;
+        }
+        beginPotentialDrag(host, event, false, { armed: true });
+    });
+    host.addEventListener('layout-tab-renamed', () => {
+        persistLayout();
+    });
+    host.addEventListener('layout-tab-folded', () => {
+        persistLayout();
+    });
+}
+
+function ensureSeedHosts() {
+    const full = getFullWidthColumn();
+    for (const host of document.querySelectorAll('.layout-tab-host')) {
+        if (full?.contains(host) || getHostPages(host).length <= 1) {
+            unwrapHost(host);
+            continue;
+        }
+        bindHostDrag(host);
+    }
+}
+
+function getGalleryMain() {
+    return document.querySelector('.gallery-main-main');
+}
+
+function isGalleryInFullWidth() {
+    const full = getFullWidthColumn();
+    const gallery = getPanel('gallery-main');
+    return Boolean(full && gallery && gallery.parentElement === full);
+}
+
+function isGalleryMainCollapsed() {
+    const gallery = getPanel('gallery-main');
+    const main = getGalleryMain();
+    return Boolean(gallery?.classList.contains('collapsed') || main?.classList.contains('collapsed'));
+}
+
+function getFullWidthItems(full) {
+    return [...(full?.children || [])].filter((el) => el.dataset?.layoutId || isTabHost(el));
+}
+
+function isGalleryCompressMode() {
+    const full = getFullWidthColumn();
+    const gallery = getPanel('gallery-main');
+    if (!full || !gallery || gallery.parentElement !== full || isGalleryMainCollapsed()) {
+        return false;
+    }
+    const items = getFullWidthItems(full);
+    const galleryIndex = items.indexOf(gallery);
+    return galleryIndex >= 0 && galleryIndex < items.length - 1;
+}
+
+function isBelowGalleryFullyVisible() {
+    const full = getFullWidthColumn();
+    const gallery = getPanel('gallery-main');
+    if (!full || !gallery || gallery.parentElement !== full) {
+        return true;
+    }
+    const items = getFullWidthItems(full);
+    const galleryIndex = items.indexOf(gallery);
+    if (galleryIndex < 0 || galleryIndex >= items.length - 1) {
+        return true;
+    }
+    const last = items.at(-1);
+    const fullRect = full.getBoundingClientRect();
+    const lastRect = last.getBoundingClientRect();
+    const padBottom = Number.parseFloat(globalThis.getComputedStyle(full).paddingBottom) || 0;
+    return lastRect.bottom <= fullRect.bottom - padBottom + 2;
+}
+
+function hasFullWidthStack() {
+    const full = getFullWidthColumn();
+    if (!full) {
+        return false;
+    }
+    return [...full.children].some((el) => (
+        (el.dataset?.layoutId && el.dataset.layoutId !== CHARACTER_ID) || isTabHost(el)
+    ));
+}
+
+function galleryChromeHeight() {
+    const gallery = getPanel('gallery-main');
+    const main = getGalleryMain();
+    if (!gallery || !main) {
+        return 42;
+    }
+    const marginTop = Number.parseFloat(globalThis.getComputedStyle(gallery).marginTop) || 0;
+    const chrome = gallery.getBoundingClientRect().height - main.getBoundingClientRect().height;
+    return Math.max(0, chrome) + marginTop;
+}
+
+function getFullWidthMinCap() {
+    const full = getFullWidthColumn();
+    const character = getPanel(CHARACTER_ID);
+    const charHeight = character && full?.contains(character)
+        ? Math.ceil(character.getBoundingClientRect().height)
+        : 40;
+    const pad = full ? Number.parseFloat(globalThis.getComputedStyle(full).paddingBottom) || 0 : 10;
+    if (isGalleryInFullWidth() && !isGalleryMainCollapsed()) {
+        return Math.ceil(charHeight + GALLERY_COMPRESS_MIN + galleryChromeHeight() + pad);
+    }
+    return Math.ceil(charHeight + pad + 8);
+}
+
+function getFullWidthMaxCap() {
+    const body = document.getElementById('full-body');
+    const header = document.getElementById('top-header');
+    const handle = document.getElementById('full-split-handle');
+    const available = body
+        ? body.clientHeight - (header?.offsetHeight || 0) - SPLIT_MIN_HEIGHT - (handle?.offsetHeight || 10)
+        : FULL_WIDTH_CSS_MAX;
+    return Math.max(getFullWidthMinCap(), Math.min(FULL_WIDTH_CSS_MAX, available));
+}
+
+function setFullRegionHeight(px) {
+    const full = getFullWidthColumn();
+    if (!full) {
+        return;
+    }
+    if (px == null) {
+        fullRegionHeight = null;
+        full.style.maxHeight = '';
+        full.style.height = '';
+        return;
+    }
+    const next = Math.round(Math.max(getFullWidthMinCap(), Math.min(getFullWidthMaxCap(), px)));
+    fullRegionHeight = next;
+    full.style.maxHeight = `${next}px`;
+    full.style.height = `${next}px`;
+}
+
+function resetGalleryHeight() {
+    const main = getGalleryMain();
+    if (!main) {
+        return;
+    }
+    main.classList.remove('layout-gallery-compress');
+    main.style.height = '';
+    main.style.maxHeight = '';
+}
+
+function readGalleryHeight() {
+    const main = getGalleryMain();
+    if (!main) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    const raw = Number.parseFloat(main.style.height);
+    return Number.isFinite(raw) ? raw : GALLERY_MAIN_HEIGHT;
+}
+
+function getGalleryHeightCap() {
+    const full = getFullWidthColumn();
+    const main = getGalleryMain();
+    if (!full || !main || !isGalleryInFullWidth()) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    const current = readGalleryHeight();
+    // Content-fit height for the current #full-width region: compress floor
+    // only (stop over-shrink / empty gap). NOT the expand ceiling -- see
+    // getGalleryExpandMax. NOT a hard upper clamp inside setGalleryHeight.
+    const fit = Math.floor(current + full.clientHeight - full.scrollHeight);
+    if (!Number.isFinite(fit)) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    return Math.min(GALLERY_MAIN_HEIGHT, Math.max(GALLERY_COMPRESS_MIN, fit));
+}
+
+function getGalleryExpandMax() {
+    const full = getFullWidthColumn();
+    const main = getGalleryMain();
+    if (!full || !main || !isGalleryInFullWidth()) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    // Region-aware expand ceiling: how tall gallery main can be while filling
+    // the visible #full-width client area. Subtract only chrome above the main
+    // (character + gallery chrome via mainRect.top); do NOT reserve sibling
+    // stack height -- expand may push those below the fold / into overflow.
+    const fullRect = full.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const padBottom = Number.parseFloat(globalThis.getComputedStyle(full).paddingBottom) || 0;
+    const regionMax = Math.floor(fullRect.bottom - padBottom - mainRect.top);
+    if (!Number.isFinite(regionMax)) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    return Math.min(GALLERY_MAIN_HEIGHT, Math.max(GALLERY_COMPRESS_MIN, regionMax));
+}
+
+function setGalleryHeight(px) {
+    const main = getGalleryMain();
+    if (!main || main.classList.contains('collapsed')) {
+        return;
+    }
+    // Absolute clamp only - wheel/split decide fit-based limits separately so
+    // compress can step by delta without snapping to the content-fit value.
+    const next = Math.min(GALLERY_MAIN_HEIGHT, Math.max(GALLERY_COMPRESS_MIN, Math.round(px)));
+    if (next >= GALLERY_MAIN_HEIGHT) {
+        resetGalleryHeight();
+        return;
+    }
+    main.classList.add('layout-gallery-compress');
+    main.style.height = `${next}px`;
+    main.style.maxHeight = `${next}px`;
+}
+
+function wheelDeltaY(event) {
+    if (event.deltaMode === 1) {
+        return event.deltaY * 16;
+    }
+    if (event.deltaMode === 2) {
+        return event.deltaY * GALLERY_MAIN_HEIGHT;
+    }
+    return event.deltaY;
+}
+
+function canScrollY(el, deltaY) {
+    if (!(el instanceof Element)) {
+        return false;
+    }
+    const style = globalThis.getComputedStyle(el);
+    const overflowY = style.overflowY;
+    if (overflowY !== 'auto' && overflowY !== 'scroll' && overflowY !== 'overlay') {
+        return false;
+    }
+    if (el.scrollHeight <= el.clientHeight + 1) {
+        return false;
+    }
+    if (deltaY > 0) {
+        return el.scrollTop + el.clientHeight < el.scrollHeight - 1;
+    }
+    if (deltaY < 0) {
+        return el.scrollTop > 0;
+    }
+    return false;
+}
+
+function findScrollableAncestor(start, boundary, deltaY) {
+    let el = start instanceof Element ? start : null;
+    while (el && el !== boundary) {
+        if (boundary && !boundary.contains(el)) {
+            break;
+        }
+        if (canScrollY(el, deltaY)) {
+            return el;
+        }
+        el = el.parentElement;
+    }
+    return null;
+}
+
+function onFullWidthWheel(event) {
+    if (!isGalleryCompressMode()) {
+        return;
+    }
+    // Ctrl/Meta+wheel is owned by gallery grid resize (customGallery handleGridWheel).
+    if (event.ctrlKey || event.metaKey) {
+        return;
+    }
+    const full = getFullWidthColumn();
+    const main = getGalleryMain();
+    if (!full || !main) {
+        return;
+    }
+    const delta = wheelDeltaY(event);
+    if (!delta) {
+        return;
+    }
+    // Nested scroll: consume wheel on gallery inner scroller until its edge,
+    // then allow compress / #full-width scroll / expand below.
+    const target = event.target instanceof Element ? event.target : null;
+    if (target && main.contains(target)) {
+        const inner = findScrollableAncestor(target, main, delta);
+        if (inner) {
+            event.preventDefault();
+            inner.scrollTop += delta;
+            return;
+        }
+    }
+    const current = readGalleryHeight();
+    // fitCap: compress floor (content-fit). expandMax: visible-region ceiling
+    // (may push siblings below the fold). Do not use fitCap as expand limit.
+    const fitCap = getGalleryHeightCap();
+    const expandMax = getGalleryExpandMax();
+    if (delta > 0) {
+        // Shrink gradually while overflowing / below not fully visible; never
+        // jump past fitCap (that created the huge empty-gap over-shrink).
+        if (current > GALLERY_COMPRESS_MIN && current > fitCap && !isBelowGalleryFullyVisible()) {
+            event.preventDefault();
+            setGalleryHeight(Math.max(fitCap, current - delta));
+            return;
+        }
+        if (full.scrollHeight > full.clientHeight + 1) {
+            event.preventDefault();
+            full.scrollTop += delta;
+        }
+        return;
+    }
+    if (full.scrollTop > 0) {
+        event.preventDefault();
+        full.scrollTop += delta;
+        return;
+    }
+    if (current < expandMax) {
+        event.preventDefault();
+        setGalleryHeight(Math.min(expandMax, current - delta));
+    }
+}
+
+function applyFullSplitDelta(deltaUp) {
+    if (!splitDrag) {
+        return;
+    }
+    const desired = Math.max(
+        getFullWidthMinCap(),
+        Math.min(getFullWidthMaxCap(), splitDrag.startFull - deltaUp)
+    );
+    const regionDelta = splitDrag.startFull - desired;
+    // Update region before gallery so layout metrics match the new clientHeight.
+    setFullRegionHeight(desired);
+    if (splitDrag.galleryInFull && !isGalleryMainCollapsed()) {
+        // Absolute [MIN, MAIN] clamp in setGalleryHeight - do not fit-snap here,
+        // or split-drag restore cannot grow the gallery back with the region.
+        setGalleryHeight(splitDrag.startGallery - regionDelta);
+    }
+}
+
+function syncFullSplitHandle() {
+    const handle = document.getElementById('full-split-handle');
+    if (!handle) {
+        return;
+    }
+    const show = hasFullWidthStack();
+    handle.hidden = !show;
+    if (!show && splitDrag == null) {
+        setFullRegionHeight(null);
+    }
+}
+
+function syncFullWidthBehavior() {
+    pinCharacterToTop();
+    syncFullSplitHandle();
+    if (!isGalleryInFullWidth()) {
+        resetGalleryHeight();
+    }
+}
+
+function onFullSplitPointerDown(event) {
+    if (event.button !== 0 || splitDrag || dragState) {
+        return;
+    }
+    const full = getFullWidthColumn();
+    const handle = document.getElementById('full-split-handle');
+    if (!full || !handle || handle.hidden) {
+        return;
+    }
+    event.preventDefault();
+    splitDrag = {
+        startY: event.clientY,
+        startFull: full.getBoundingClientRect().height,
+        startGallery: readGalleryHeight(),
+        galleryInFull: isGalleryInFullWidth()
+    };
+    handle.classList.add('layout-full-split-active');
+    document.body.classList.add('layout-is-resizing-full');
+    window.addEventListener('pointermove', onFullSplitPointerMove);
+    window.addEventListener('pointerup', onFullSplitPointerUp);
+    window.addEventListener('pointercancel', onFullSplitPointerUp);
+}
+
+function onFullSplitPointerMove(event) {
+    if (!splitDrag) {
+        return;
+    }
+    applyFullSplitDelta(splitDrag.startY - event.clientY);
+}
+
+async function onFullSplitPointerUp() {
+    window.removeEventListener('pointermove', onFullSplitPointerMove);
+    window.removeEventListener('pointerup', onFullSplitPointerUp);
+    window.removeEventListener('pointercancel', onFullSplitPointerUp);
+    document.getElementById('full-split-handle')?.classList.remove('layout-full-split-active');
+    document.body.classList.remove('layout-is-resizing-full');
+    splitDrag = null;
+    syncFullWidthBehavior();
+    await persistLayout();
+}
+
+function setupFullWidthScroll() {
+    const full = getFullWidthColumn();
+    if (!full || full.dataset.layoutScrollBound === '1') {
+        return;
+    }
+    full.dataset.layoutScrollBound = '1';
+    full.addEventListener('wheel', onFullWidthWheel, { passive: false, capture: true });
+    document.getElementById('gallery-main-toggle')?.addEventListener('click', () => {
+        resetGalleryHeight();
+        syncFullWidthBehavior();
+    });
+    const handle = document.getElementById('full-split-handle');
+    handle?.addEventListener('pointerdown', onFullSplitPointerDown);
+    window.addEventListener('resize', () => {
+        if (fullRegionHeight != null) {
+            setFullRegionHeight(fullRegionHeight);
+        }
+        syncFullSplitHandle();
+    });
+}
+
 function bindIndependentToggle() {
     const button = document.getElementById('ui-layout-independent-toggle');
     if (!button) {
@@ -656,9 +1530,11 @@ export async function setupUiLayout() {
             }
         }
         bindIndependentToggle();
+        setupFullWidthScroll();
         handlesBound = true;
     }
     await applySavedLayout();
     updateUiLayoutLanguage();
+    syncFullWidthBehavior();
 }
 

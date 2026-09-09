@@ -126,6 +126,7 @@ export function setupGallery(containerId) {
     let gridTotalHeight = 0;
     let gridItemEls = new Map();
     let gridResizeTimer = null;
+    let metaButtonsLayoutRaf = 0;
     let gridRelayoutRaf = 0;
     let gridScrollRaf = 0;
     let pendingAspectProbes = new Set();
@@ -540,6 +541,7 @@ export function setupGallery(containerId) {
             img.src = images[currentIndex];
         }
         updateGridSelection();
+        updateMetaButtonsLayout();
     }
 
     function handleGalleryFocusKeyDown(e) {
@@ -600,6 +602,7 @@ export function setupGallery(containerId) {
         ensureTagButton();
         ensureInfoButton();
         setGridMetaButtonsVisible(true);
+        updateMetaButtonsLayout();
         updateGridSelection();
     }
 
@@ -609,11 +612,12 @@ export function setupGallery(containerId) {
         if (overlay) overlay.classList.remove('visible');
         document.removeEventListener('keydown', handleGalleryFocusKeyDown);
         setGridMetaButtonsVisible(false);
+        updateMetaButtonsLayout();
         updateGridSelection();
     }
 
     function handleGridWheel(e) {
-        if (!e.ctrlKey || !isGridMode) return;
+        if ((!e.ctrlKey && !e.metaKey) || !isGridMode) return;
         e.preventDefault();
         const current = getGridTargetSize();
         const next = clampGridSize(current + (e.deltaY < 0 ? GRID_SIZE_STEP : -GRID_SIZE_STEP));
@@ -637,7 +641,13 @@ export function setupGallery(containerId) {
         if (overlay) overlay.classList.remove('visible');
         currentIndex = images.length - 1;
         setGridSizeSliderVisible(isGridMode);
-        isGridMode ? gallery_renderGridMode() : gallery_renderSplitMode();
+        if (isGridMode) {
+            setGridMetaButtonsVisible(false);
+            gallery_renderGridMode();
+        } else {
+            setGridMetaButtonsVisible(true);
+            gallery_renderSplitMode();
+        }
     }
 
     function ensurePrivacyButton() {
@@ -647,8 +657,6 @@ export function setupGallery(containerId) {
             privacyButton.id = 'cg-privacy-button';
             privacyButton.className = 'cg-button';
             privacyButton.textContent = '(X)';
-            privacyButton.style.top = '50px';
-            privacyButton.style.left = '10px';
             privacyButton.style.background = 'linear-gradient(45deg, red, orange, yellow, green, blue, indigo, violet)';
             privacyButton.addEventListener('click', () => {
                 if (privacyBalls.length >= 5) {
@@ -878,6 +886,8 @@ export function setupGallery(containerId) {
 
         ensureSwitchModeButton(container, toggleGalleryMode, 'cg-switch-mode-button', images.length);
         ensurePrivacyButton();
+        if (!isGalleryFocus) setGridMetaButtonsVisible(false);
+        updateMetaButtonsLayout();
 
         if (isGalleryFocus) {
             enterGalleryFocus(currentIndex);
@@ -906,6 +916,7 @@ export function setupGallery(containerId) {
             mainImage.src = images[currentIndex];
             mainImage.className = 'cg-main-image';
             mainImage.addEventListener('click', () => enterFullscreen(currentIndex));
+            mainImage.onload = () => updateMetaButtonsLayout();
             mainImageContainer.appendChild(mainImage);
             container.appendChild(mainImageContainer);
 
@@ -994,7 +1005,9 @@ export function setupGallery(containerId) {
         ensureTagButton();
         ensureInfoButton();
         ensurePrivacyButton();
+        setGridMetaButtonsVisible(true);
         adjustPreviewContainer(previewContainer);
+        updateMetaButtonsLayout();
     }
     
     function updatePreviewBorders() {
@@ -1009,6 +1022,173 @@ export function setupGallery(containerId) {
             previewImages[domIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
     }
+
+
+    function isGalleryHostInFullWidth() {
+        const full = document.getElementById('full-width');
+        return Boolean(full && full.contains(container));
+    }
+
+    function getMetaAnchorImage() {
+        if (isGalleryFocus) {
+            const focusImg = container.querySelector('.cg-gallery-focus-overlay.visible .cg-gallery-focus-image');
+            if (focusImg) return focusImg;
+        }
+        if (isGalleryHostInFullWidth() && !isGridMode) {
+            return container.querySelector('.cg-main-image-container .cg-main-image');
+        }
+        if (isGalleryHostInFullWidth() && isGridMode && isGalleryFocus) {
+            return container.querySelector('.cg-gallery-focus-overlay.visible .cg-gallery-focus-image');
+        }
+        return null;
+    }
+
+    function clearMetaButtonSideStyles(button) {
+        if (!button) return;
+        button.style.left = '';
+        button.style.right = '';
+        button.style.top = '';
+        button.style.bottom = '';
+        button.style.transform = '';
+    }
+
+    function clearChromeButtonSideStyles() {
+        for (const id of ['cg-switch-mode-button', 'cg-privacy-button']) {
+            const button = document.getElementById(id);
+            if (!button) continue;
+            button.style.left = '';
+            button.style.right = '';
+        }
+    }
+
+    function applyChromeButtonsSideLayout(rtl) {
+        const chromeIds = ['cg-switch-mode-button', 'cg-privacy-button'];
+        const chromeTops = {
+            'cg-switch-mode-button': '10px',
+            'cg-privacy-button': '50px'
+        };
+        for (const id of chromeIds) {
+            const button = document.getElementById(id);
+            if (!button) continue;
+            button.style.top = chromeTops[id];
+            button.style.bottom = 'auto';
+            button.style.transform = 'none';
+            if (rtl) {
+                button.style.left = 'auto';
+                button.style.right = '10px';
+            } else {
+                button.style.left = '10px';
+                button.style.right = 'auto';
+            }
+        }
+    }
+
+    function applyMetaButtonsSideLayout(rtl) {
+        const metaIds = ['cg-seed-button', 'cg-tag-button', 'cg-info-button'];
+        const metaTops = {
+            'cg-seed-button': '10px',
+            'cg-tag-button': '50px',
+            'cg-info-button': '90px'
+        };
+        for (const id of metaIds) {
+            const button = document.getElementById(id);
+            if (!button) continue;
+            button.style.top = metaTops[id];
+            button.style.bottom = 'auto';
+            button.style.transform = 'none';
+            button.style.width = 'auto';
+            button.style.whiteSpace = 'nowrap';
+            if (rtl) {
+                button.style.left = '10px';
+                button.style.right = 'auto';
+            } else {
+                button.style.left = 'auto';
+                button.style.right = '10px';
+            }
+        }
+        applyChromeButtonsSideLayout(rtl);
+        container.classList.remove('cg-meta-buttons-centered');
+    }
+
+    function updateMetaButtonsLayout() {
+        const rtl = document.body.classList.contains('right-to-left');
+        // Default row seed-tags-info. RTL mirrors to info-tags-seed.
+        // (Previously seed-tags-info matched <> on-right; after side flip RTL mirrors the row.)
+        const metaIds = rtl
+            ? ['cg-info-button', 'cg-tag-button', 'cg-seed-button']
+            : ['cg-seed-button', 'cg-tag-button', 'cg-info-button'];
+        const buttons = metaIds.map((id) => document.getElementById(id)).filter(Boolean);
+        if (!buttons.length) {
+            applyChromeButtonsSideLayout(rtl);
+            return;
+        }
+
+        const anchor = getMetaAnchorImage();
+        // Bottom-center only in full-width; half-width grid focus stays on the side.
+        const shouldCenter = Boolean(anchor) && isGalleryHostInFullWidth();
+        container.classList.toggle('cg-meta-buttons-centered', shouldCenter);
+
+        // Grid without in-frame focus: keep seed/tags/info hidden.
+        if (isGridMode && !isGalleryFocus) {
+            setGridMetaButtonsVisible(false);
+            applyChromeButtonsSideLayout(!rtl);
+            return;
+        }
+
+        // Normal / side mode: explicitly place chrome vs meta so RTL cannot be
+        // overridden by leftover inline coords or weaker stylesheet order.
+        if (!shouldCenter) {
+            applyMetaButtonsSideLayout(!rtl);
+            return;
+        }
+
+        const containerRect = container.getBoundingClientRect();
+        const anchorRect = anchor.getBoundingClientRect();
+        if (anchorRect.width < 8 || anchorRect.height < 8) {
+            applyMetaButtonsSideLayout(!rtl);
+            return;
+        }
+
+        for (const button of buttons) {
+            if (button.style.display === 'none') continue;
+        }
+
+        const gap = 18;
+        const visibleButtons = buttons.filter((button) => button.style.display !== 'none');
+        if (!visibleButtons.length) {
+            applyChromeButtonsSideLayout(!rtl);
+            return;
+        }
+        for (const button of visibleButtons) {
+            button.style.right = 'auto';
+            button.style.width = 'auto';
+            button.style.whiteSpace = 'nowrap';
+        }
+
+        const widths = visibleButtons.map((button) => {
+            const width = button.getBoundingClientRect().width;
+            return width > 1 ? Math.ceil(width) : Math.max(button.offsetWidth || 0, 56);
+        });
+        const heights = visibleButtons.map((button) => Math.max(button.offsetHeight || 0, 28));
+        const totalWidth = widths.reduce((sum, width) => sum + width, 0) + gap * (visibleButtons.length - 1);
+        const maxHeight = Math.max(...heights);
+        const centerX = anchorRect.left + anchorRect.width / 2 - containerRect.left;
+        const top = anchorRect.bottom - containerRect.top - maxHeight - 10;
+        let left = centerX - totalWidth / 2;
+
+        for (let i = 0; i < visibleButtons.length; i++) {
+            const button = visibleButtons[i];
+            button.style.left = `${Math.round(left)}px`;
+            button.style.right = 'auto';
+            button.style.top = `${Math.round(Math.max(8, top))}px`;
+            button.style.bottom = 'auto';
+            button.style.transform = 'none';
+            left += widths[i] + gap;
+        }
+        applyChromeButtonsSideLayout(!rtl);
+    }
+
+    globalThis.mainGallery.updateMetaButtonsLayout = updateMetaButtonsLayout;
 
     function ensureSeedButton() {
         let seedButton = document.getElementById('cg-seed-button');
@@ -1107,9 +1287,16 @@ export function setupGallery(containerId) {
     }
 
     const gridResizeObserver = new ResizeObserver(() => {
-        if (!isGridMode) return;
+        // Buttons track size immediately (rAF); masonry stays debounced.
+        if (metaButtonsLayoutRaf) cancelAnimationFrame(metaButtonsLayoutRaf);
+        metaButtonsLayoutRaf = requestAnimationFrame(() => {
+            metaButtonsLayoutRaf = 0;
+            updateMetaButtonsLayout();
+        });
         clearTimeout(gridResizeTimer);
-        gridResizeTimer = setTimeout(() => applyMasonryAndSync(true), 50);
+        gridResizeTimer = setTimeout(() => {
+            if (isGridMode) applyMasonryAndSync(true);
+        }, 50);
     });
     gridResizeObserver.observe(container);
 }

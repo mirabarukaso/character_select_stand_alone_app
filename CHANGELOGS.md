@@ -1,3 +1,10 @@
+2026.09.10 v2.9.1  
+Add, `Tabs` and `Height Drag`       
+Add, buttons on `Gallery` now follow `Right to Left` rules         
+Add, UI auto zoom for some 1080p or lower resolution display         
+Minor bugs fix     
+
+
 2026.09.09 v2.9.0     
 Add, `UI Layout` drag the `Collapse Arrow` or `Empty area` to modify UI layout     
 Add, `Info` button for current image in gallery       

@@ -57,34 +57,39 @@ export const sharedBodyHTML = `
         </div>        
       </div>
 
-      <div class="dropdown-character"></div>
-      <div class="dropdown-character-regional"></div>
-      <div id="full-width"></div>
+      <div id="full-width">
+        <div class="layout-character-host" data-layout-id="character">
+          <div class="dropdown-character"></div>
+          <div class="dropdown-character-regional"></div>
+        </div>
+      </div>
+
+      <div id="full-split-handle" class="layout-full-split" hidden></div>
 
       <div id="split">
         <div id="left">
-          <div id="generate-settings-static-left" data-layout-id="generate-settings-static-left" data-layout-empty-drag="true">                        
+          <div id="generate-settings-static-left" data-layout-id="generate-settings-static-left" data-layout-empty-drag="true">                                                
             <div id="generate-settings-slider">
               <div class="generate-width"></div>
               <div class="generate-height"></div>
               <div class="generate-cfg"></div>
-              <div class="generate-step"></div>              
+              <div class="generate-step"></div>
             </div>
             <div class="dropdown-view"></div>
             <div id="generate-settings-slider">
-              <div class="generate-tag-assist"></div>              
-              <div class="generate-refiner-dummy"></div>              
+              <div class="generate-tag-assist"></div>
+              <div class="generate-refiner-dummy"></div>
               <div class="generate-hires-fix-dummy"></div>
               <div class="generate-landscape"></div>
-            </div>
+            </div>            
           </div>
 
           <div class="gallery-main-container" data-layout-id="gallery-main">
             <div class="gallery-main-header">
               <div class="regional-condition-trigger"></div>
-              <div class="gallery-main-latest"></div>
-              <div></div>
+              <div class="gallery-main-latest"></div>              
               <div class="gallery-grid-size"></div>
+              <div class="queue-autostart-generate-dummy"></div>
               <div class="gallery-main-header-span">
                 <span id="gallery-main-span"></span>
                 <img id="gallery-main-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
@@ -150,13 +155,16 @@ export const sharedBodyHTML = `
           <div class="highres-fix-container" data-layout-id="highres-fix">
             <div class="highres-fix-header">
               <div class="generate-hires-fix"></div>
-              <div class="hires-fix-random-seed"></div>              
+              <div></div>
               <div class="highres-fix-header-span">
-                <span id="highres-fix-span"></span>
+                <span id="highres-fix-span">Hires Fix</span>
                 <img id="highres-fix-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
               </div>
             </div>
             <div class="highres-fix-main">
+              <div class="hires-fix-resolution">
+                <span></span>
+              </div>
               <div class="highres-fix-settings-1">
                 <div class="hires-fix-model"></div>
                 <div class="hires-fix-scale"></div>
@@ -164,7 +172,7 @@ export const sharedBodyHTML = `
               <div class="highres-fix-settings-2">
                 <div class="hires-fix-color-transfer"></div>
                 <div class="hires-fix-denoise"></div>
-                <div></div>
+                <div class="hires-fix-random-seed"></div>
                 <div class="hires-fix-steps"></div>
               </div>
             </div>
@@ -173,9 +181,9 @@ export const sharedBodyHTML = `
           <div class="refiner-container" data-layout-id="refiner">
             <div class="refiner-header">
               <div class="generate-refiner"></div>
-              <div class="refiner-addnoise"></div>              
+              <div></div>
               <div class="refiner-header-span">
-                <span id="refiner-span"></span>
+                <span id="refiner-span">Refiner</span>
                 <img id="refiner-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
               </div>
             </div>
@@ -183,7 +191,7 @@ export const sharedBodyHTML = `
               <div class="refiner-settings-1">
                 <div class="refiner-model"></div>
                 <div class="refiner-vpred"></div>
-                <div></div>
+                <div class="refiner-addnoise"></div>
                 <div class="refiner-ratio"></div>
               </div>
             </div>
@@ -192,27 +200,29 @@ export const sharedBodyHTML = `
           <div class="regional-condition-container" data-layout-id="regional-condition">
             <div class="regional-condition-header">
               <div class="regional-condition-trigger-dummy"></div>
-              <div class="regional-condition-swap"></div>
+              <div></div>
               <div class="regional-condition-header-span">
-                <span id="regional-condition-span"></span>
+                <span id="regional-condition-span">Regional</span>
                 <img id="regional-condition-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
               </div>
             </div>
             <div class="regional-condition-main">
               <div class="regional-condition-settings-1">
+                <div></div>
+                <div class="regional-condition-swap"></div>
                 <div class="regional-condition-image-ratio"></div>
                 <div class="regional-condition-overlap-ratio"></div>
                 <div class="regional-condition-strength-left"></div>
                 <div class="regional-condition-strength-right"></div>
                 <div class="regional-condition-option-left"></div>
-                <div class="regional-condition-option-right"></div>
+                <div class="regional-condition-option-right"></div>                
               </div>
             </div>
           </div>          
 
           <div class="image-infobox-container" data-layout-id="image-infobox">
             <div class="image-infobox-header">
-              <span id="image-infobox-span"></span>
+              <span id="image-infobox-span">Info</span>
               <img id="image-infobox-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
             </div>
             <div class="image-infobox-main"></div>
@@ -220,18 +230,7 @@ export const sharedBodyHTML = `
         </div>
 
         <div id="right">
-          <div id="generate-settings-static-right" data-layout-id="generate-settings-static-right" data-layout-empty-drag="true">
-            <div id="generate-buttons-2">
-              <div class="generate-button-cancel"></div>
-              <div class="generate-button-skip"></div>
-              <div class="generate-button-skip-current"></div>
-            </div>
-            <div id="generate-settings-static">
-              <div class="generate-random-seed"></div>
-              <div class="generate-sampler"></div>
-              <div class="generate-scheduler"></div>
-              <div class="generate-batch"></div>              
-            </div>       
+          <div id="generate-settings-static-right" data-layout-id="generate-settings-static-right" data-layout-empty-drag="true">            
             <div id="generate-buttons-container" >
               <div id="generate-buttons-1">
                 <div class="generate-button-single"></div>
@@ -239,14 +238,25 @@ export const sharedBodyHTML = `
                 <div class="generate-button-same"></div>
               </div>
             </div>
+            <div id="generate-settings-static">
+              <div class="generate-random-seed"></div>
+              <div class="generate-sampler"></div>
+              <div class="generate-scheduler"></div>
+              <div class="generate-batch"></div>              
+            </div>       
+            <div id="generate-buttons-2">
+              <div class="generate-button-cancel"></div>
+              <div class="generate-button-skip"></div>
+              <div class="generate-button-skip-current"></div>
+            </div>
           </div>
 
           <div class="gallery-thumb-container" data-layout-id="gallery-thumb">
             <div class="gallery-thumb-header">
-              <div class="queue-autostart-generate"></div>
               <div></div>
               <div></div>
-              <div class="generate-wildcard-random"></div>
+              <div></div>
+              <div></div>
               <div class="gallery-thumb-header-span">
                 <span id="gallery-thumb-span"></span>
                 <img id="gallery-thumb-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
@@ -258,7 +268,7 @@ export const sharedBodyHTML = `
           <div class="add-lora-container" data-layout-id="add-lora">
             <div class="add-lora-header">
               <div></div>
-              <div></div>              
+              <div></div>
               <div class="add-lora-span">
                 <span id="add-lora-span">LoRA</span>
                 <img id="add-lora-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
@@ -269,9 +279,9 @@ export const sharedBodyHTML = `
 
           <div class="model-settings-container" data-layout-id="model-settings">
             <div class="model-settings-header">
-              <div class="model-vpred"></div>
-              <div></div>
               <div class="thumb-select"></div>
+              <div></div>
+              <div></div>
               <div class="model-settings-span">
                 <span id="model-settings-span">Model</span>
                 <img id="model-settings-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
@@ -295,15 +305,16 @@ export const sharedBodyHTML = `
                 <div class="vae-override"></div>
               </div>              
               <div class="system-settings-main-2">
-                <div class="vae-sdxl"></div>                
+                <div class="vae-sdxl"></div>
+                <div class="model-vpred"></div>
               </div>
             </div>
           </div>
           
           <div id="prompt-text-container" data-layout-id="prompt-text" data-layout-empty-drag="true">
-            <div id="prompt-textbox-settings">              
-              <div></div>
-              <div></div>
+            <div id="prompt-textbox-settings">
+              <div class="system-settings-ai-select"></div>
+              <div class="system-settings-ai-preview"></div>              
               <div class="prompt-textbox-autoresize"></div>
               <div class="prompt-textbox-fontsize"></div>
             </div>
@@ -317,8 +328,8 @@ export const sharedBodyHTML = `
 
           <div class="jsonlist-container" data-layout-id="jsonlist">
             <div class="jsonlist-header">              
-              <div class="system-settings-ai-select"></div>
-              <div class="system-settings-ai-preview"></div>
+              <div class="generate-wildcard-random"></div>
+              <div></div>
               <div class="jsonlist-header-span">
                 <span id="jsonlist-span">JSON/CSV</span>
                 <img id="jsonlist-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
@@ -353,10 +364,10 @@ export const sharedBodyHTML = `
 
           <div class="queue-container" data-layout-id="queue">
             <div class="queue-header">
-              <div class="queue-autostart-generate-dummy"></div>
+              <div class="queue-autostart-generate"></div>              
               <div class="queue-busy-retry"></div>
               <div class="queue-header-span">
-                <span id="queue-span">Queue Manager</span>
+                <span id="queue-span">Job List</span>
                 <img id="queue-toggle" src="scripts/svg/mydropdown-arrow.svg" alt="><" fill="currentColor">
               </div>
             </div>                                    

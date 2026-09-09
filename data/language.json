@@ -53,10 +53,10 @@
         "custom_prompt": "Custom Prompt (Header)",
         "api_prompt": "Positive Prompt (Tail)",
         "api_neg_prompt": "Negative Prompt",
-        "ptompt_textbox_autoresize": "Auto line height",
+        "ptompt_textbox_autoresize": "Auto height",
         "ptompt_textbox_fontsize": "Prompt font size",
 
-        "batch_generate_rule": "AI rule for Batch generate",
+        "batch_generate_rule": "AI",
 
         "regional_condition": "Regional",
         "regional_swap": "Swap Character",
@@ -116,12 +116,11 @@
         "ai_system_prompt_text": "AI System Prompt",
         "ai_select_title":"Not use AI caption,AI caption once for multiple generation,Re-caption in each image,Use last AI caption result",
         "ai_select":"None,Once,Every,Last",
-        "ai_prompt_preview":"Preview",
+        "ai_prompt_preview":"AI Preview",
         "system_settings": "Settings",
         "image_info": "Image Info Reader",
         "image_info_to_generate": "Send image info to generator",
         "scroll_to_last": "Scroll to latest",
-
         
         "model_path_comfyui": "ComfyUI checkpoints folder (E.g. ..\\ComfyUI\\models\\checkpoints)",
         "image_save_path_comfyui": "ComfyUI output folder path prefix (Default: %date)",
@@ -329,7 +328,9 @@
         "setup_local_ai_addr": "Please enter the API address for your local language model.",
 
         "setup_done": "Initial setup is complete, and the configuration has been saved as settings.json.\nIf you are using ComfyUI, please enable Dev Mode in the settings.\nIf you are using WebUI, modify webui-user.bat and add COMMANDLINE_ARGS= --api.\n\nImportant: Please ensure that the HighRes Fix model has been selected correctly. The initial default configuration may not select the correct model.",  
-        "setup_skip_wizard": "Skip following setup?"
+        "setup_skip_wizard": "Skip following setup?",
+
+        "system_zoom_mode": "Zoom Mode Enabled\n\nNote: SAA now runs in zoom mode, which may cause some UI elements to be misaligned. You can adjust the zoom level by pressing Ctrl +/-/0 to adjust the zoom level."
     },
     "zh-CN": {
         "language": "中文（简体）",
@@ -388,7 +389,7 @@
         "ptompt_textbox_autoresize": "自动调整行数",
         "ptompt_textbox_fontsize": "提示词字体尺寸",
 
-        "batch_generate_rule": "AI填词规则",
+        "batch_generate_rule": "AI",
 
         "regional_condition": "双人分区采样",
         "regional_swap": "交换角色位置",
@@ -448,7 +449,7 @@
         "ai_system_prompt_text": "AI系统提示词",
         "ai_select_title":"不使用AI题词,多次生成时只运行一次AI题词,每张图片都用AI重新题词,使用上次的AI题词结果",
         "ai_select":"关闭,单次,每次,上次",
-        "ai_prompt_preview":"预览",
+        "ai_prompt_preview":"AI填词预览",
         "system_settings": "设置",
         "image_info": "读取图片信息",
         "image_info_to_generate": "传输图片数据到生成器",
@@ -661,6 +662,8 @@
         "setup_local_ai_addr": "请输入你的本地语言模型API地址",
 
         "setup_done": "初始化设置完成，相关配置已经存储为 settings.json\n如果你使用ComfyUI，请在设置中开启Dev Mode\n如果你使用WebUI，请修改webui-user.bat，修改COMMANDLINE_ARGS= --api\n\n重要：请确认高清修复模型是否正确选择，默认的初始化配置可能无法选择正确的模型。",
-        "setup_skip_wizard": "是否要跳过后续设置？"        
+        "setup_skip_wizard": "是否要跳过后续设置？",
+
+        "system_zoom_mode": "缩放模式\n\n注意：SAA现在运行在缩放模式下，可能会导致部分UI元素错位，可以按Ctrl +/-/0 调整缩放级别。"
     }    
   }

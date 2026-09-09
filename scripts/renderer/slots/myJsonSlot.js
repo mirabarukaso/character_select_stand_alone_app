@@ -1,6 +1,7 @@
 import { mySimpleList } from '../components/myDropdown.js';
 import { generateGUID } from './myLoRASlot.js';
 import { setupTextbox } from '../components/myTextbox.js';
+import { refreshTabLabelHints } from '../uiLayoutTabs.js';
 
 const regionalPositions = ['Both', 'Left', 'Right'];
 const promptPositions = ["BOP", "BOC", "EOC", "EOP", "Off"];
@@ -282,7 +283,7 @@ class JsonSlotManager {
             const newRow = this.renderAddRow(newCandidateClassName);
             this.container.appendChild(newRow);
         }
-
+        refreshTabLabelHints();
         return className;
     }
 
@@ -303,6 +304,7 @@ class JsonSlotManager {
                 rowElement.remove();
             }
             this.slotIndex.delete(className);
+            refreshTabLabelHints();
         }
     }
 

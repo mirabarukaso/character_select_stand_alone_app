@@ -1,3 +1,5 @@
+import { refreshTabLabelHints } from '../uiLayoutTabs.js';
+
 const CAT_CB = '[myCheckbox]'
 const CAT_RB = '[myRadiobox]';
 
@@ -48,12 +50,14 @@ export function setupCheckbox(containerId, spanText = 'myCheckbox', defaultCheck
         }
         if (callback)
             callback(checkboxInput.checked);
+        refreshTabLabelHints();
     });
 
     return {
         setValue: (value) => {
             if (typeof value === 'boolean') {
                 checkboxInput.checked = value;
+                refreshTabLabelHints();
             } else {
                 console.warn(CAT_CB, `Invalid value for setValue. Expected true or false: `, typeof value);
             }

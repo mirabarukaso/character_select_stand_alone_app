@@ -1,6 +1,6 @@
 // main.js
 // Modules to control application life and create native browser window
-import { app, BrowserWindow, ipcMain } from 'electron';
+import { app, BrowserWindow, ipcMain, screen } from 'electron';
 import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 
@@ -21,6 +21,11 @@ import { setupCachedFiles } from './scripts/main/cachedFiles.js';
 import { setupWildcardsHandlers } from './scripts/main/wildCards.js';
 import { setupTagger } from './scripts/main/imageTagger.js';
 import { setupUiLayoutHandlers } from './scripts/main/uiLayout_backend.js';
+import {
+  detectAndApplyDisplayFit,
+  getDisplayFit,
+  applyZoomToWindow
+} from './scripts/main/screenResolution.js';
 
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
@@ -38,11 +43,13 @@ function addToDictionary(word) {
 }
 
 function createWindow () {
+  const fit = getDisplayFit();
   // Create the browser window.
   mainWindow = new BrowserWindow({
     autoHideMenuBar: true,  // Hide menu
-    width: 1300,
-    height: 1286,
+    useContentSize: true,
+    width: fit.width,
+    height: fit.height,
     icon: path.join(__dirname, './html/icon.png'),
     webPreferences: {
       preload: path.join(__dirname, './scripts/preload.js'),
@@ -52,8 +59,16 @@ function createWindow () {
       spellcheck: true, // Enable spellcheck
       sandbox: false, // Disable sandbox for ES modules
       webSecurity: true, //Enable web security
+      zoomFactor: fit.zoomFactor,
     }
   });
+
+  // Keep zoom + content size tight after load (webPreferences.zoomFactor is initial)
+  const applyFit = () => {
+    applyZoomToWindow(mainWindow);
+  };
+  mainWindow.webContents.on('did-finish-load', applyFit);
+  mainWindow.once('ready-to-show', applyFit);
 
   // Set the spellchecker to check English US
   mainWindow.webContents.session.setSpellCheckerLanguages(['en-US']);
@@ -76,6 +91,8 @@ function createWindow () {
 async function initializeApp() {
   const version = getAppVersion();
   console.log("Character Select SAA Version:", version);
+
+  detectAndApplyDisplayFit(screen);
 
   setupFileHandlers();  
   const SETTINGS = setupGlobalSettings();
@@ -128,7 +145,7 @@ async function initializeApp() {
 // Initialize the app
 // eslint-disable-next-line unicorn/prefer-top-level-await
 (async () => { 
-  await app.whenReady();
+  await app.whenReady();  
   await initializeApp();
   
   app.on('activate', function () {

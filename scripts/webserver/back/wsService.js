@@ -29,7 +29,7 @@ import { remoteAI, localAI } from '../../main/remoteAI_backend.js';
 import { loadFile, readImage, readSafetensors, readBase64Image } from '../../main/fileHandlers.js';
 import { runImageTagger } from '../../main/imageTagger.js';
 import { getAppVersion, compressGzipThenBase64 } from '../../../main-common.js';
-import { loadUiLayout, saveUiLayout, setUiLayoutMode, setUiLayoutIndependent } from '../../main/uiLayout_backend.js';
+import { loadUiLayout, saveUiLayout, setUiLayoutMode, setUiLayoutIndependent, deleteUiLayout } from '../../main/uiLayout_backend.js';
 
 const CAT = '[WSS]';
 
@@ -448,6 +448,7 @@ const methodHandlers = {
   'saveUiLayout': (params)=> saveUiLayout(...params),
   'setUiLayoutMode': (params)=> setUiLayoutMode(...params),
   'setUiLayoutIndependent': (params)=> setUiLayoutIndependent(...params),
+  'deleteUiLayout': (params)=> deleteUiLayout(...params),
 
   'updateMiraITUSettingFiles': ()=> updateMiraITUSettingFiles(),
   'loadMiraITUSettingFile': (params)=> loadMiraITUSettings(...params),

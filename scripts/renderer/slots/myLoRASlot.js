@@ -1,6 +1,7 @@
 import { mySimpleList } from '../components/myDropdown.js';
 import { setupTextbox } from '../components/myTextbox.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { refreshTabLabelHints } from '../uiLayoutTabs.js';
 
 let instanceSlotManager = null;
 
@@ -404,7 +405,7 @@ class SlotManager {
             const newRow = this.renderAddRow(newCandidateClassName, newCandidateSlot.itemClasses);
             this.container.appendChild(newRow);
         }
-        
+        refreshTabLabelHints();
         return className;
     }
 
@@ -427,6 +428,7 @@ class SlotManager {
             }
             
             this.slotIndex.delete(className);
+            refreshTabLabelHints();
         }
     }
 

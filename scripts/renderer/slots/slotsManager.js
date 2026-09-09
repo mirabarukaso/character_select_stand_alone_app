@@ -1,3 +1,5 @@
+import { refreshTabLabelHints } from '../uiLayoutTabs.js';
+
 export function flushSlots() {
     // Load LoRA slots and update the collapsed state of the LoRA tab
     globalThis.lora.flush();
@@ -14,4 +16,5 @@ export function flushSlots() {
     } else if(globalThis.collapsedTabs.aDetailer.getCollapsed() === false) {
         globalThis.collapsedTabs.aDetailer.setCollapsed(true);
     }
+    refreshTabLabelHints();
 }

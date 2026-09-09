@@ -4,8 +4,8 @@ export function hiresCalculate() {
 
     const mega_pixel = (Number.parseFloat(hr_width * hr_height / 1024) / 1024).toFixed(2); 
 
-    const resolution = document.querySelector('.hires-fix-resolution');
-    if(resolution) {
+    const resolutions = document.querySelectorAll('.hires-fix-resolution');
+    for(const resolution of resolutions) {
         const SETTINGS = globalThis.globalSettings;
         const FILES = globalThis.cachedFiles;
         const LANG = FILES.language[SETTINGS.language];

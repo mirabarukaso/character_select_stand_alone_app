@@ -90,6 +90,7 @@ contextBridge.exposeInMainWorld('api', {
   saveUiLayout: async (settingsName, layout, mode) => ipcRenderer.invoke('save-ui-layout', settingsName, layout, mode),
   setUiLayoutMode: async (settingsName, mode, currentLayout) => ipcRenderer.invoke('set-ui-layout-mode', settingsName, mode, currentLayout),
   setUiLayoutIndependent: async (settingsName, independent, currentLayout) => ipcRenderer.invoke('set-ui-layout-independent', settingsName, independent, currentLayout),
+  deleteUiLayout: async (settingsName) => ipcRenderer.invoke('delete-ui-layout', settingsName),
   // MiraITU settings
   loadMiraITUSettingFile: async (fineName) => ipcRenderer.invoke('load-miraitu-setting-file', fineName),
   saveMiraITUSettingFile: async (fineName, settings) => ipcRenderer.invoke('save-miraitu-setting-file', fineName, settings),

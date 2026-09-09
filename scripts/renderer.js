@@ -49,6 +49,13 @@ function afterDOMinit() {
         globalThis.okm.setup_rightClickMenu_spellCheck(addSpellCheckSuggestions);
         if (globalThis.initialized) {
             setNormal();
+
+            if(version.includes('zoom')) {
+                const SETTINGS = globalThis.globalSettings;
+                const FILES = globalThis.cachedFiles;
+                const LANG = FILES.language[SETTINGS.language];
+                globalThis.overlay.custom.createErrorOverlay(LANG.system_zoom_mode, LANG.system_zoom_mode);
+            }
         }
     })().catch((e) => {
         console.log('SAAC may load this script and get error with undefined api\nDo nothing here:');

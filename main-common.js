@@ -3,6 +3,7 @@ import { Mutex } from 'async-mutex';
 import { createHash } from 'node:crypto';
 import zlib from 'node:zlib';
 import bcrypt from 'bcrypt';
+import { getDisplayFit } from './scripts/main/screenResolution.js';
 
 const version = app.getVersion();
 
@@ -33,6 +34,18 @@ function getAppVersion() {
   return version;
 }
 
+function formatSaaVersion() {
+  let result = version;
+  if (ws_service !== `none`) {
+    result = `${version} with SAAC listening at ${ws_service}`;
+  }
+  const fit = getDisplayFit();
+  if (fit && fit.zoomFactor < 0.999) {
+    result = `${result} [zoom=${fit.zoomFactor.toFixed(3)}]`;
+  }
+  return result;
+}
+
 async function compressGzipThenBase64(byteArray){
   try {
     const buffer = Buffer.from(byteArray);
@@ -58,11 +71,7 @@ function setupIPCs(ws_service_result) {
   
   // Version
   ipcMain.handle('get-saa-version', async (event) => {    
-    if(ws_service !== `none`) {
-      return `${version} with SAAC listening at ${ws_service}`;
-    }
-
-    return version;
+    return formatSaaVersion();
   });
 
   ipcMain.handle('md5-hash', async (event, input) => {
@@ -108,4 +117,3 @@ export {
   compressGzipThenBase64,
   bcryptHadh,
 };
-

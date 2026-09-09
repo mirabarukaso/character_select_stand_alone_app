@@ -3,6 +3,7 @@ import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { setADetailerModelList } from '../slots/myADetailerSlot.js';
 import { addFavorites, delFavorites } from './favoriteCharacters.js';
 import { get_prompt_textBox_Heights } from './componentsManager.js';
+import { persistIndependentLayoutFor, deleteIndependentLayoutFor } from '../uiLayout.js';
 
 const CAT = '[myCollapsed]'
 
@@ -63,6 +64,7 @@ export async function setupSaveSettingsToggle() {
 
     saveSettingsButton.addEventListener('click', async () => {
         setBlur();
+        const previousSettingsName = globalThis.globalSettings.lastLoadedSettings;
         const inputResult = await showDialog('input', { 
             message: globalThis.cachedFiles.language[globalThis.globalSettings.language].save_settings_title, 
             placeholder: 'tmp_settings', 
@@ -110,6 +112,13 @@ export async function setupSaveSettingsToggle() {
                 }
                 globalThis.dropdownList.settings.setOptions(globalThis.cachedFiles.settingList);
                 globalThis.dropdownList.settings.updateDefaults(`${inputResult}.json`);
+
+                // Save As / new config name: bind current independent layout to the new settings name
+                const prevName = String(previousSettingsName || '').replace(/\.json$/i, '').trim();
+                const nextName = String(inputResult || '').replace(/\.json$/i, '').trim();
+                if (nextName && nextName !== prevName) {
+                    await persistIndependentLayoutFor(nextName);
+                }
             } else {
                 await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].save_settings_failed.replace('{0}', inputResult) });
             }
@@ -141,6 +150,7 @@ export async function setupDeleteSettingsToggle() {
             noText: LANG.setup_no
         });
         if(inputResult) {
+            const deletedSettingsName = String(globalThis.globalSettings.lastLoadedSettings || '').replace(/\.json$/i, '').trim();
             let result;
             if (globalThis.inBrowser) {
                 result = await sendWebSocketMessage({ type: 'API', method: 'deleteSettingFile', params: [`${globalThis.globalSettings.lastLoadedSettings}.json`, globalSettings] });
@@ -149,7 +159,10 @@ export async function setupDeleteSettingsToggle() {
             }
 
             if (result === true) {
-                await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].delete_settings_success.replace('{0}', globalThis.globalSettings.lastLoadedSettings) }); 
+                await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].delete_settings_success.replace('{0}', globalThis.globalSettings.lastLoadedSettings) });
+                if (deletedSettingsName) {
+                    await deleteIndependentLayoutFor(deletedSettingsName);
+                } 
 
                 if (globalThis.inBrowser) {
                     globalThis.cachedFiles.settingList = await sendWebSocketMessage({ type: 'API', method: 'updateSettingFiles' });
@@ -317,6 +330,8 @@ export function doSwap(rightToLeft) {
     const left = document.getElementById('left');
     const right = document.getElementById('right');
 
+    document.body.classList.toggle('right-to-left', Boolean(rightToLeft));
+
     if (rightToLeft) {
         right.before(left);
         left.style.marginLeft = '10px';
@@ -329,6 +344,10 @@ export function doSwap(rightToLeft) {
         left.style.marginRight = '10px';
         right.style.marginLeft = '10px';
         right.style.marginRight = '5px';
+    }
+
+    if (typeof globalThis.mainGallery?.updateMetaButtonsLayout === 'function') {
+        globalThis.mainGallery.updateMetaButtonsLayout();
     }
 }
 

@@ -120,6 +120,45 @@ body {
     border: #933 2px solid !important;
 }
 
+.layout-tab-host.layout-tab-multi {
+    background: rgb(39, 39, 42);
+    border-color: #666;
+}
+
+.layout-tab-host.layout-tab-multi > .layout-tab-bar {
+    border-bottom-color: #666;
+    background: rgb(28, 28, 30);
+}
+
+.layout-tab-label.layout-tab-active {
+    border-color: #555;
+    background: rgb(39, 39, 42);
+}
+
+.layout-tab-label.layout-tab-hint-on,
+.layout-tab-label.layout-tab-active.layout-tab-hint-on {
+    color: #1ce088;
+    background: rgba(28, 224, 136, 0.22);
+    border-color: #1ce088;
+}
+
+.layout-tab-label.layout-tab-hint-alert,
+.layout-tab-label.layout-tab-active.layout-tab-hint-alert {
+    color: #ff8a80;
+    background: rgba(231, 76, 60, 0.28);
+    border-color: #e74c3c;
+}
+
+.layout-tab-collapse {
+    background: #3ec8e8;
+    border: 2px solid #3ec8e8;
+}
+
+.layout-full-split:hover::after,
+.layout-full-split.layout-full-split-active::after {
+    background: #3498db;
+}
+
 .queue-container.queue-generate-paused {
     border-color: #933;
 }
@@ -252,6 +291,30 @@ body {
     top: 90px;
     background: #2ecc71;
 }
+/* RTL normal mode: seed/tags/info left; <> / privacy right. */
+body.right-to-left #cg-switch-mode-button,
+body.right-to-left #cg-privacy-button {
+    left: auto;
+    right: 10px;
+}
+
+body.right-to-left #cg-seed-button,
+body.right-to-left #cg-tag-button,
+body.right-to-left #cg-info-button {
+    right: auto;
+    left: 10px;
+}
+
+/* Centered seed/tags/info keep JS inline coords; raise above image edge */
+.gallery-main-main.cg-meta-buttons-centered #cg-seed-button,
+.gallery-main-main.cg-meta-buttons-centered #cg-tag-button,
+.gallery-main-main.cg-meta-buttons-centered #cg-info-button {
+    right: auto;
+    width: auto;
+    white-space: nowrap;
+    z-index: 60;
+}
+
 
 /* Switch Mode Button for Thumb */
 #cg-thumb-switch-mode-button {
@@ -323,7 +386,7 @@ body {
 
 .model-settings-header {
     display: grid;
-    grid-template-columns: 1.3fr 0.5fr 2.2fr 1fr; 
+    grid-template-columns: 3fr 0.5fr 0.5fr 1fr; 
     padding-left: 10px;
 }
 
@@ -582,7 +645,7 @@ body {
 
 #generate-settings-static{
     display: grid; 
-    grid-template-columns: 1.2fr 1.3fr 0.7fr 0.8fr; 
+    grid-template-columns: 1.3fr 1.2fr 0.7fr 0.8fr;
     grid-template-rows: repeat(1, auto); 
     align-items: end;
 }
@@ -710,11 +773,11 @@ body {
 #prompt-textbox-settings {
     align-items: center;
     display: grid; 
-    grid-template-columns: 1fr 1fr 1fr 1fr; 
+    grid-template-columns: 2fr 1fr 1fr 1fr; 
     margin-left: 10px;
     margin-right: 10px;
-    margin-top: 2px;
-    margin-bottom: 2px;
+    margin-top: 3px;
+    margin-bottom: 3px;
     background-color: rgb(39,39,42);
 }
 

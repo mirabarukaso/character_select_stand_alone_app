@@ -67,7 +67,6 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.headerIcon.refresh.title = LANG.title_global_refresh;
     globalThis.headerIcon.swap.title = LANG.title_swap_layout;
     globalThis.headerIcon.theme.title = LANG.title_theme;
-    updateUiLayoutLanguage();
 
     globalThis.dropdownList.thumb_select.setTitle(LANG.thumb_select);
 
@@ -202,6 +201,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.imageInfo.updateHintText(LANG.image_info_drag_hint_top, LANG.image_info_drag_hint_bottom);
 
     hiresCalculate();
+    updateUiLayoutLanguage();
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity

@@ -2,6 +2,7 @@ import { setupTextbox } from '../components/myTextbox.js';
 import { generateGUID } from './myLoRASlot.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { cancelAutoRetry } from '../tools/autoRetry.js';
+import { refreshTabLabelHints } from '../uiLayoutTabs.js';
 let instanceQueueManager = null;
 
 async function cancelGenerate(slotClass) {
@@ -247,6 +248,15 @@ class QueueManager {
         return generateData;
     }
     
+    getQueueLength() {
+        const queue = document.querySelector('.queue-busy-retry');
+        const length = this.getSlotsCount();
+        if (queue) {
+            queue.textContent = length > 0 ? `${length}` : '';
+        }
+        return length;
+    }
+
     attach(jobID = '', generateData={}) {
         const className = this.createSlotRow();
         if (!className) return;
@@ -270,6 +280,9 @@ class QueueManager {
         }
 
         this.initializeSlotComponents(className, jobID);
+        refreshTabLabelHints();
+
+        this.getQueueLength();
     }
 
     removeAt(index) {
@@ -290,7 +303,10 @@ class QueueManager {
                 rowElement.remove();
             }
             this.slotIndex.delete(slotClass);
+            refreshTabLabelHints();
         }
+
+        this.getQueueLength();
     }
 
     removeAll() {

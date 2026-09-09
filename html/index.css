@@ -66,6 +66,23 @@ html, body {
     box-sizing: border-box;
 }
 
+.layout-character-host {
+    display: flex;
+    flex-direction: row;
+    align-items: stretch;
+    flex: 0 0 auto;
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.layout-character-host .dropdown-character,
+.layout-character-host .dropdown-character-regional {
+    flex: 1 1 auto;
+    min-width: 0;
+    margin-left: 0;
+    margin-right: 0;
+}
+
 #full-width {
     display: flex;
     flex-direction: column;
@@ -74,12 +91,11 @@ html, body {
     align-self: stretch;
     min-width: 0;
     min-height: 0;
-    max-height: calc(872px + 42px);
+    max-height: calc(872px + 42px + 42px);
     overflow-x: hidden;
     overflow-y: auto;
     margin-left: 10px;
     margin-right: 10px;
-    padding-bottom: 10px;
     box-sizing: border-box;
 }
 
@@ -89,6 +105,39 @@ html, body {
 
 #full-width::-webkit-scrollbar {
     display: none;
+}
+
+.layout-full-split {
+    flex: 0 0 2px;
+    align-self: stretch;
+    margin-left: 10px;
+    margin-right: 10px;
+    cursor: ns-resize;
+    position: relative;
+    box-sizing: border-box;
+    touch-action: none;
+}
+
+.layout-full-split::after {
+    content: '';
+    position: absolute;
+    left: 0;
+    right: 0;
+    top: 4px;
+    height: 2px;
+    border-radius: 1px;
+    background: transparent;
+}
+
+.layout-full-split:hover::after,
+.layout-full-split.layout-full-split-active::after {
+    background: #3498db;
+}
+
+body.layout-is-resizing-full,
+body.layout-is-resizing-full * {
+    cursor: ns-resize !important;
+    user-select: none !important;
 }
 
 #split {
@@ -117,10 +166,183 @@ html, body {
     box-sizing: border-box;
 }
 
-#full-width > [data-layout-id] {
+#full-width [data-layout-id] {
     width: 100%;
     max-width: 100%;
     box-sizing: border-box;
+}
+
+.layout-tab-host,
+.layout-tab-pages,
+.layout-tab-page {
+    width: 100%;
+    box-sizing: border-box;
+}
+
+.layout-tab-host.layout-tab-multi {
+    border: 2px solid #666;
+    border-radius: 8px;
+    padding: 0 6px 8px;
+    margin-top: 6px;
+    box-sizing: border-box;
+}
+
+.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id],
+.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id] > [class$="-main"],
+.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id] > [class$="-main collapsed"] {
+    border-color: transparent !important;
+    background: transparent !important;
+    box-shadow: none !important;
+    margin-top: 0;
+}
+
+.layout-tab-host.layout-tab-multi .dropdown-character,
+.layout-tab-host.layout-tab-multi .dropdown-character-regional {
+    border-color: transparent !important;
+    background: transparent !important;
+    margin-left: 0;
+    margin-right: 0;
+}
+
+.layout-tab-host.layout-tab-hint,
+[data-layout-id].layout-tab-hint {
+    outline: 2px solid #e67e22;
+    outline-offset: 1px;
+    cursor: grab;
+}
+
+.layout-tab-bar {
+    display: none;
+    flex-direction: row;
+    flex-wrap: nowrap;
+    align-items: flex-end;
+    gap: 4px;
+    padding: 2px;
+    margin-bottom: 4px;
+    box-sizing: border-box;
+}
+
+.layout-tab-host.layout-tab-multi > .layout-tab-bar {
+    display: flex;
+    margin: 0 -6px 6px;
+    padding: 6px 8px 0;
+    border-bottom: 1px solid #666;
+    background: rgba(0, 0, 0, 0.16);
+}
+
+.layout-tab-labels {
+    display: flex;
+    flex-wrap: wrap;
+    flex: 1 1 auto;
+    align-items: flex-end;
+    gap: 4px;
+    min-width: 0;
+}
+
+.layout-tab-collapse {
+    flex: 0 0 12px;
+    width: 12px;
+    height: 12px;
+    margin: 0 2px 6px 8px;
+    cursor: pointer;
+    opacity: 0.45;
+    align-self: center;
+    border-radius: 8px;
+    box-sizing: content-box;
+}
+
+.layout-tab-collapse:hover {
+    opacity: 0.9;
+}
+
+.layout-tab-collapse.collapsed {
+    transform: rotate(90deg);
+}
+
+.layout-tab-host.layout-tab-folded.layout-tab-multi {
+    padding-bottom: 4px;
+}
+
+.layout-tab-host.layout-tab-folded > .layout-tab-pages {
+    display: none !important;
+}
+
+.layout-tab-host.layout-tab-folded.layout-tab-multi > .layout-tab-bar {
+    margin-bottom: 0;
+    border-bottom-color: transparent;
+    padding-bottom: 4px;
+}
+
+.layout-tab-label {
+    cursor: grab;
+    padding: 2px 16px 3px;
+    border-radius: 6px 6px 0 0;
+    border: 1px solid transparent;
+    border-bottom: none;
+    font-size: 12px;
+    line-height: 18px;
+    user-select: none;
+    white-space: nowrap;
+    opacity: 0.7;
+    position: relative;
+    top: 1px;
+}
+
+.layout-tab-label:hover {
+    opacity: 1;
+}
+
+.layout-tab-label.layout-tab-active {
+    opacity: 1;
+    border-color: #666;
+    background: rgba(52, 152, 219, 0.2);
+    box-shadow: inset 0 -2px 0 #3498db;
+}
+
+.layout-tab-label.layout-tab-drop-before {
+    box-shadow: inset 3px 0 0 #3498db;
+}
+
+.layout-tab-label.layout-tab-drop-after {
+    box-shadow: inset -3px 0 0 #3498db;
+}
+
+.layout-tab-label.layout-tab-hint-on,
+.layout-tab-label.layout-tab-active.layout-tab-hint-on {
+    opacity: 1;
+    font-weight: 600;
+    color: #0f7a4a;
+    background: #b7e0c4;
+    border-color: #2e8b57;
+}
+
+.layout-tab-label.layout-tab-hint-alert,
+.layout-tab-label.layout-tab-active.layout-tab-hint-alert {
+    opacity: 1;
+    font-weight: 600;
+    color: #8a221c;
+    background: #f0b8b0;
+    border-color: #c0392b;
+}
+
+.gallery-main-main.layout-gallery-compress {
+    transition: none;
+}
+
+.gallery-main-main.collapsed {
+    height: 0 !important;
+    max-height: 0 !important;
+}
+
+.layout-tab-page[hidden] {
+    display: none !important;
+}
+
+/* Hide per-panel collapse header when the panel lives inside a multi-tab host */
+[data-layout-id].layout-tab-hide-header-span [class$="-header-span"],
+[data-layout-id].layout-tab-hide-header-span .add-lora-header > .add-lora-span,
+[data-layout-id].layout-tab-hide-header-span .model-settings-header > .model-settings-span {
+    display: none !important;
 }
 
 #left{
@@ -148,7 +370,7 @@ html, body {
 }
 
 #generate-settings-static-left, #generate-settings-static-right {
-    min-height: 90px;
+    min-height: 112px;
     height: auto;
     margin-top: 6px;
 }
@@ -337,6 +559,11 @@ body.layout-is-dragging * {
     cursor: grabbing !important;
 }
 
+.layout-dragging,
+.layout-dragging * {
+    pointer-events: none !important;
+}
+
 [data-layout-id].layout-dragging {
     box-shadow: 0 8px 24px rgba(0, 0, 0, 0.35);
 }
@@ -348,6 +575,11 @@ body.layout-is-dragging * {
     pointer-events: none;
     border: 2px dashed #1ce088;
     background: rgba(28, 224, 136, 0.08);
+}
+
+.layout-drop-placeholder.layout-drop-merge {
+    border-color: #e67e22;
+    background: rgba(230, 126, 34, 0.12);
 }
 
 #global-pose-icon {
