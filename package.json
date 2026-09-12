@@ -13,8 +13,8 @@
     "package_mac": "electron-packager ./ saa --platform=darwin --out=release --overwrite"
   },
   "devDependencies": {
-    "adm-zip": "^0.6.0",
-    "electron": "^44.2.0",
+    "adm-zip": "^0.6.1",
+    "electron": "^44.3.0",
     "qs": "^6.16.0"
   },
   "dependencies": {
