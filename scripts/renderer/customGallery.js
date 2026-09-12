@@ -136,6 +136,24 @@ export function setupGallery(containerId) {
     const GRID_SIZE_STEP = 10;
     const GRID_SIZE_DEFAULT = 200;
 
+    function isHiresImage(index) {
+        const info = infos?.[index] || '';
+        const plain = String(info).replace(/\[\/?color(?:=[^\]]*)?\]/gi, '');
+        return /Hires\s*Fix:\s*\[\s*true\s*\]/i.test(plain);
+    }
+
+    function applyHiresClass(el, index) {
+        if (!el) return;
+        el.classList.toggle('cg-hires', isHiresImage(index));
+    }
+
+    function syncHiresFrame() {
+        // In-frame large view (split main / grid focus): color the gallery
+        // chrome instead of outlining the image. Grid browsing stays on tiles.
+        const inFrameFull = !isGridMode || isGalleryFocus;
+        container.classList.toggle('cg-hires-frame', Boolean(inFrameFull && isHiresImage(currentIndex)));
+    }
+
     const container = document.querySelector(`.${containerId}`);
     if (!container) {
         console.error('Gallery container not found', containerId);
@@ -159,6 +177,7 @@ export function setupGallery(containerId) {
         const overlay = container.querySelector('.cg-gallery-focus-overlay');
         if (overlay) overlay.classList.remove('visible');
         clearGalleryView();
+        syncHiresFrame();
     };
 
     globalThis.mainGallery.removeCurrentImage = function (element = null) {
@@ -453,6 +472,7 @@ export function setupGallery(containerId) {
             if (Math.abs(ar - prev) > 0.01) scheduleGridRelayout();
         };
         el.appendChild(img);
+        applyHiresClass(el, pos.index);
         return el;
     }
 
@@ -542,6 +562,7 @@ export function setupGallery(containerId) {
         }
         updateGridSelection();
         updateMetaButtonsLayout();
+        syncHiresFrame();
     }
 
     function handleGalleryFocusKeyDown(e) {
@@ -604,6 +625,7 @@ export function setupGallery(containerId) {
         setGridMetaButtonsVisible(true);
         updateMetaButtonsLayout();
         updateGridSelection();
+        syncHiresFrame();
     }
 
     function exitGalleryFocus() {
@@ -614,6 +636,7 @@ export function setupGallery(containerId) {
         setGridMetaButtonsVisible(false);
         updateMetaButtonsLayout();
         updateGridSelection();
+        syncHiresFrame();
     }
 
     function handleGridWheel(e) {
@@ -868,6 +891,7 @@ export function setupGallery(containerId) {
             renderedImageCount = 0;
             currentIndex = 0;
             container.querySelector('.cg-gallery-grid-container')?.remove();
+            syncHiresFrame();
             return;
         }
 
@@ -893,6 +917,7 @@ export function setupGallery(containerId) {
             enterGalleryFocus(currentIndex);
         } else {
             updateGridSelection();
+            syncHiresFrame();
         }
     }
     
@@ -902,6 +927,7 @@ export function setupGallery(containerId) {
             clearGalleryView();
             renderedImageCount = 0;
             currentIndex = 0;
+            syncHiresFrame();
             return;
         }
 
@@ -1016,7 +1042,9 @@ export function setupGallery(containerId) {
             const index = images.length - 1 - domIndex;
             child.dataset.domIndex = domIndex;
             child.style.border = index === currentIndex ? '2px solid #3498db' : 'none';
+            applyHiresClass(child, index);
         }
+        syncHiresFrame();
         const domIndex = images.length - 1 - currentIndex;
         if (domIndex >= 0 && domIndex < previewImages.length) {
             previewImages[domIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });

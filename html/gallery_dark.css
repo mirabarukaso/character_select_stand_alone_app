@@ -44,6 +44,27 @@
     outline-offset: -2px;
 }
 
+.cg-gallery-item.cg-hires::after {
+    content: '';
+    position: absolute;
+    inset: 0;
+    border-radius: 5px;
+    padding: 3px;
+    box-sizing: border-box;
+    background: linear-gradient(45deg, #3498db, #ad5cea);
+    -webkit-mask:
+        linear-gradient(#fff 0 0) content-box,
+        linear-gradient(#fff 0 0);
+    -webkit-mask-composite: xor;
+    mask-composite: exclude;
+    pointer-events: none;
+    z-index: 2;
+}
+
+.cg-preview-image.cg-hires {
+    box-shadow: 0 0 0 2px #3498db, 0 0 0 3px #ad5cea;
+}
+
 .cg-gallery-image {
     display: block;
     width: 100%;

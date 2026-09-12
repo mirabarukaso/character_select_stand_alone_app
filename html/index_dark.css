@@ -190,9 +190,18 @@ body {
 
 /* Main Gallery */
 .gallery-main-main {
-    transition: max-height 0.3s ease, opacity 0.3s ease;
+    transition: max-height 0.3s ease, opacity 0.3s ease, border-color 0.2s ease;
     overflow: hidden;
     height: 872px;
+}
+
+.gallery-main-main.cg-hires-frame {
+    border-color: transparent;
+    background-image:
+        linear-gradient(#111, #111),
+        linear-gradient(45deg, #3498db, #ad5cea);
+    background-origin: padding-box, border-box;
+    background-clip: padding-box, border-box;
 }
 
 /* Thumb Gallery */
@@ -1113,4 +1122,29 @@ body.right-to-left #cg-info-button {
     mask: url('../scripts/svg/sun.svg') no-repeat center;
     -webkit-mask-size: contain;
     mask-size: contain;
+}
+
+.layout-tab-enable {
+    border: 1px solid #70757d;
+    background-color: #24272c;
+    background-image: radial-gradient(circle at 7px 7px, #cfd4d8 0 4px, transparent 4.5px);
+    transition: background-color 0.16s ease, border-color 0.16s ease, background-position 0.16s ease;
+}
+.layout-tab-enable:hover {
+    border-color: #1ce088;
+    background-color: #2d3338;
+    background-image: radial-gradient(circle at 7px 7px, #fff 0 4px, transparent 4.5px);
+}
+.layout-tab-enable.is-on {
+    border-color: #1ce088;
+    background-color: #1ce088;
+    background-image: radial-gradient(circle at 21px 7px, #000 0 4px, transparent 4.5px);
+}
+.layout-tab-enable.is-on:hover {
+    border-color: #1ce088;
+    background-color: #1ce088;
+}
+.layout-tab-enable:disabled {
+    opacity: 0.45;
+    cursor: default;
 }

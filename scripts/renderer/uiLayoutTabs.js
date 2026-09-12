@@ -221,6 +221,60 @@ export function getTabLabelHint(panelId) {
     }
 }
 
+const TAB_ENABLE_SWITCH = {
+    'highres-fix': '.generate-hires-fix input',
+    'refiner': '.generate-refiner input',
+    'regional-condition': '.regional-condition-trigger-dummy input',
+    'controlnet': '.generate-controlnet input',
+    'adetailer': '.generate-adetailer input',
+    'queue': '.queue-autostart-generate input'
+};
+
+function getOriginalEnableInput(panelId) {
+    const sel = TAB_ENABLE_SWITCH[panelId];
+    return sel ? document.querySelector(sel) : null;
+}
+
+function syncTabEnableSwitch(label, panelId) {
+    const clone = label?.querySelector(':scope > .layout-tab-enable');
+    const original = getOriginalEnableInput(panelId);
+    if (!clone || !original) {
+        return;
+    }
+    const on = Boolean(original.checked);
+    clone.classList.toggle('is-on', on);
+    clone.setAttribute('aria-checked', on ? 'true' : 'false');
+    clone.disabled = original.disabled;
+}
+
+function attachTabEnableSwitch(label, panelId) {
+    if (!label || !TAB_ENABLE_SWITCH[panelId] || label.querySelector(':scope > .layout-tab-enable')) {
+        return;
+    }
+    const clone = document.createElement('button');
+    clone.type = 'button';
+    clone.className = 'layout-tab-enable';
+    clone.setAttribute('role', 'switch');
+    clone.setAttribute('aria-label', 'enable');
+    clone.tabIndex = 0;
+    clone.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+    });
+    clone.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        const original = getOriginalEnableInput(panelId);
+        if (!original || original.disabled) {
+            return;
+        }
+        original.click();
+        syncTabEnableSwitch(label, panelId);
+        refreshTabLabelHints();
+    });
+    label.appendChild(clone);
+    syncTabEnableSwitch(label, panelId);
+}
+
 function applyLabelHint(label, panelId) {
     if (!label) {
         return;
@@ -228,6 +282,7 @@ function applyLabelHint(label, panelId) {
     const hint = getTabLabelHint(panelId);
     label.classList.toggle('layout-tab-hint-on', hint === 'on');
     label.classList.toggle('layout-tab-hint-alert', hint === 'alert');
+    syncTabEnableSwitch(label, panelId);
 }
 
 export function refreshTabLabelHints(host) {
@@ -303,7 +358,11 @@ function rebuildTabBar(host) {
         const label = document.createElement('div');
         label.className = 'layout-tab-label';
         label.dataset.tabPage = id;
-        label.textContent = getStoredTitle(host, id);
+        const title = document.createElement('span');
+        title.className = 'layout-tab-label-title';
+        title.textContent = getStoredTitle(host, id);
+        label.appendChild(title);
+        attachTabEnableSwitch(label, id);
         applyLabelHint(label, id);
         labelsRoot.appendChild(label);
     }
@@ -360,31 +419,32 @@ export function createTabHost() {
     });
     bar.addEventListener('dblclick', (event) => {
         const label = event.target.closest('.layout-tab-label');
-        if (!label) {
+        if (!label || event.target.closest('.layout-tab-enable')) {
             return;
         }
+        const title = label.querySelector('.layout-tab-label-title') || label;
         event.preventDefault();
-        label.contentEditable = 'true';
-        label.focus();
+        title.contentEditable = 'true';
+        title.focus();
         const range = document.createRange();
-        range.selectNodeContents(label);
+        range.selectNodeContents(title);
         const sel = globalThis.getSelection();
         sel.removeAllRanges();
         sel.addRange(range);
         const finish = () => {
-            label.contentEditable = 'false';
-            setStoredTitle(host, label.dataset.tabPage, label.textContent);
-            label.textContent = getStoredTitle(host, label.dataset.tabPage);
+            title.contentEditable = 'false';
+            setStoredTitle(host, label.dataset.tabPage, title.textContent);
+            title.textContent = getStoredTitle(host, label.dataset.tabPage);
             host.dispatchEvent(new CustomEvent('layout-tab-renamed', { bubbles: true }));
         };
-        label.addEventListener('blur', finish, { once: true });
-        label.addEventListener('keydown', (keyEvent) => {
+        title.addEventListener('blur', finish, { once: true });
+        title.addEventListener('keydown', (keyEvent) => {
             if (keyEvent.key === 'Enter') {
                 keyEvent.preventDefault();
-                label.blur();
+                title.blur();
             } else if (keyEvent.key === 'Escape') {
-                label.textContent = getStoredTitle(host, label.dataset.tabPage);
-                label.blur();
+                title.textContent = getStoredTitle(host, label.dataset.tabPage);
+                title.blur();
             }
         });
     });
@@ -430,10 +490,8 @@ export function mergePanelIntoHost(host, panel, makeActive = true) {
     if (oldPage && oldPage.parentElement !== pages) {
         oldPage.remove();
     }
-    if (sourceHost && sourceHost !== host && getHostPages(sourceHost).length === 0) {
-        sourceHost.remove();
-    } else if (sourceHost && sourceHost !== host && getHostPages(sourceHost).length === 1) {
-        unwrapHost(sourceHost);
+    if (sourceHost && sourceHost !== host) {
+        cleanupTabHost(sourceHost);
     }
     for (const inner of getHostPages(host)) {
         expandPanel(inner);
@@ -488,14 +546,7 @@ export function extractPanelFromHost(panel, beforeEl, allowLast = false) {
     }
     page?.remove();
     setPanelHeaderSpanHidden(panel, false);
-    const remaining = getHostPages(host);
-    if (remaining.length === 0) {
-        host.remove();
-    } else if (remaining.length === 1) {
-        unwrapHost(host);
-    } else {
-        refreshHostChrome(host);
-    }
+    cleanupTabHost(host);
     return panel;
 }
 
@@ -559,6 +610,37 @@ export function mountHostFromEntry(entry, panelMap) {
         setHostFolded(host, true);
     }
     return host;
+}
+
+export function cleanupTabHost(host) {
+    if (!isTabHost(host)) {
+        return;
+    }
+    if (!host.isConnected) {
+        host.remove();
+        return;
+    }
+    for (const page of [...host.querySelectorAll(':scope > .layout-tab-pages > .layout-tab-page')]) {
+        if (!page.querySelector(':scope > [data-layout-id]')) {
+            page.remove();
+        }
+    }
+    const remaining = getHostPages(host);
+    if (remaining.length === 0) {
+        host.remove();
+        return;
+    }
+    if (remaining.length === 1) {
+        unwrapHost(host);
+        return;
+    }
+    refreshHostChrome(host);
+}
+
+export function pruneTabHosts(root = document) {
+    for (const host of [...(root?.querySelectorAll?.('.layout-tab-host') || [])]) {
+        cleanupTabHost(host);
+    }
 }
 
 export function unwrapHost(host) {

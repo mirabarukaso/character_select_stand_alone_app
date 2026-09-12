@@ -17,6 +17,7 @@ import {
     refreshHostChrome,
     setHostActive,
     unwrapHost,
+    pruneTabHosts,
     zoneOfColumn
 } from './uiLayoutTabs.js';
 
@@ -162,6 +163,22 @@ function isInteractiveTarget(target, panel) {
 const HINT_DELAY_MS = 1000;
 let hintTimer = null;
 let hintPanel = null;
+let hintBlocked = false;
+let hintUsed = false;
+
+function isHintOn(panel) {
+    if (!panel) {
+        return false;
+    }
+    if (isTabHost(panel)) {
+        return panel.classList.contains('layout-tab-hint');
+    }
+    const host = getTabHost(panel);
+    if (host) {
+        return host.classList.contains('layout-tab-hint');
+    }
+    return panel.classList.contains('layout-drop-hint');
+}
 
 function applyDropHint(panel, on) {
     if (!panel) {
@@ -182,11 +199,21 @@ function clearHintTimer() {
     }
 }
 
+function resetHintSession() {
+    clearHintTimer();
+    if (hintPanel) {
+        applyDropHint(hintPanel, false);
+    }
+    hintPanel = null;
+    hintBlocked = false;
+    hintUsed = false;
+}
+
 function scheduleDropHint(panel) {
     if (!panel || dragState) {
         return;
     }
-    if (hintPanel === panel && (hintTimer !== null || panel.classList.contains('layout-drop-hint'))) {
+    if (hintPanel === panel && (hintBlocked || hintUsed || hintTimer !== null || isHintOn(panel))) {
         return;
     }
     clearHintTimer();
@@ -194,21 +221,38 @@ function scheduleDropHint(panel) {
         applyDropHint(hintPanel, false);
     }
     hintPanel = panel;
+    hintBlocked = false;
+    hintUsed = false;
     hintTimer = setTimeout(() => {
         hintTimer = null;
-        if (!dragState && hintPanel === panel) {
+        if (!dragState && hintPanel === panel && !hintBlocked) {
             applyDropHint(panel, true);
+            hintUsed = true;
         }
     }, HINT_DELAY_MS);
 }
 
-function cancelDropHint(panel) {
-    clearHintTimer();
-    if (!panel || hintPanel === panel) {
-        if (hintPanel) {
-            applyDropHint(hintPanel, false);
+function noteHintGesture(panel) {
+    const target = panel && hintPanel === panel ? panel : (panel || hintPanel);
+    if (!target || (panel && hintPanel && hintPanel !== panel)) {
+        if (panel && hintPanel === panel) {
+            hintBlocked = true;
+            clearHintTimer();
+            applyDropHint(panel, false);
         }
-        hintPanel = null;
+        return;
+    }
+    if (hintPanel !== target) {
+        return;
+    }
+    hintBlocked = true;
+    clearHintTimer();
+    applyDropHint(target, false);
+}
+
+function cancelDropHint(panel) {
+    if (!panel || hintPanel === panel) {
+        resetHintSession();
         return;
     }
     applyDropHint(panel, false);
@@ -225,7 +269,7 @@ export function readCurrentLayout() {
         layout.fullMaxHeight = fullRegionHeight;
     }
     const galleryHeight = readGalleryHeight();
-    if (isGalleryInFullWidth() && galleryHeight < GALLERY_MAIN_HEIGHT) {
+    if (isGalleryInFullWidth() && hasItemsBelowGallery() && galleryHeight < GALLERY_MAIN_HEIGHT) {
         layout.galleryHeight = galleryHeight;
     }
     return layout;
@@ -338,15 +382,17 @@ export function applyLayout(layout) {
     for (const host of document.querySelectorAll('.layout-tab-host')) {
         refreshHostChrome(host);
     }
-    if (typeof layout.galleryHeight === 'number' && isGalleryInFullWidth()) {
+    if (typeof layout.fullMaxHeight === 'number' && hasFullWidthStack()) {
+        setFullRegionHeight(layout.fullMaxHeight);
+    } else if (isGalleryInFullWidth() && !hasItemsBelowGallery()) {
+        setFullRegionHeight(getFullWidthMaxCap());
+    } else {
+        setFullRegionHeight(null);
+    }
+    if (typeof layout.galleryHeight === 'number' && isGalleryInFullWidth() && hasItemsBelowGallery()) {
         setGalleryHeight(layout.galleryHeight);
     } else if (!isGalleryInFullWidth()) {
         resetGalleryHeight();
-    }
-    if (typeof layout.fullMaxHeight === 'number' && hasFullWidthStack()) {
-        setFullRegionHeight(layout.fullMaxHeight);
-    } else {
-        setFullRegionHeight(null);
     }
     syncFullWidthBehavior();
 
@@ -930,6 +976,7 @@ async function endDrag() {
     document.body.classList.remove('layout-is-dragging');
     setFullWidthDropHint(false);
     dragState = null;
+    pruneTabHosts();
     syncFullWidthBehavior();
     await persistLayout();
 }
@@ -949,7 +996,7 @@ function beginPotentialDrag(panel, event, suppressClick, options = {}) {
     if (panel?.dataset?.layoutId === CHARACTER_ID) {
         return;
     }
-    if (!options.forceExtract && !options.armed && !isDragArmed(panel)) {
+    if (!options.armed && !isDragArmed(panel)) {
         return;
     }
 
@@ -1034,6 +1081,11 @@ function bindEmptyDrag(panelId) {
         if (event.buttons) {
             return;
         }
+        // Tabbed: only the tab label may drag. Restore empty-area arming
+        // when this panel is extracted as a standalone element.
+        if (getTabHost(panel)) {
+            return;
+        }
         if (isInteractiveTarget(event.target, panel)) {
             cancelDropHint(panel);
             return;
@@ -1042,10 +1094,19 @@ function bindEmptyDrag(panelId) {
     });
     panel.addEventListener('pointerleave', () => cancelDropHint(panel));
     panel.addEventListener('pointerdown', (event) => {
-        if (isInteractiveTarget(event.target, panel)) {
+        if (getTabHost(panel)) {
             return;
         }
-        beginPotentialDrag(panel, event, false);
+        const interactive = isInteractiveTarget(event.target, panel);
+        const armed = isDragArmed(panel);
+        noteHintGesture(panel);
+        if (interactive) {
+            return;
+        }
+        if (!armed) {
+            return;
+        }
+        beginPotentialDrag(panel, event, false, { armed: true });
     });
 }
 
@@ -1086,10 +1147,31 @@ function bindHostDrag(host) {
     }
     bar.addEventListener('pointerenter', () => scheduleDropHint(host));
     bar.addEventListener('pointerleave', () => cancelDropHint(host));
-    bar.addEventListener('pointerdown', (event) => {
-        if (event.target.closest('.layout-tab-collapse')) {
+    bar.addEventListener('click', (event) => {
+        if (!suppressHandleClick || !event.target.closest('.layout-tab-collapse')) {
             return;
         }
+        event.preventDefault();
+        event.stopImmediatePropagation();
+        suppressHandleClick = false;
+    }, true);
+    bar.addEventListener('pointerdown', (event) => {
+        const armed = isDragArmed(host);
+        const onCollapse = event.target.closest('.layout-tab-collapse');
+        const onEnable = event.target.closest('.layout-tab-enable');
+        if (onEnable) {
+            noteHintGesture(host);
+            return;
+        }
+        // Fold button keeps handle-style hover-to-drag. Do not consume the
+        // arm on pointerdown or a click-to-fold also kills the drag.
+        if (onCollapse) {
+            if (armed) {
+                beginPotentialDrag(host, event, true, { armed: true });
+            }
+            return;
+        }
+        noteHintGesture(host);
         const label = event.target.closest('.layout-tab-label');
         if (label) {
             if (label.isContentEditable) {
@@ -1098,12 +1180,20 @@ function bindHostDrag(host) {
             const pagePanel = getHostPages(host).find((item) => item.dataset.layoutId === label.dataset.tabPage);
             if (pagePanel) {
                 setHostActive(host, label.dataset.tabPage);
-                beginPotentialDrag(pagePanel, event, true, { forceExtract: true, labelDrag: true });
+                if (armed) {
+                    beginPotentialDrag(pagePanel, event, true, {
+                        forceExtract: true,
+                        labelDrag: true,
+                        armed: true
+                    });
+                }
             }
             return;
         }
-        beginPotentialDrag(host, event, false, { armed: true });
-    });
+        if (armed) {
+            beginPotentialDrag(host, event, false, { armed: true });
+        }
+    }, true);
     host.addEventListener('layout-tab-renamed', () => {
         persistLayout();
     });
@@ -1143,15 +1233,22 @@ function getFullWidthItems(full) {
     return [...(full?.children || [])].filter((el) => el.dataset?.layoutId || isTabHost(el));
 }
 
-function isGalleryCompressMode() {
+function hasItemsBelowGallery() {
     const full = getFullWidthColumn();
     const gallery = getPanel('gallery-main');
-    if (!full || !gallery || gallery.parentElement !== full || isGalleryMainCollapsed()) {
+    if (!full || !gallery || gallery.parentElement !== full) {
         return false;
     }
     const items = getFullWidthItems(full);
     const galleryIndex = items.indexOf(gallery);
     return galleryIndex >= 0 && galleryIndex < items.length - 1;
+}
+
+function isGalleryCompressMode() {
+    if (!isGalleryInFullWidth() || isGalleryMainCollapsed()) {
+        return false;
+    }
+    return hasItemsBelowGallery();
 }
 
 function isBelowGalleryFullyVisible() {
@@ -1252,6 +1349,48 @@ function readGalleryHeight() {
     return Number.isFinite(raw) ? raw : GALLERY_MAIN_HEIGHT;
 }
 
+function fullWidthContentBottom(full) {
+    const style = globalThis.getComputedStyle(full);
+    const padBottom = Number.parseFloat(style.paddingBottom) || 0;
+    const borderBottom = Number.parseFloat(style.borderBottomWidth) || 0;
+    return full.getBoundingClientRect().bottom - padBottom - borderBottom;
+}
+
+function gallerySeamGap() {
+    const full = getFullWidthColumn();
+    const gallery = getPanel('gallery-main');
+    if (!full || !gallery) {
+        return 0;
+    }
+    return Math.floor(fullWidthContentBottom(full) - gallery.getBoundingClientRect().bottom);
+}
+
+function galleryMainFitForRegion(inset = 2) {
+    const full = getFullWidthColumn();
+    const gallery = getPanel('gallery-main');
+    const main = getGalleryMain();
+    if (!full || !gallery || !main) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    const fullStyle = globalThis.getComputedStyle(full);
+    const padBottom = Number.parseFloat(fullStyle.paddingBottom) || 0;
+    const borderBottom = Number.parseFloat(fullStyle.borderBottomWidth) || 0;
+    const rowGap = Number.parseFloat(fullStyle.rowGap) || Number.parseFloat(fullStyle.gap) || 0;
+    const fullRect = full.getBoundingClientRect();
+    const mainRect = main.getBoundingClientRect();
+    const galleryRect = gallery.getBoundingClientRect();
+    // Container padding/border below .gallery-main-main, plus any flex gap.
+    // Using main.top alone overshoots and clips the gallery bottom edge.
+    const belowMain = Math.max(0, galleryRect.bottom - mainRect.bottom);
+    const regionMax = Math.floor(
+        fullRect.bottom - padBottom - borderBottom - mainRect.top - belowMain - rowGap - inset
+    );
+    if (!Number.isFinite(regionMax)) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    return regionMax;
+}
+
 function getGalleryHeightCap() {
     const full = getFullWidthColumn();
     const main = getGalleryMain();
@@ -1259,45 +1398,78 @@ function getGalleryHeightCap() {
         return GALLERY_MAIN_HEIGHT;
     }
     const current = readGalleryHeight();
-    // Content-fit height for the current #full-width region: compress floor
-    // only (stop over-shrink / empty gap). NOT the expand ceiling -- see
-    // getGalleryExpandMax. NOT a hard upper clamp inside setGalleryHeight.
-    const fit = Math.floor(current + full.clientHeight - full.scrollHeight);
+    // Content-fit using last child's margin box. scrollHeight misses
+    // flex item margin-top / margin-bottom and under-reports overflow.
+    const items = getFullWidthItems(full);
+    const last = items.at(-1);
+    if (!last) {
+        return GALLERY_MAIN_HEIGHT;
+    }
+    const fullStyle = globalThis.getComputedStyle(full);
+    const padBottom = Number.parseFloat(fullStyle.paddingBottom) || 0;
+    const lastMarginBottom = Number.parseFloat(globalThis.getComputedStyle(last).marginBottom) || 0;
+    const overflow = Math.ceil(
+        last.getBoundingClientRect().bottom + lastMarginBottom + padBottom
+        - full.getBoundingClientRect().bottom
+    );
+    const fit = Math.floor(current - overflow);
     if (!Number.isFinite(fit)) {
         return GALLERY_MAIN_HEIGHT;
     }
     return Math.min(GALLERY_MAIN_HEIGHT, Math.max(GALLERY_COMPRESS_MIN, fit));
 }
 
-function getGalleryExpandMax() {
-    const full = getFullWidthColumn();
-    const main = getGalleryMain();
-    if (!full || !main || !isGalleryInFullWidth()) {
+function getGalleryExpandMax(fillSeam = false) {
+    if (!isGalleryInFullWidth()) {
         return GALLERY_MAIN_HEIGHT;
     }
-    // Region-aware expand ceiling: how tall gallery main can be while filling
-    // the visible #full-width client area. Subtract only chrome above the main
-    // (character + gallery chrome via mainRect.top); do NOT reserve sibling
-    // stack height -- expand may push those below the fold / into overflow.
-    const fullRect = full.getBoundingClientRect();
-    const mainRect = main.getBoundingClientRect();
-    const padBottom = Number.parseFloat(globalThis.getComputedStyle(full).paddingBottom) || 0;
-    const regionMax = Math.floor(fullRect.bottom - padBottom - mainRect.top);
-    if (!Number.isFinite(regionMax)) {
-        return GALLERY_MAIN_HEIGHT;
-    }
-    return Math.min(GALLERY_MAIN_HEIGHT, Math.max(GALLERY_COMPRESS_MIN, regionMax));
+    // Region-aware expand ceiling: fit the gallery *container* (not just
+    // .gallery-main-main) inset from #full-width's bottom so the border
+    // stays visible. Siblings may still be pushed below the fold.
+    const regionMax = galleryMainFitForRegion(2);
+    const hardMax = fillSeam ? FULL_WIDTH_CSS_MAX : GALLERY_MAIN_HEIGHT;
+    return Math.min(hardMax, Math.max(GALLERY_COMPRESS_MIN, regionMax));
 }
 
-function setGalleryHeight(px) {
+function fillGalleryToFullWidthSeam() {
+    if (!isGalleryInFullWidth() || isGalleryMainCollapsed() || hasItemsBelowGallery() || splitDrag) {
+        return;
+    }
+    // Auto height collapses to current content, so expandMax cannot grow.
+    // Lock the region to the designed max first, then fill the leftover band.
+    if (fullRegionHeight == null) {
+        setFullRegionHeight(getFullWidthMaxCap());
+    }
+    const gap = gallerySeamGap();
+    // 0..2px leftover is flush enough (includes drag-to-max). Grow a real
+    // under-fill; shrink when the default 872 + chrome already past the split.
+    if (gap >= 0 && gap <= 2) {
+        return;
+    }
+    setGalleryHeight(galleryMainFitForRegion(2), { fillSeam: true });
+}
+
+function clampGalleryIfOverflowing() {
+    if (!isGalleryInFullWidth() || isGalleryMainCollapsed() || splitDrag) {
+        return;
+    }
+    if (gallerySeamGap() >= 0) {
+        return;
+    }
+    setGalleryHeight(galleryMainFitForRegion(2), { fillSeam: !hasItemsBelowGallery() });
+}
+
+function setGalleryHeight(px, { fillSeam = false } = {}) {
     const main = getGalleryMain();
     if (!main || main.classList.contains('collapsed')) {
         return;
     }
     // Absolute clamp only - wheel/split decide fit-based limits separately so
     // compress can step by delta without snapping to the content-fit value.
-    const next = Math.min(GALLERY_MAIN_HEIGHT, Math.max(GALLERY_COMPRESS_MIN, Math.round(px)));
-    if (next >= GALLERY_MAIN_HEIGHT) {
+    // fillSeam may grow past GALLERY_MAIN_HEIGHT so a lone gallery meets the split.
+    const hardMax = fillSeam ? FULL_WIDTH_CSS_MAX : GALLERY_MAIN_HEIGHT;
+    const next = Math.min(hardMax, Math.max(GALLERY_COMPRESS_MIN, Math.round(px)));
+    if (!fillSeam && next >= GALLERY_MAIN_HEIGHT) {
         resetGalleryHeight();
         return;
     }
@@ -1421,9 +1593,14 @@ function applyFullSplitDelta(deltaUp) {
     // Update region before gallery so layout metrics match the new clientHeight.
     setFullRegionHeight(desired);
     if (splitDrag.galleryInFull && !isGalleryMainCollapsed()) {
-        // Absolute [MIN, MAIN] clamp in setGalleryHeight - do not fit-snap here,
-        // or split-drag restore cannot grow the gallery back with the region.
-        setGalleryHeight(splitDrag.startGallery - regionDelta);
+        const next = splitDrag.startGallery - regionDelta;
+        // After the region changes, clamp to the container-aware expand max
+        // so a non-max split does not leave the gallery a few px too tall.
+        if (hasItemsBelowGallery()) {
+            setGalleryHeight(Math.min(getGalleryExpandMax(), next));
+        } else {
+            setGalleryHeight(Math.min(getGalleryExpandMax(true), next), { fillSeam: true });
+        }
     }
 }
 
@@ -1441,10 +1618,17 @@ function syncFullSplitHandle() {
 
 function syncFullWidthBehavior() {
     pinCharacterToTop();
-    syncFullSplitHandle();
     if (!isGalleryInFullWidth()) {
         resetGalleryHeight();
+    } else if (hasItemsBelowGallery()) {
+        if (readGalleryHeight() > GALLERY_MAIN_HEIGHT) {
+            resetGalleryHeight();
+        }
+        clampGalleryIfOverflowing();
+    } else {
+        fillGalleryToFullWidthSeam();
     }
+    syncFullSplitHandle();
 }
 
 function onFullSplitPointerDown(event) {
@@ -1484,7 +1668,8 @@ async function onFullSplitPointerUp() {
     document.getElementById('full-split-handle')?.classList.remove('layout-full-split-active');
     document.body.classList.remove('layout-is-resizing-full');
     splitDrag = null;
-    syncFullWidthBehavior();
+    pinCharacterToTop();
+    syncFullSplitHandle();
     await persistLayout();
 }
 
@@ -1505,7 +1690,7 @@ function setupFullWidthScroll() {
         if (fullRegionHeight != null) {
             setFullRegionHeight(fullRegionHeight);
         }
-        syncFullSplitHandle();
+        syncFullWidthBehavior();
     });
 }
 

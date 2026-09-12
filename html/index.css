@@ -97,6 +97,14 @@ html, body {
     margin-left: 10px;
     margin-right: 10px;
     box-sizing: border-box;
+    background: inherit;
+}
+
+#full-width > .layout-character-host {
+    position: sticky;
+    top: 0;
+    z-index: 6;
+    background: inherit;
 }
 
 #full-width:empty {
@@ -275,7 +283,10 @@ body.layout-is-resizing-full * {
 
 .layout-tab-label {
     cursor: grab;
-    padding: 2px 16px 3px;
+    display: inline-flex;
+    align-items: center;
+    gap: 4px;
+    padding: 2px 8px 3px 12px;
     border-radius: 6px 6px 0 0;
     border: 1px solid transparent;
     border-bottom: none;
@@ -339,6 +350,29 @@ body.layout-is-resizing-full * {
 }
 
 /* Hide per-panel collapse header when the panel lives inside a multi-tab host */
+
+[data-layout-id].layout-tab-hide-header-span .generate-hires-fix,
+[data-layout-id].layout-tab-hide-header-span .generate-refiner,
+[data-layout-id].layout-tab-hide-header-span .regional-condition-trigger-dummy,
+[data-layout-id].layout-tab-hide-header-span .generate-controlnet,
+[data-layout-id].layout-tab-hide-header-span .generate-adetailer,
+[data-layout-id].layout-tab-hide-header-span .queue-autostart-generate {
+    display: none !important;
+}
+
+.layout-tab-enable {
+    flex: 0 0 auto;
+    width: 28px;
+    height: 16px;
+    margin: 0;
+    padding: 0;
+    border-radius: 999px;
+    box-sizing: border-box;
+    cursor: pointer;
+    appearance: none;
+    background-repeat: no-repeat;
+}
+
 [data-layout-id].layout-tab-hide-header-span [class$="-header-span"],
 [data-layout-id].layout-tab-hide-header-span .add-lora-header > .add-lora-span,
 [data-layout-id].layout-tab-hide-header-span .model-settings-header > .model-settings-span {

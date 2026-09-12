@@ -1,4 +1,10 @@
-2026.09.10 v2.9.1  
+2026.09.13 v2.9.2       
+Add, `Enable/Disable` in `Tab header`          
+Add, `Outline` for `Hires Fix` image in `Gallery`        
+Minor bugs fix     
+
+
+2026.09.10 v2.9.1       
 Add, `Tabs` and `Height Drag`       
 Add, buttons on `Gallery` now follow `Right to Left` rules         
 Add, UI auto zoom for some 1080p or lower resolution display         

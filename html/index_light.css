@@ -200,9 +200,18 @@ body {
 
 /* Main Gallery */
 .gallery-main-main {
-    transition: max-height 0.3s ease, opacity 0.3s ease;
+    transition: max-height 0.3s ease, opacity 0.3s ease, border-color 0.2s ease;
     overflow: hidden;
     height: 872px;
+}
+
+.gallery-main-main.cg-hires-frame {
+    border-color: transparent;
+    background-image:
+        linear-gradient(rgb(245, 242, 230), rgb(245, 242, 230)),
+        linear-gradient(45deg, #D98C7C, #E8C050);
+    background-origin: padding-box, border-box;
+    background-clip: padding-box, border-box;
 }
 
 /* Thumb Gallery */
@@ -1128,4 +1137,29 @@ body.right-to-left #cg-info-button {
     mask: url('../scripts/svg/moon.svg') no-repeat center;
     -webkit-mask-size: contain;
     mask-size: contain;
+}
+
+.layout-tab-enable {
+    border: 1px solid #b7aa96;
+    background-color: #fffdf7;
+    background-image: radial-gradient(circle at 7px 7px, #8f8579 0 4px, transparent 4.5px);
+    transition: background-color 0.16s ease, border-color 0.16s ease, background-position 0.16s ease;
+}
+.layout-tab-enable:hover {
+    border-color: #c7784f;
+    background-color: #fff8e9;
+    background-image: radial-gradient(circle at 7px 7px, #5b4437 0 4px, transparent 4.5px);
+}
+.layout-tab-enable.is-on {
+    border-color: #c7784f;
+    background-color: #c7784f;
+    background-image: radial-gradient(circle at 21px 7px, #fff 0 4px, transparent 4.5px);
+}
+.layout-tab-enable.is-on:hover {
+    border-color: #c7784f;
+    background-color: #c7784f;
+}
+.layout-tab-enable:disabled {
+    opacity: 0.45;
+    cursor: default;
 }
