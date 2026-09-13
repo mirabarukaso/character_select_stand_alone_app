@@ -1,3 +1,11 @@
+2026.09.14 v2.9.3       
+Add, `Landscape` on `Image tab header`     
+Add, `View select button` on `Prompt tab` in `Tab mode`       
+Change, modernized `Slider`      
+Change, improved prompt `Auto height`            
+Bugfix, revert `Regional Condition SDXL`             
+
+
 2026.09.13 v2.9.2       
 Add, `Enable/Disable` in `Tab header`          
 Add, `Outline` for `Hires Fix` image in `Gallery`        

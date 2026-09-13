@@ -93,7 +93,7 @@ const defaultSettings = {
     "prompt_ban" : "",
     "ptompt_textbox_autoresize": true,
     "ptompt_textbox_fontsize": 14,
-    "ptompt_textbox_heights": [3,3,3,3,3,3],
+    "ptompt_textbox_heights": [3,3,3,2,2,1],
     
     "remote_ai_base_url": "https://api.groq.com/openai/v1/chat/completions",
     "remote_ai_model": "meta-llama/llama-4-maverick-17b-128e-instruct",

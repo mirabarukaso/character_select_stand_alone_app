@@ -462,6 +462,38 @@ export const WORKFLOW = {
 };
 
 export const WORKFLOW_REGIONAL = {
+  "2": {
+    "inputs": {
+      "text": [
+        "34",
+        4
+      ],
+      "clip": [
+        "34",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
+  "3": {
+    "inputs": {
+      "text": [
+        "33",
+        0
+      ],
+      "clip": [
+        "34",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
   "5": {
     "inputs": {
       "width": [
@@ -482,12 +514,12 @@ export const WORKFLOW_REGIONAL = {
   "6": {
     "inputs": {
       "samples": [
-        "36",
+        "37",
         0
       ],
       "vae": [
-        "61",
-        0
+        "43",
+        2
       ]
     },
     "class_type": "VAEDecode",
@@ -508,6 +540,46 @@ export const WORKFLOW_REGIONAL = {
       "title": "Create Canvas Advanced"
     }
   },
+  "18": {
+    "inputs": {
+      "tile_size": 1024,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "samples": [
+        "20",
+        0
+      ],
+      "vae": [
+        "43",
+        2
+      ]
+    },
+    "class_type": "VAEDecodeTiled",
+    "_meta": {
+      "title": "VAE Decode (Tiled)"
+    }
+  },
+  "19": {
+    "inputs": {
+      "tile_size": 1024,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8,
+      "pixels": [
+        "25",
+        0
+      ],
+      "vae": [
+        "43",
+        2
+      ]
+    },
+    "class_type": "VAEEncodeTiled",
+    "_meta": {
+      "title": "VAE Encode (Tiled)"
+    }
+  },
   "20": {
     "inputs": {
       "seed": 715010500915488,
@@ -515,13 +587,13 @@ export const WORKFLOW_REGIONAL = {
       "cfg": 7,
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
-      "denoise": 0.4,
+      "denoise": 0.4000000000000001,
       "model": [
         "39",
         2
       ],
       "positive": [
-        "53",
+        "57",
         0
       ],
       "negative": [
@@ -529,7 +601,7 @@ export const WORKFLOW_REGIONAL = {
         0
       ],
       "latent_image": [
-        "62",
+        "19",
         0
       ]
     },
@@ -572,7 +644,7 @@ export const WORKFLOW_REGIONAL = {
     "inputs": {
       "method": "Mean",
       "src_image": [
-        "63",
+        "18",
         0
       ],
       "ref_image": [
@@ -595,8 +667,14 @@ export const WORKFLOW_REGIONAL = {
       "modelname": "waiNSFWIllustrious_v130.safetensors",
       "sampler_name": "euler_ancestral",
       "scheduler": "normal",
-      "positive": "night, outdoors, duo, masterpiece, best quality, amazing quality, bailu \\(honkai  star rail\\), \nnight, outdoors, duo, masterpiece, best quality, amazing quality, meowscarada, :d, selfie,",
-      "negative": "unknown",
+      "positive": [
+        "32",
+        0
+      ],
+      "negative": [
+        "33",
+        0
+      ],
       "seed_value": 1775747588,
       "width": [
         "17",
@@ -628,7 +706,7 @@ export const WORKFLOW_REGIONAL = {
   },
   "32": {
     "inputs": {
-      "text": ""
+      "text": "2girls"
     },
     "class_type": "TextBoxMira",
     "_meta": {
@@ -637,11 +715,45 @@ export const WORKFLOW_REGIONAL = {
   },
   "33": {
     "inputs": {
-      "text": ""
+      "text": "bad quality, worst quality, worst detail, sketch"
     },
     "class_type": "TextBoxMira",
     "_meta": {
       "title": "Text Box"
+    }
+  },
+  "34": {
+    "inputs": {
+      "text": [
+        "32",
+        0
+      ],
+      "model": [
+        "35",
+        0
+      ],
+      "clip": [
+        "45",
+        1
+      ]
+    },
+    "class_type": "LoRAfromText",
+    "_meta": {
+      "title": "LoRA Loader from Text"
+    }
+  },
+  "35": {
+    "inputs": {
+      "sampling": "eps",
+      "zsnr": false,
+      "model": [
+        "45",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingDiscrete",
+    "_meta": {
+      "title": "ModelSamplingDiscrete"
     }
   },
   "36": {
@@ -656,7 +768,7 @@ export const WORKFLOW_REGIONAL = {
       "end_at_step": 1000,
       "return_with_leftover_noise": "disable",
       "model": [
-        "39",
+        "34",
         0
       ],
       "positive": [
@@ -664,11 +776,44 @@ export const WORKFLOW_REGIONAL = {
         0
       ],
       "negative": [
-        "40",
+        "3",
         0
       ],
       "latent_image": [
         "5",
+        0
+      ]
+    },
+    "class_type": "KSamplerAdvanced",
+    "_meta": {
+      "title": "KSampler (Advanced)"
+    }
+  },
+  "37": {
+    "inputs": {
+      "add_noise": "disable",
+      "noise_seed": 790295579866824,
+      "steps": 20,
+      "cfg": 7,
+      "sampler_name": "euler_ancestral",
+      "scheduler": "normal",
+      "start_at_step": 12,
+      "end_at_step": 10000,
+      "return_with_leftover_noise": "disable",
+      "model": [
+        "39",
+        0
+      ],
+      "positive": [
+        "57",
+        0
+      ],
+      "negative": [
+        "40",
+        0
+      ],
+      "latent_image": [
+        "36",
         0
       ]
     },
@@ -684,12 +829,12 @@ export const WORKFLOW_REGIONAL = {
         0
       ],
       "model": [
-        "59",
+        "44",
         0
       ],
       "clip": [
-        "60",
-        0
+        "43",
+        1
       ]
     },
     "class_type": "LoRAfromText",
@@ -729,9 +874,41 @@ export const WORKFLOW_REGIONAL = {
       "title": "CLIP Text Encode (Prompt)"
     }
   },
+  "43": {
+    "inputs": {
+      "ckpt_name": "waiIllustriousSDXL_v180.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
+  "44": {
+    "inputs": {
+      "sampling": "eps",
+      "zsnr": false,
+      "model": [
+        "43",
+        0
+      ]
+    },
+    "class_type": "ModelSamplingDiscrete",
+    "_meta": {
+      "title": "ModelSamplingDiscrete"
+    }
+  },
+  "45": {
+    "inputs": {
+      "ckpt_name": "refiner.safetensors"
+    },
+    "class_type": "CheckpointLoaderSimple",
+    "_meta": {
+      "title": "Load Checkpoint"
+    }
+  },
   "46": {
     "inputs": {
-      "text": ""
+      "text": "2girls"
     },
     "class_type": "TextBoxMira",
     "_meta": {
@@ -797,7 +974,7 @@ export const WORKFLOW_REGIONAL = {
       "strength": 1,
       "set_cond_area": "default",
       "conditioning": [
-        "41",
+        "2",
         0
       ],
       "mask": [
@@ -810,12 +987,28 @@ export const WORKFLOW_REGIONAL = {
       "title": "Conditioning (Set Mask)"
     }
   },
+  "51": {
+    "inputs": {
+      "text": [
+        "46",
+        0
+      ],
+      "clip": [
+        "34",
+        1
+      ]
+    },
+    "class_type": "CLIPTextEncode",
+    "_meta": {
+      "title": "CLIP Text Encode (Prompt)"
+    }
+  },
   "52": {
     "inputs": {
       "strength": 1,
       "set_cond_area": "default",
       "conditioning": [
-        "54",
+        "51",
         0
       ],
       "mask": [
@@ -860,66 +1053,70 @@ export const WORKFLOW_REGIONAL = {
       "title": "CLIP Text Encode (Prompt)"
     }
   },
-  "59": {
+  "55": {
     "inputs": {
-      "unet_name": "anima.safetensors",
-      "weight_dtype": "default"
-    },
-    "class_type": "UNETLoader",
-    "_meta": {
-      "title": "Load Diffusion Model"
-    }
-  },
-  "60": {
-    "inputs": {
-      "clip_name": "qwen_3_06b_base.safetensors",
-      "type": "stable_diffusion",
-      "device": "default"
-    },
-    "class_type": "CLIPLoader",
-    "_meta": {
-      "title": "Load CLIP"
-    }
-  },
-  "61": {
-    "inputs": {
-      "vae_name": "qwen_image_vae.safetensors"
-    },
-    "class_type": "VAELoader",
-    "_meta": {
-      "title": "Load VAE"
-    }
-  },
-  "62": {
-    "inputs": {
-      "pixels": [
-        "25",
+      "strength": 1,
+      "set_cond_area": "default",
+      "conditioning": [
+        "41",
         0
       ],
-      "vae": [
-        "61",
+      "mask": [
+        "48",
         0
       ]
     },
-    "class_type": "VAEEncode",
+    "class_type": "ConditioningSetMask",
     "_meta": {
-      "title": "VAE Encode"
+      "title": "Conditioning (Set Mask)"
     }
   },
-  "63": {
+  "56": {
+    "inputs": {
+      "strength": 1,
+      "set_cond_area": "default",
+      "conditioning": [
+        "54",
+        0
+      ],
+      "mask": [
+        "49",
+        0
+      ]
+    },
+    "class_type": "ConditioningSetMask",
+    "_meta": {
+      "title": "Conditioning (Set Mask)"
+    }
+  },
+  "57": {
+    "inputs": {
+      "conditioning_1": [
+        "55",
+        0
+      ],
+      "conditioning_2": [
+        "56",
+        0
+      ]
+    },
+    "class_type": "ConditioningCombine",
+    "_meta": {
+      "title": "Conditioning (Combine)"
+    }
+  },
+  "58": {
     "inputs": {
       "samples": [
-        "20",
+        "36",
         0
       ],
-      "vae": [
-        "61",
-        0
-      ]
+      "upscale_method": "nearest-exact",
+      "scale_by": 1.5
     },
-    "class_type": "VAEDecode",
+    "class_type": "LatentUpscaleBy",
     "_meta": {
-      "title": "VAE Decode"
+      "title": "Upscale Latent By"
     }
   }
 };

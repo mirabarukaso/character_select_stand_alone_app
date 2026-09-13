@@ -386,7 +386,7 @@
         "custom_prompt": "自定义提示词（放在最前）",
         "api_prompt": "效果提示词（放在末尾）",        
         "api_neg_prompt": "负面提示词",
-        "ptompt_textbox_autoresize": "自动调整行数",
+        "ptompt_textbox_autoresize": "自动行高",
         "ptompt_textbox_fontsize": "提示词字体尺寸",
 
         "batch_generate_rule": "AI",

@@ -1,5 +1,5 @@
 import { updateLanguage, updateSettings } from './renderer/language.js';
-import { setupGallery } from './renderer/customGallery.js';
+import { setupGallery, GRID_SIZE_MIN, GRID_SIZE_MAX, GRID_SIZE_STEP, GRID_SIZE_DEFAULT } from './renderer/customGallery.js';
 import { setupThumbOverlay, setupThumb } from './renderer/customThumbGallery.js';
 import { setupSuggestionSystem } from './renderer/tagAutoComplete.js';
 import { setupButtonOverlay, customCommonOverlay } from './renderer/customOverlay.js';
@@ -165,10 +165,10 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         regionalCondition_dummy: setupCheckbox('regional-condition-trigger-dummy', LANG.regional_condition, SETTINGS.regional_condition, true, (value) => { callback_regional_condition(value, true); }),
         scrollToLatest: setupCheckbox('gallery-main-latest', LANG.scroll_to_last, SETTINGS.scroll_to_last, true, (value) => { globalThis.globalSettings.scroll_to_last = value; }),
         gridSize: setupSlider('gallery-grid-size', LANG.gallery_grid_size_hint,
-            {min:80, max:400, step:10, defaultValue: SETTINGS.gallery_grid_size ?? 200},
+            {min: GRID_SIZE_MIN, max: GRID_SIZE_MAX, step: GRID_SIZE_STEP, defaultValue: SETTINGS.gallery_grid_size ?? GRID_SIZE_DEFAULT, tooltipValue: true},
             (value) => { globalThis.mainGallery.applyGridSize?.(value); }, true),
 
-        seed: setupSlider('generate-random-seed', LANG.random_seed, {min:-1, max:4294967295, step:1, defaultValue:SETTINGS.random_seed}, (value) =>{globalThis.globalSettings.random_seed = value;}),
+        seed: setupSlider('generate-random-seed', LANG.random_seed, {min:-1, max:4294967295, step:1, defaultValue:SETTINGS.random_seed, fullGradient: true}, (value) =>{globalThis.globalSettings.random_seed = value;}),
         cfg: setupSlider('generate-cfg', LANG.cfg, {min:0, max:20, step:0.01, defaultValue:SETTINGS.cfg}, (value) =>{globalThis.globalSettings.cfg = value;}),
         step: setupSlider('generate-step', LANG.step, {min:1, max:100, step:1, defaultValue:SETTINGS.step}, (value) =>{globalThis.globalSettings.step = value;}),
         width: setupSlider('generate-width', LANG.width, {min:512, max:2048, step:8, defaultValue:SETTINGS.width}, (value) =>{globalThis.globalSettings.width = value; hiresCalculate(); }),
@@ -337,40 +337,49 @@ export async function createPrompt(SETTINGS, FILES, LANG) {
             value: SETTINGS.custom_prompt,
             defaultTextColor: 'darkorange',
             minLines: 3,
-            maxLines: 50
+            maxLines: 50,
+            shrinkToContent: true
             }, false, (value) => { globalThis.globalSettings.custom_prompt = value; }),
         positive: setupTextbox('prompt-positive', LANG.api_prompt, {
             value: SETTINGS.api_prompt,
             defaultTextColor: 'LawnGreen',
             minLines: 3,
-            maxLines: 50
+            maxLines: 50,
+            shrinkToContent: true
             }, false, (value) => { globalThis.globalSettings.api_prompt = value; }),
         positive_right: setupTextbox('prompt-positive-right', LANG.api_prompt, {    //Regional Condition
             value: SETTINGS.api_prompt_right,
             defaultTextColor: 'LawnGreen',
             minLines: 3,
-            maxLines: 50
+            maxLines: 50,
+            shrinkToContent: true
             }, false, (value) => { globalThis.globalSettings.api_prompt_right = value; }),
         negative: setupTextbox('prompt-negative', LANG.api_neg_prompt, {
             value: SETTINGS.api_neg_prompt,
             defaultTextColor: 'Crimson',
-            maxLines: 10
+            minLines: 2,
+            maxLines: 10,
+            shrinkToContent: true
             }, false, (value) => { globalThis.globalSettings.api_neg_prompt = value; }),
         ai: setupTextbox('prompt-ai', LANG.ai_prompt, {
             value: SETTINGS.ai_prompt,
             defaultTextColor: 'hotpink',
-            maxLines: 10
+            minLines: 2,
+            maxLines: 10,
+            shrinkToContent: true
             }, false, (value) => { globalThis.globalSettings.ai_prompt = value; }),
         exclude: setupTextbox('prompt-exclude', LANG.prompt_ban, {
             value: SETTINGS.prompt_ban,
             defaultTextColor: 'khaki',
-            maxLines: 10
+            minLines: 1,
+            maxLines: 10,
+            shrinkToContent: true
             }, false, (value) => { globalThis.globalSettings.prompt_ban = value; }),
         autoResize: setupCheckbox('prompt-textbox-autoresize', LANG.ptompt_textbox_autoresize,
             true, true, callback_ptompt_textbox_autoresize
         ),
         fontSize: setupSlider('prompt-textbox-fontsize', LANG.ptompt_textbox_fontsize,
-            {min:6, max:22, step:1, defaultValue:14}, callback_ptompt_textbox_fontsize, true
+            {min:6, max:22, step:1, defaultValue:14, tooltipValue: true}, callback_ptompt_textbox_fontsize, true
         )
     }
     console.log('Creating setupSuggestionSystem');

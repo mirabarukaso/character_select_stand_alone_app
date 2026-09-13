@@ -62,7 +62,8 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
         minLines = 2,
         maxLines = 20,
         readOnly = false,
-        autoResize = true
+        autoResize = true,
+        shrinkToContent = false
     } = options;
 
     const container = document.querySelector(`.${containerId}`);
@@ -78,7 +79,7 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
         <div class="myTextbox-wrapper">
             ${showTitle ? `<div class="myTextbox-${containerId}-header">${placeholder}</div>` : ''}
             <div class="myTextbox-container-relative">
-                <textarea class="myTextbox-${containerId}-textarea ${numberOnly ? 'numeric-input' : ''}" title="${placeholder}" placeholder="${placeholder}" ${readOnly ? 'readonly' : ''}></textarea>
+                <textarea class="myTextbox-${containerId}-textarea ${numberOnly ? 'numeric-input' : ''}" rows="1" title="${placeholder}" placeholder="${placeholder}" ${readOnly ? 'readonly' : ''}></textarea>
                 <div class="myTextbox-${containerId}-resize-handle">◢</div>
             </div>
         </div>
@@ -129,20 +130,40 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
             return;
         }
 
-        // Auto mode: calculate needed lines strictly based on current content
+        const floorLines = (shrinkToContent && isAutoMode) ? 1 : minLines;
+        const heightSlackPx = 2;
+
+        // Auto mode: size to real content. shrinkToContent only drops unused minLines,
+        // never below 1, and never below explicit newlines in the value.
         if (isAutoMode) {
-            textbox.style.height = 'auto';
-            const neededLines = Math.ceil(textbox.scrollHeight / lineHeight);
-            currentAllowedLines = Math.max(minLines, Math.min(maxLines, neededLines));
+            let neededLines;
+            if (shrinkToContent) {
+                if (textbox.value.length === 0) {
+                    neededLines = 1;
+                } else {
+                    const explicitLines = textbox.value.split('\n').length;
+                    // Collapse to 0 instead of `auto`: a textarea's default rows=2
+                    // makes `height: auto` report 2 lines for 1-line content.
+                    textbox.style.overflowY = 'hidden';
+                    textbox.style.height = '0px';
+                    const measuredLines = Math.max(1, Math.round(textbox.scrollHeight / lineHeight));
+                    neededLines = Math.max(explicitLines, measuredLines);
+                }
+            } else {
+                textbox.style.height = 'auto';
+                neededLines = Math.ceil(textbox.scrollHeight / lineHeight);
+            }
+            currentAllowedLines = Math.max(floorLines, Math.min(maxLines, neededLines));
         }
 
         // Apply clamped allowed lines limit
-        const clampedLines = Math.max(minLines, Math.min(maxLines, currentAllowedLines));
-        const targetHeight = clampedLines * lineHeight;
+        const clampedLines = Math.max(floorLines, Math.min(maxLines, currentAllowedLines));
+        const targetHeight = clampedLines * lineHeight + heightSlackPx;
 
         textbox.style.height = `${targetHeight}px`;
 
-        // Overflow/scrollbar control independent of resize capability
+        // Overflow/scrollbar control independent of resize capability.
+        // Slack keeps the bar hidden until content actually exceeds the allowed lines.
         if (textbox.scrollHeight > targetHeight) {
             textbox.style.overflowY = 'scroll'; 
         } else {
@@ -188,9 +209,16 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
 
     updateHandleVisibility();
 
-    setTimeout(() => {
-        adjustHeight();
-    }, 0);
+    const scheduleAdjust = () => {
+        setTimeout(() => {
+            adjustHeight();
+            if (shrinkToContent) {
+                requestAnimationFrame(() => adjustHeight());
+            }
+        }, 0);
+    };
+
+    scheduleAdjust();
 
     let realValue = textbox.value;
     if (passwordMode) {
@@ -281,7 +309,7 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
             if (passwordMode) {
                 textbox.value = '******';
             }
-            setTimeout(adjustHeight, 0);
+            scheduleAdjust();
         },
         setColors: (backgroundColor, textColor) => {
             textbox.style.backgroundColor = backgroundColor;
@@ -314,7 +342,7 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
         },
 
         flush() {
-            setTimeout(adjustHeight, 0);
+            scheduleAdjust();
         },
         getElement: () => textbox,  
         isNumberOnly: () => numberOnly 

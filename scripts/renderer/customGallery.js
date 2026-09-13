@@ -1,5 +1,10 @@
 import { customCommonOverlay, addDragFunctionality } from './customOverlay.js';
 
+export const GRID_SIZE_MIN = 40;
+export const GRID_SIZE_MAX = 420;
+export const GRID_SIZE_STEP = 10;
+export const GRID_SIZE_DEFAULT = 200;
+
 function setupScrollableContainer(container) {
     let isDragging = false, startX, scrollLeft;
     container.addEventListener('mousedown', (e) => {
@@ -131,10 +136,7 @@ export function setupGallery(containerId) {
     let gridScrollRaf = 0;
     let pendingAspectProbes = new Set();
     let galleryFocusOpenedAt = 0;
-    const GRID_SIZE_MIN = 80;
-    const GRID_SIZE_MAX = 400;
-    const GRID_SIZE_STEP = 10;
-    const GRID_SIZE_DEFAULT = 200;
+
 
     function isHiresImage(index) {
         const info = infos?.[index] || '';
@@ -1054,7 +1056,7 @@ export function setupGallery(containerId) {
 
     function isGalleryHostInFullWidth() {
         const full = document.getElementById('full-width');
-        return Boolean(full && full.contains(container));
+        return Boolean(full?.contains(container));
     }
 
     function getMetaAnchorImage() {
@@ -1069,24 +1071,6 @@ export function setupGallery(containerId) {
             return container.querySelector('.cg-gallery-focus-overlay.visible .cg-gallery-focus-image');
         }
         return null;
-    }
-
-    function clearMetaButtonSideStyles(button) {
-        if (!button) return;
-        button.style.left = '';
-        button.style.right = '';
-        button.style.top = '';
-        button.style.bottom = '';
-        button.style.transform = '';
-    }
-
-    function clearChromeButtonSideStyles() {
-        for (const id of ['cg-switch-mode-button', 'cg-privacy-button']) {
-            const button = document.getElementById(id);
-            if (!button) continue;
-            button.style.left = '';
-            button.style.right = '';
-        }
     }
 
     function applyChromeButtonsSideLayout(rtl) {

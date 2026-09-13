@@ -148,6 +148,7 @@ export function setHostActive(host, pageId) {
     const pages = getHostPageIds(host);
     const showBar = pages.length > 1;
     host.classList.toggle('layout-tab-multi', showBar);
+    const prevActive = host.dataset.tabActive;
     const active = pages.includes(pageId) ? pageId : pages[0];
     host.dataset.tabActive = active || '';
 
@@ -162,6 +163,10 @@ export function setHostActive(host, pageId) {
     for (const label of host.querySelectorAll(':scope > .layout-tab-bar .layout-tab-label')) {
         label.classList.toggle('layout-tab-active', label.dataset.tabPage === active);
     }
+    if (prevActive !== undefined && prevActive !== active) {
+        closePromptViewDock(host);
+    }
+    refreshPromptViewToggles();
 }
 
 function settingOn(key, fallback) {
@@ -193,6 +198,7 @@ function slotsUsed(manager) {
     return false;
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export function getTabLabelHint(panelId) {
     switch (panelId) {
         case 'highres-fix':
@@ -227,7 +233,10 @@ const TAB_ENABLE_SWITCH = {
     'regional-condition': '.regional-condition-trigger-dummy input',
     'controlnet': '.generate-controlnet input',
     'adetailer': '.generate-adetailer input',
-    'queue': '.queue-autostart-generate input'
+    'queue': '.queue-autostart-generate input',
+    // Image tab: clone landscape onto the label. Keep the original checkbox
+    // in the panel (no header-span hide / no remove on extract).
+    'generate-settings-static-left': '.generate-landscape input'
 };
 
 function getOriginalEnableInput(panelId) {
@@ -294,6 +303,256 @@ export function refreshTabLabelHints(host) {
         for (const label of item.querySelectorAll('.layout-tab-label')) {
             applyLabelHint(label, label.dataset.tabPage);
         }
+        syncPromptViewToggle(item);
+    }
+}
+
+const VIEW_DROPDOWN_SEL = '.dropdown-view';
+const VIEW_PLACEHOLDER_CLASS = 'dropdown-view-placeholder';
+let viewDockDismissBound = false;
+
+function getViewDropdown() {
+    return document.querySelector(VIEW_DROPDOWN_SEL);
+}
+
+function isViewInHostDock(host) {
+    const dock = host?.querySelector(':scope > .layout-tab-view-dock');
+    const view = getViewDropdown();
+    return Boolean(dock && view && dock.contains(view) && !dock.hidden);
+}
+
+function isDropdownViewVisible() {
+    const view = getViewDropdown();
+    if (!view?.isConnected) {
+        return false;
+    }
+    if (view.closest('.layout-tab-view-dock')?.hidden) {
+        return false;
+    }
+    return view.getClientRects().length > 0;
+}
+
+function isViewToggleDisabled(host) {
+    if (isViewInHostDock(host)) {
+        return false;
+    }
+    return isDropdownViewVisible();
+}
+
+function viewTagsActive() {
+    try {
+        const values = globalThis.viewList?.getValue?.();
+        if (!Array.isArray(values)) {
+            return false;
+        }
+        return values.some((value) => value && String(value).toLowerCase() !== 'none');
+    } catch {
+        return false;
+    }
+}
+
+function viewToggleAriaLabel() {
+    const lang = globalThis.cachedFiles?.language?.[globalThis.globalSettings?.language];
+    return lang?.view_angle || 'View';
+}
+
+function shouldShowViewToggle(host) {
+    if (!host?.classList.contains('layout-tab-multi')) {
+        return false;
+    }
+    return getHostPageIds(host).includes('prompt-text');
+}
+
+function ensureViewDock(host) {
+    let dock = host.querySelector(':scope > .layout-tab-view-dock');
+    if (dock) {
+        return dock;
+    }
+    dock = document.createElement('div');
+    dock.className = 'layout-tab-view-dock';
+    dock.hidden = true;
+    const pages = host.querySelector(':scope > .layout-tab-pages');
+    if (pages) {
+        pages.before(dock);
+    } else {
+        host.appendChild(dock);
+    }
+    return dock;
+}
+
+function restoreViewDropdown() {
+    const view = getViewDropdown();
+    const placeholder = document.querySelector(`.${VIEW_PLACEHOLDER_CLASS}`);
+    if (view && placeholder?.parentElement) {
+        placeholder.replaceWith(view);
+    } else if (view?.closest('.layout-tab-view-dock')) {
+        const home = document.querySelector('[data-layout-id="generate-settings-static-left"]');
+        home?.appendChild(view);
+    }
+    document.querySelector(`.${VIEW_PLACEHOLDER_CLASS}`)?.remove();
+}
+
+function closePromptViewDock(host) {
+    if (!host) {
+        restoreViewDropdown();
+        return;
+    }
+    const wasOpen = isViewInHostDock(host);
+    if (wasOpen) {
+        restoreViewDropdown();
+    }
+    const dock = host.querySelector(':scope > .layout-tab-view-dock');
+    if (dock) {
+        dock.hidden = true;
+        dock.replaceChildren();
+    }
+    host.classList.remove('layout-tab-view-open');
+    const btn = host.querySelector('.layout-tab-view-toggle');
+    btn?.classList.remove('is-on');
+    btn?.setAttribute('aria-pressed', 'false');
+}
+
+function closeAllPromptViewDocks() {
+    restoreViewDropdown();
+    for (const host of document.querySelectorAll('.layout-tab-host')) {
+        const dock = host.querySelector(':scope > .layout-tab-view-dock');
+        if (dock) {
+            dock.hidden = true;
+            dock.replaceChildren();
+        }
+        host.classList.remove('layout-tab-view-open');
+        const btn = host.querySelector('.layout-tab-view-toggle');
+        btn?.classList.remove('is-on');
+        btn?.setAttribute('aria-pressed', 'false');
+    }
+}
+
+function openPromptViewDock(host) {
+    const view = getViewDropdown();
+    if (!host || !view || isViewToggleDisabled(host)) {
+        return;
+    }
+    closeAllPromptViewDocks();
+    const placeholder = document.createElement('div');
+    placeholder.className = VIEW_PLACEHOLDER_CLASS;
+    placeholder.hidden = true;
+    view.before(placeholder);
+    const dock = ensureViewDock(host);
+    dock.appendChild(view);
+    dock.hidden = false;
+    host.classList.add('layout-tab-view-open');
+    const btn = host.querySelector('.layout-tab-view-toggle');
+    btn?.classList.add('is-on');
+    btn?.setAttribute('aria-pressed', 'true');
+}
+
+function bindViewDockDismiss() {
+    if (viewDockDismissBound) {
+        return;
+    }
+    viewDockDismissBound = true;
+    document.addEventListener('pointerdown', (event) => {
+        const openHost = document.querySelector('.layout-tab-host.layout-tab-view-open');
+        if (!openHost) {
+            return;
+        }
+        const target = event.target;
+        if (target.closest?.('.layout-tab-view-dock')
+            || target.closest?.('.layout-tab-view-toggle')
+            || target.closest?.('[class*="mydropdown-"]')) {
+            return;
+        }
+        closeAllPromptViewDocks();
+        syncPromptViewToggle(openHost);
+    });
+    document.addEventListener('keydown', (event) => {
+        if (event.key !== 'Escape') {
+            return;
+        }
+        const openHost = document.querySelector('.layout-tab-host.layout-tab-view-open');
+        if (!openHost) {
+            return;
+        }
+        closeAllPromptViewDocks();
+        syncPromptViewToggle(openHost);
+    });
+}
+
+function syncViewToggleState(button, host) {
+    if (!button) {
+        return;
+    }
+    const open = isViewInHostDock(host);
+    const disabled = isViewToggleDisabled(host);
+    button.disabled = disabled;
+    button.classList.toggle('is-on', open);
+    button.classList.toggle('has-tags', viewTagsActive());
+    button.setAttribute('aria-pressed', open ? 'true' : 'false');
+    button.setAttribute('aria-label', viewToggleAriaLabel());
+}
+
+function attachPromptViewToggle(label, host) {
+    if (!label || label.querySelector(':scope > .layout-tab-view-toggle')) {
+        return label?.querySelector(':scope > .layout-tab-view-toggle');
+    }
+    bindViewDockDismiss();
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'layout-tab-view-toggle';
+    button.setAttribute('aria-pressed', 'false');
+    button.setAttribute('aria-label', viewToggleAriaLabel());
+    const icon = document.createElement('img');
+    icon.src = 'scripts/svg/portrait.svg';
+    icon.alt = '';
+    icon.draggable = false;
+    button.appendChild(icon);
+    button.addEventListener('pointerdown', (event) => {
+        event.stopPropagation();
+    });
+    button.addEventListener('click', (event) => {
+        event.preventDefault();
+        event.stopPropagation();
+        if (button.disabled) {
+            return;
+        }
+        if (isViewInHostDock(host)) {
+            closePromptViewDock(host);
+        } else {
+            openPromptViewDock(host);
+        }
+        syncPromptViewToggle(host);
+    });
+    label.appendChild(button);
+    syncViewToggleState(button, host);
+    return button;
+}
+
+function syncPromptViewToggle(host) {
+    if (!host) {
+        return;
+    }
+    const label = host.querySelector('.layout-tab-label[data-tab-page="prompt-text"]');
+    if (!label) {
+        return;
+    }
+    const show = shouldShowViewToggle(host);
+    let button = label.querySelector(':scope > .layout-tab-view-toggle');
+    if (show) {
+        if (!button) {
+            button = attachPromptViewToggle(label, host);
+        }
+        syncViewToggleState(button, host);
+        return;
+    }
+    if (isViewInHostDock(host)) {
+        closePromptViewDock(host);
+    }
+    button?.remove();
+}
+
+export function refreshPromptViewToggles() {
+    for (const host of document.querySelectorAll('.layout-tab-host')) {
+        syncPromptViewToggle(host);
     }
 }
 
@@ -304,11 +563,13 @@ function setHostFolded(host, folded) {
     host.classList.toggle('layout-tab-folded', Boolean(folded));
     if (folded) {
         host.dataset.tabFolded = '1';
+        closePromptViewDock(host);
     } else {
         delete host.dataset.tabFolded;
     }
     host.querySelector(':scope > .layout-tab-bar > .layout-tab-collapse')
         ?.classList.toggle('collapsed', Boolean(folded));
+    refreshPromptViewToggles();
 }
 
 function ensureCollapseButton(host, bar) {
@@ -363,6 +624,9 @@ function rebuildTabBar(host) {
         title.textContent = getStoredTitle(host, id);
         label.appendChild(title);
         attachTabEnableSwitch(label, id);
+        if (id === 'prompt-text') {
+            attachPromptViewToggle(label, host);
+        }
         applyLabelHint(label, id);
         labelsRoot.appendChild(label);
     }
@@ -390,6 +654,7 @@ export function refreshHostChrome(host) {
     if (!host) {
         return;
     }
+    closePromptViewDock(host);
     rebuildTabBar(host);
     const pages = getHostPageIds(host);
     const current = host.dataset.tabActive;
@@ -407,6 +672,7 @@ export function createTabHost() {
         <div class="layout-tab-bar">
             <div class="layout-tab-labels"></div>
         </div>
+        <div class="layout-tab-view-dock" hidden></div>
         <div class="layout-tab-pages"></div>
     `;
     const bar = host.querySelector('.layout-tab-bar');
@@ -419,7 +685,7 @@ export function createTabHost() {
     });
     bar.addEventListener('dblclick', (event) => {
         const label = event.target.closest('.layout-tab-label');
-        if (!label || event.target.closest('.layout-tab-enable')) {
+        if (!label || event.target.closest('.layout-tab-enable, .layout-tab-view-toggle')) {
             return;
         }
         const title = label.querySelector('.layout-tab-label-title') || label;
@@ -534,6 +800,7 @@ export function extractPanelFromHost(panel, beforeEl, allowLast = false) {
     if (!host) {
         return panel;
     }
+    closeAllPromptViewDocks();
     const onlyPage = getHostPages(host).length <= 1;
     if (onlyPage && !allowLast) {
         return host;
@@ -616,11 +883,14 @@ export function cleanupTabHost(host) {
     if (!isTabHost(host)) {
         return;
     }
+    if (isViewInHostDock(host)) {
+        closePromptViewDock(host);
+    }
     if (!host.isConnected) {
         host.remove();
         return;
     }
-    for (const page of [...host.querySelectorAll(':scope > .layout-tab-pages > .layout-tab-page')]) {
+    for (const page of host.querySelectorAll(':scope > .layout-tab-pages > .layout-tab-page')) {
         if (!page.querySelector(':scope > [data-layout-id]')) {
             page.remove();
         }
@@ -638,7 +908,7 @@ export function cleanupTabHost(host) {
 }
 
 export function pruneTabHosts(root = document) {
-    for (const host of [...(root?.querySelectorAll?.('.layout-tab-host') || [])]) {
+    for (const host of root?.querySelectorAll?.('.layout-tab-host') || []) {
         cleanupTabHost(host);
     }
 }
@@ -647,6 +917,7 @@ export function unwrapHost(host) {
     if (!isTabHost(host)) {
         return;
     }
+    closeAllPromptViewDocks();
     const parent = host.parentElement;
     if (!parent) {
         host.remove();

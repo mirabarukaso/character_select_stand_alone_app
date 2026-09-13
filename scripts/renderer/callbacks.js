@@ -13,6 +13,7 @@ import { compareAndMergeFavoriteLists } from './components/favoriteCharacters.js
 import { changeFontSize } from './components/myTextbox.js';
 import { set_prompt_textBox_Heights } from './components/componentsManager.js';
 import { applySavedLayout } from './uiLayout.js';
+import { refreshPromptViewToggles } from './uiLayoutTabs.js';
 import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
 import { cancelAutoRetry, isAutoRetryRunning } from './tools/autoRetry.js';
 
@@ -264,6 +265,7 @@ export function callback_myViewList_Update(){
     globalThis.globalSettings.view_camera = v2;
     globalThis.globalSettings.view_background = v3;
     globalThis.globalSettings.view_style = v4;
+    refreshPromptViewToggles();
 }
 
 export async function callback_generate_start(runType='normal', dataPack=null){    

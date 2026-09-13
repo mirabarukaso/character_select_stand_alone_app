@@ -2,6 +2,7 @@ import { callback_api_model_type, callback_regional_condition, callback_ai_promo
 import { hiresCalculate } from './tools/hiresCalculation.js';
 import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
 import { updateUiLayoutLanguage } from './uiLayout.js';
+import { GRID_SIZE_DEFAULT } from './customGallery.js';
 
 const CAT = '[Language]'
 
@@ -316,7 +317,7 @@ export function updateSettings() {
     globalThis.generate.batch.setValue(SETTINGS.batch);    
     globalThis.generate.landscape.setValue(SETTINGS.api_image_landscape);
     globalThis.generate.scrollToLatest.setValue(SETTINGS.scroll_to_last);
-    globalThis.generate.gridSize.setValue(SETTINGS.gallery_grid_size ?? 200);
+    globalThis.generate.gridSize.setValue(SETTINGS.gallery_grid_size ?? GRID_SIZE_DEFAULT);
 
     globalThis.prompt.common.setValue(SETTINGS.custom_prompt);
     globalThis.prompt.positive.setValue(SETTINGS.api_prompt);

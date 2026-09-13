@@ -1412,7 +1412,7 @@ class ComfyUI {
 
     if (model !== 'Default') {
         // Set model name
-        workflow["45"].inputs.ckpt_name = model;            
+        workflow["45"].inputs.ckpt_name = model;
         workflow["43"].inputs.ckpt_name = model;
 
         // Set model name to Image Save

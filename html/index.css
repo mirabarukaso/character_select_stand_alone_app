@@ -373,6 +373,51 @@ body.layout-is-resizing-full * {
     background-repeat: no-repeat;
 }
 
+.layout-tab-view-toggle {
+    flex: 0 0 auto;
+    width: 16px;
+    height: 16px;
+    margin: 0 0 0 4px;
+    padding: 0;
+    border-radius: 4px;
+    box-sizing: border-box;
+    cursor: pointer;
+    appearance: none;
+}
+
+.layout-tab-view-toggle img {
+    display: block;
+    width: 12px;
+    height: 12px;
+    margin: 1px auto 0;
+    pointer-events: none;
+}
+
+.layout-tab-host.layout-tab-multi > .layout-tab-view-dock {
+    margin: 2px 4px 6px;
+    padding: 0;
+    box-sizing: border-box;
+    overflow: visible;
+    background: transparent;
+    border: none;
+}
+
+.layout-tab-view-dock[hidden] {
+    display: none !important;
+}
+
+.layout-tab-view-dock .dropdown-view {
+    margin-top: 0;
+    padding: 0;
+    border-radius: 0;
+    background: transparent;
+    box-sizing: border-box;
+}
+
+.layout-tab-host.layout-tab-folded > .layout-tab-view-dock {
+    display: none !important;
+}
+
 [data-layout-id].layout-tab-hide-header-span [class$="-header-span"],
 [data-layout-id].layout-tab-hide-header-span .add-lora-header > .add-lora-span,
 [data-layout-id].layout-tab-hide-header-span .model-settings-header > .model-settings-span {

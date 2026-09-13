@@ -1158,7 +1158,7 @@ function bindHostDrag(host) {
     bar.addEventListener('pointerdown', (event) => {
         const armed = isDragArmed(host);
         const onCollapse = event.target.closest('.layout-tab-collapse');
-        const onEnable = event.target.closest('.layout-tab-enable');
+        const onEnable = event.target.closest('.layout-tab-enable, .layout-tab-view-toggle');
         if (onEnable) {
             noteHintGesture(host);
             return;

@@ -314,9 +314,9 @@ export const sharedBodyHTML = `
           <div id="prompt-text-container" data-layout-id="prompt-text" data-layout-empty-drag="true">
             <div id="prompt-textbox-settings">
               <div class="system-settings-ai-select"></div>
-              <div class="system-settings-ai-preview"></div>              
-              <div class="prompt-textbox-autoresize"></div>
+              <div class="system-settings-ai-preview"></div>
               <div class="prompt-textbox-fontsize"></div>
+              <div class="prompt-textbox-autoresize"></div>
             </div>
             <div class="prompt-common">common</div>
             <div class="prompt-positive">positive</div>

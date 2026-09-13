@@ -1163,3 +1163,48 @@ body.right-to-left #cg-info-button {
     opacity: 0.45;
     cursor: default;
 }
+
+.layout-tab-view-toggle {
+    border: 1px solid #b7aa96;
+    background: #fff8e9;
+    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.layout-tab-view-toggle:hover {
+    border-color: #c7784f;
+}
+
+.layout-tab-view-toggle.has-tags {
+    border-color: #c7784f;
+    background: #c7784f;
+    box-shadow: 0 0 0 2px rgba(199, 120, 79, 0.35);
+}
+
+.layout-tab-view-toggle.has-tags img {
+    filter: invert(1);
+    opacity: 1;
+}
+
+.layout-tab-view-toggle.is-on {
+    border-color: #c7784f;
+    background: rgba(199, 120, 79, 0.22);
+}
+
+.layout-tab-view-toggle.has-tags.is-on {
+    background: #c7784f;
+}
+
+.layout-tab-view-toggle:disabled {
+    opacity: 0.45;
+    cursor: default;
+    box-shadow: none;
+}
+
+.layout-tab-host.layout-tab-multi > .layout-tab-view-dock {
+    background: transparent;
+    border: none;
+}
+
+.layout-tab-view-dock .dropdown-view {
+    background: transparent;
+}

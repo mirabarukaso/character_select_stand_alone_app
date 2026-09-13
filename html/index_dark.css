@@ -1148,3 +1148,53 @@ body.right-to-left #cg-info-button {
     opacity: 0.45;
     cursor: default;
 }
+
+.layout-tab-view-toggle {
+    border: 1px solid #70757d;
+    background: #24272c;
+    transition: border-color 0.16s ease, background-color 0.16s ease, box-shadow 0.16s ease;
+}
+
+.layout-tab-view-toggle img {
+    filter: invert(1);
+    opacity: 0.88;
+}
+
+.layout-tab-view-toggle:hover {
+    border-color: #1ce088;
+}
+
+.layout-tab-view-toggle.has-tags {
+    border-color: #1ce088;
+    background: #1ce088;
+    box-shadow: 0 0 0 2px rgba(28, 224, 136, 0.35);
+}
+
+.layout-tab-view-toggle.has-tags img {
+    filter: none;
+    opacity: 1;
+}
+
+.layout-tab-view-toggle.is-on {
+    border-color: #1ce088;
+    background: rgba(28, 224, 136, 0.22);
+}
+
+.layout-tab-view-toggle.has-tags.is-on {
+    background: #1ce088;
+}
+
+.layout-tab-view-toggle:disabled {
+    opacity: 0.45;
+    cursor: default;
+    box-shadow: none;
+}
+
+.layout-tab-host.layout-tab-multi > .layout-tab-view-dock {
+    background: transparent;
+    border: none;
+}
+
+.layout-tab-view-dock .dropdown-view {
+    background: transparent;
+}

@@ -13,8 +13,8 @@ export function get_prompt_textBox_Heights(){
 export function set_prompt_textBox_Heights(){
     const heights = Array.isArray(globalThis.globalSettings?.ptompt_textbox_heights)
         ? globalThis.globalSettings.ptompt_textbox_heights
-        : [3, 3, 3, 3, 3, 3];
-    const [common = 3, pos = 3, posr = 3, neg = 3, ai = 3, exc = 3] = heights;
+        : [3, 3, 3, 2, 2, 1];
+    const [common = 3, pos = 3, posr = 3, neg = 2, ai = 2, exc = 1] = heights;
 
     globalThis.prompt.common.setHeight(common);
     globalThis.prompt.positive.setHeight(pos);
