@@ -1,6 +1,6 @@
 import { decodeThumb } from './customThumbGallery.js';
-import { generateRandomSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, getRandomIndex, formatCharacterInfo, formatOriginalCharacterInfo,
-    getViewTags, createHiFix, createRefiner, extractHostPort, checkVpred, extractAPISecure,
+import { generateRandomSeed, resolveGenerateSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, getRandomIndex, formatCharacterInfo, formatOriginalCharacterInfo,
+    getViewTags, createHiFix, formatQueueJobSeed, createRefiner, extractHostPort, checkVpred, extractAPISecure,
     createControlNet, createADetailer, toggleQueueColor, startQueue, REPLACE_AI_MARK,
     updateADetailerModelList, getImageSavePrefix } from './generate.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
@@ -242,11 +242,8 @@ function parseCharacter(weight, tag){
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
-async function getCharacters(){    
-    let random_seed = globalThis.generate.seed.getValue();
-    if (random_seed === -1){
-        random_seed = generateRandomSeed();
-    }
+async function getCharacters(seedOverride = null){    
+    const random_seed = resolveGenerateSeed(seedOverride);
     const seeds = [random_seed, Math.floor(random_seed /3), Math.floor(random_seed /7), 4294967296 - random_seed];
 
     let character_left = '';
@@ -307,7 +304,7 @@ async function getCharacters(){
     }
 }
 
-async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
+async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverride = null){
     let finalInfo = ''
     let randomSeed = -1;
     let randomSeedr = -1;
@@ -333,7 +330,7 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
         charactersName = globalThis.generate.lastCharacter;
         img_prefix = globalThis.generate.lastImagePrefix;
     } else {            
-        const {thumb, character_left, character_right, information, seed, characters, negative_tags, image_prefix} = await getCharacters();
+        const {thumb, character_left, character_right, information, seed, characters, negative_tags, image_prefix} = await getCharacters(seedOverride);
         randomSeed = seed;
         randomSeedr = Math.floor(seed / 3);
         finalInfo = information;
@@ -405,7 +402,7 @@ function createRegional(apiInterface) {
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export async function generateRegionalImage(dataPack){
-    const {loops, runSame} = dataPack;
+    const {loops, runSame, hiresOneShot = false, seedOverride = null} = dataPack;
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
@@ -444,9 +441,9 @@ export async function generateRegionalImage(dataPack){
         if(!globalThis.inGenerating)
             globalThis.generate.loadingMessage = LANG.generate_start.replace('{0}', `${loop+1}`).replace('{1}', loops);
 
-        const createPromptResult = await createPrompt(runSame, aiPromot, apiInterface, (loops > 1)?loop:-1);
+        const createPromptResult = await createPrompt(runSame, aiPromot, apiInterface, (loops > 1)?loop:-1, seedOverride);
 
-        const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor);
+        const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor, hiresOneShot);
         const refiner = createRefiner();
         const regional = createRegional(apiInterface);
 
@@ -561,9 +558,10 @@ export async function generateRegionalImage(dataPack){
 
         const nameList = generateData.queueManager.id.replaceAll('\n', ' | ');
         const fullPrompt = `${createPromptResult.positivePromptLeft}\n${createPromptResult.positivePromptRight}`;
+        const seedLabel = formatQueueJobSeed(createPromptResult.randomSeed, generateData.hifix?.enable, LANG);
         globalThis.queueManager.attach(
-            [   (nameList === '') ? LANG.generate_regional.replace('{0}', `${createPromptResult.randomSeed} | ${fullPrompt}`) : 
-                LANG.generate_regional.replace('{0}', `${createPromptResult.randomSeed} | ${nameList}`), 
+            [   (nameList === '') ? LANG.generate_regional.replace('{0}', `${seedLabel} | ${fullPrompt}`) : 
+                LANG.generate_regional.replace('{0}', `${seedLabel} | ${nameList}`), 
                 fullPrompt
             ],
             generateData
@@ -572,7 +570,8 @@ export async function generateRegionalImage(dataPack){
 
     globalThis.generate.generate_single.setClickable(true);
     globalThis.generate.generate_batch.setClickable(true);
-    globalThis.generate.generate_same.setClickable(true);    
+    globalThis.generate.generate_same.setClickable(true);
+    globalThis.generate.generate_hires?.syncFromGallery?.();
     
     if(globalThis.globalSettings.generate_auto_start) {
         await startQueue();

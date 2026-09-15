@@ -5,7 +5,7 @@
   "keywords": [],
   "main": "./main.js",
   "type": "module",
-  "version": "2.9.3",
+  "version": "2.9.4",
   "author": "oOkami",
   "scripts": {
     "start": "electron .",

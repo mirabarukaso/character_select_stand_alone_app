@@ -480,45 +480,40 @@ body.layout-is-resizing-full * {
     justify-content: flex-start;
 }
 
-#generate-settings-static-right.show-cancel #generate-buttons-container {
-    height: 32px;
-    padding: 4px 10px;
-}
-
 #generate-buttons-1 {
     flex: 1 1 0;
     min-height: 0;
 }
 
-#generate-buttons-2 {
-    flex: 0 0 0;
-    min-height: 0;
-    overflow: hidden;
-    opacity: 0;
-    visibility: hidden;
-    pointer-events: none;
-    padding: 0 10px;
-    box-sizing: border-box;
-}
-
-#generate-settings-static-right.show-cancel #generate-buttons-2 {
-    flex: 0 0 32px;
-    opacity: 1;
-    visibility: visible;
-    pointer-events: auto;
-    margin-bottom: 4px;
-    padding: 4px 10px;
-}
-
 #generate-settings-static-right .generate-button-single,
 #generate-settings-static-right .generate-button-batch,
-#generate-settings-static-right .generate-button-same,
-#generate-settings-static-right .generate-button-skip,
-#generate-settings-static-right .generate-button-skip-current,
-#generate-settings-static-right .generate-button-cancel {
+#generate-settings-static-right .generate-button-slot-3,
+#generate-settings-static-right .generate-button-hires,
+#generate-settings-static-right .generate-button-skip-current {
     margin: 0;
     padding: 0;
     display: flex;
+}
+
+#generate-settings-static-right .generate-button-slot-3 {
+    position: relative;
+    display: grid;
+    min-width: 0;
+}
+
+#generate-settings-static-right .generate-button-slot-3 > * {
+    grid-area: 1 / 1;
+    min-width: 0;
+}
+
+#generate-settings-static-right:not(.show-cancel) .generate-button-skip-current {
+    visibility: hidden;
+    pointer-events: none;
+}
+
+#generate-settings-static-right.show-cancel .generate-button-hires {
+    visibility: hidden;
+    pointer-events: none;
 }
 
 #generate-settings-static-right [class^="myButton-"][class$="-container"] {
@@ -534,6 +529,45 @@ body.layout-is-resizing-full * {
     display: flex !important;
     align-items: center;
     justify-content: center;
+}
+
+#generate-settings-static-right .myButton-split-container {
+    width: 100%;
+    height: 100%;
+    display: flex;
+    min-width: 0;
+    overflow: hidden;
+    gap: 1px;
+}
+
+#generate-settings-static-right .myButton-split-container button[class^="myButton-"] {
+    width: auto;
+    flex: 1 1 auto;
+    min-width: 0;
+    padding: 0 6px;
+    border-radius: 4px 0 0 4px;
+}
+
+#generate-settings-static-right .myButton-split-container .generate-split-chevron {
+    flex: 0 0 28px;
+    width: 28px;
+    min-width: 28px;
+    height: 100%;
+    border: none;
+    border-radius: 0 4px 4px 0;
+    color: white;
+    display: flex;
+    align-items: center;
+    justify-content: center;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+#generate-settings-static-right .myButton-split-container .generate-split-chevron::after {
+    content: '';
+    border: 4px solid transparent;
+    border-top-color: currentColor;
+    margin-top: 3px;
 }
 
 .model-select{

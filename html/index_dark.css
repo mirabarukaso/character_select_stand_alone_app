@@ -711,7 +711,7 @@ body.right-to-left #cg-info-button {
     gap: 8px;
 }
 
-#generate-buttons-1, #generate-buttons-2 {
+#generate-buttons-1 {
     top: 0;
     left: 0;
     width: 100%;
@@ -722,10 +722,9 @@ body.right-to-left #cg-info-button {
 
 .generate-button-single, 
 .generate-button-batch, 
-.generate-button-same,
-.generate-button-skip, 
-.generate-button-skip-current,
-.generate-button-cancel {
+.generate-button-slot-3,
+.generate-button-hires,
+.generate-button-skip-current {
     margin: 2px; 
     position: relative;
     padding: 8px; 
@@ -737,13 +736,52 @@ body.right-to-left #cg-info-button {
     transition: background-color 0.3s ease;
 }
 
-.generate-button-single, .generate-button-cancel {
+.generate-button-single {
     flex: 2;
 }
 
-.generate-button-batch, .generate-button-same,
-.generate-button-skip, .generate-button-skip-current {
+.generate-button-batch,
+.generate-button-slot-3 {
     flex: 1;
+}
+
+.generate-split-menu {
+    position: fixed;
+    z-index: 10000;
+    min-width: 180px;
+    padding: 4px;
+    box-sizing: border-box;
+    border-radius: 8px;
+    background: rgb(39, 39, 42);
+    border: 1px solid #666;
+    box-shadow: 0 8px 24px rgba(0, 0, 0, 0.45);
+}
+
+.generate-split-menu-item {
+    padding: 8px 12px;
+    border-radius: 6px;
+    cursor: pointer;
+    font-size: 13px;
+    color: #eee;
+    user-select: none;
+}
+
+.generate-split-menu-item:hover {
+    background: rgba(255, 255, 255, 0.08);
+}
+
+.generate-split-menu-item.destructive {
+    color: #fca5a5;
+}
+
+.generate-split-menu-item.destructive:hover {
+    background: rgba(185, 28, 28, 0.35);
+}
+
+.generate-split-menu-item.disabled {
+    opacity: 0.45;
+    cursor: not-allowed;
+    pointer-events: none;
 }
 
 .generate-random-seed, .generate-width, .generate-height, .generate-cfg, .generate-step, .generate-batch

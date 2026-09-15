@@ -1,3 +1,12 @@
+2026.09.16 v2.9.4       
+Add, `Hires Fix` button, one-click from selected Gallery image seed     
+Add, `Hires` mark on Queue job after `Seed` when `Hires Fix` is `Enabled`      
+Change, merged `Batch` buttons into a split control      
+Change, merged `Cancel` buttons into a split control, keep Generate row height      
+Change, idle third slot is `Hires Fix`, when generating third slot is `Cancel current`             
+Minor bugs fix     
+
+
 2026.09.14 v2.9.3       
 Add, `Landscape` on `Image tab header`     
 Add, `View select button` on `Prompt tab` in `Tab mode`       

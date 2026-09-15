@@ -56,7 +56,8 @@ function createModeSwitchOverlay(container) {
 function ensureSwitchModeButton(container, toggleFunction, id, images_length) {
     let button = document.getElementById(id);
     if (button) {
-        button.textContent = images_length > 0 ? `<${images_length}>` : '<>';        
+        button.textContent = images_length > 0 ? `<${images_length}>` : '<>';
+        button.style.display = '';
     } else {
         button = document.createElement('button');
         button.id = id;
@@ -162,6 +163,26 @@ export function setupGallery(containerId) {
         return;
     }
 
+    function notifyHiresButton() {
+        globalThis.generate?.generate_hires?.syncFromGallery?.();
+    }
+
+    function parseGallerySeed(raw) {
+        if (raw === undefined || raw === null || String(raw).trim() === '') return null;
+        const parsed = Number.parseInt(String(raw).trim(), 10);
+        return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
+    }
+
+    globalThis.mainGallery.getHiresTargetSeed = function () {
+        if (!seeds.length) return null;
+        const inFrameFull = !isGridMode || isGalleryFocus;
+        let index = inFrameFull ? currentIndex : seeds.length - 1;
+        if (index < 0 || index >= seeds.length) {
+            index = seeds.length - 1;
+        }
+        return parseGallerySeed(seeds[index]);
+    };
+
     globalThis.mainGallery.clearGallery = function () {
         images = [];
         seeds = [];
@@ -179,7 +200,9 @@ export function setupGallery(containerId) {
         const overlay = container.querySelector('.cg-gallery-focus-overlay');
         if (overlay) overlay.classList.remove('visible');
         clearGalleryView();
+        setGalleryOverlayButtonsVisible(false);
         syncHiresFrame();
+        notifyHiresButton();
     };
 
     globalThis.mainGallery.removeCurrentImage = function (element = null) {
@@ -217,7 +240,8 @@ export function setupGallery(containerId) {
             if(currentIndex < 0)
                 currentIndex = 0;
             gallery_renderSplitMode(false);
-        }            
+        }
+        notifyHiresButton();
     };
 
     globalThis.mainGallery.appendImageData = function (base64, seed, tagsString, switchToLatest = false, info = '') {
@@ -248,6 +272,7 @@ export function setupGallery(containerId) {
         } else {
             gallery_renderSplitMode(incremental);
         }
+        notifyHiresButton();
     };
 
     globalThis.mainGallery.showLoading = function (loadingMEssage, elapsedTimePrefix, elapsedTimeSuffix) {        
@@ -550,6 +575,13 @@ export function setupGallery(containerId) {
         }
     }
 
+    function setGalleryOverlayButtonsVisible(visible) {
+        for (const id of ['cg-seed-button', 'cg-tag-button', 'cg-info-button', 'cg-privacy-button', 'cg-switch-mode-button']) {
+            const button = document.getElementById(id);
+            if (button) button.style.display = visible ? '' : 'none';
+        }
+    }
+
     function updateGridSelection() {
         for (const [index, el] of gridItemEls) {
             el.classList.toggle('selected', isGalleryFocus && index === currentIndex);
@@ -565,6 +597,7 @@ export function setupGallery(containerId) {
         updateGridSelection();
         updateMetaButtonsLayout();
         syncHiresFrame();
+        notifyHiresButton();
     }
 
     function handleGalleryFocusKeyDown(e) {
@@ -628,6 +661,7 @@ export function setupGallery(containerId) {
         updateMetaButtonsLayout();
         updateGridSelection();
         syncHiresFrame();
+        notifyHiresButton();
     }
 
     function exitGalleryFocus() {
@@ -639,6 +673,7 @@ export function setupGallery(containerId) {
         updateMetaButtonsLayout();
         updateGridSelection();
         syncHiresFrame();
+        notifyHiresButton();
     }
 
     function handleGridWheel(e) {
@@ -673,6 +708,7 @@ export function setupGallery(containerId) {
             setGridMetaButtonsVisible(true);
             gallery_renderSplitMode();
         }
+        notifyHiresButton();
     }
 
     function ensurePrivacyButton() {
@@ -692,6 +728,7 @@ export function setupGallery(containerId) {
             });
             container.appendChild(privacyButton);
         }
+        privacyButton.style.display = '';
     }
 
     function createPrivacyBall() {
@@ -853,9 +890,11 @@ export function setupGallery(containerId) {
             } else if (e.key === 'ArrowRight' || e.key === ' ') {
                 currentIndex = (currentIndex - 1 + images.length) % images.length;
                 fullScreenImg.src = images[currentIndex];
+                notifyHiresButton();
             } else if (e.key === 'ArrowLeft') {
                 currentIndex = (currentIndex + 1) % images.length;
                 fullScreenImg.src = images[currentIndex];
+                notifyHiresButton();
             }
         }
 
@@ -893,6 +932,7 @@ export function setupGallery(containerId) {
             renderedImageCount = 0;
             currentIndex = 0;
             container.querySelector('.cg-gallery-grid-container')?.remove();
+            setGalleryOverlayButtonsVisible(false);
             syncHiresFrame();
             return;
         }
@@ -929,6 +969,7 @@ export function setupGallery(containerId) {
             clearGalleryView();
             renderedImageCount = 0;
             currentIndex = 0;
+            setGalleryOverlayButtonsVisible(false);
             syncHiresFrame();
             return;
         }
@@ -1047,6 +1088,7 @@ export function setupGallery(containerId) {
             applyHiresClass(child, index);
         }
         syncHiresFrame();
+        notifyHiresButton();
         const domIndex = images.length - 1 - currentIndex;
         if (domIndex >= 0 && domIndex < previewImages.length) {
             previewImages[domIndex].scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });

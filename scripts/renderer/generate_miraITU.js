@@ -69,7 +69,8 @@ export async function generateMiraITU(dataPack){
 
     globalThis.generate.generate_single.setClickable(true);
     globalThis.generate.generate_batch.setClickable(true);
-    globalThis.generate.generate_same.setClickable(true);    
+    globalThis.generate.generate_same.setClickable(true);
+    globalThis.generate.generate_hires?.syncFromGallery?.();    
 
     if(globalThis.globalSettings.generate_auto_start) {        
         await startQueue();        

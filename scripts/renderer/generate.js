@@ -71,6 +71,113 @@ export function generateRandomSeed() {
     return array[0];
 }
 
+export function resolveGenerateSeed(seedOverride = null) {
+    if (seedOverride !== null && seedOverride !== undefined && seedOverride !== '') {
+        const parsed = Number(seedOverride);
+        if (Number.isFinite(parsed) && parsed >= 0) {
+            return Math.floor(parsed);
+        }
+    }
+    const current = globalThis.generate.seed.getValue();
+    if (current === -1) {
+        return generateRandomSeed();
+    }
+    return current;
+}
+
+function readComponentValue(component, fallback = '') {
+    try {
+        if (!component) return fallback;
+        if (typeof component.getValue === 'function') return component.getValue();
+        if (typeof component.getFloat === 'function') return component.getFloat();
+    } catch {
+        return fallback;
+    }
+    return fallback;
+}
+
+function readSlotValues(manager, ...args) {
+    try {
+        if (!manager || typeof manager.getValues !== 'function') return [];
+        return manager.getValues(...args);
+    } catch {
+        return [];
+    }
+}
+
+function fnv1aHash(text) {
+    let hash = 2166136261;
+    for (let i = 0; i < text.length; i++) {
+        const codePoint = text.codePointAt(i);
+        hash ^= codePoint;
+        hash = Math.imul(hash, 16777619);
+        if (codePoint > 0xffff) i++;
+    }
+    return (hash >>> 0).toString(16);
+}
+
+export function hashHiresSubmit(seed) {
+    const regional = Boolean(globalThis.globalSettings?.regional_condition);
+    const characterList = regional ? globalThis.characterListRegional : globalThis.characterList;
+    const snapshot = {
+        seed,
+        regional,
+        api: readComponentValue(globalThis.generate?.api_interface),
+        model: readComponentValue(globalThis.dropdownList?.model),
+        modelType: globalThis.globalSettings?.api_model_type || '',
+        width: readComponentValue(globalThis.generate?.width),
+        height: readComponentValue(globalThis.generate?.height),
+        landscape: readComponentValue(globalThis.generate?.landscape),
+        cfg: readComponentValue(globalThis.generate?.cfg),
+        step: readComponentValue(globalThis.generate?.step),
+        sampler: readComponentValue(globalThis.generate?.sampler),
+        scheduler: readComponentValue(globalThis.generate?.scheduler),
+        common: readComponentValue(globalThis.prompt?.common),
+        positive: readComponentValue(globalThis.prompt?.positive),
+        positiveRight: readComponentValue(globalThis.prompt?.positive_right),
+        negative: readComponentValue(globalThis.prompt?.negative),
+        characters: typeof characterList?.getKey === 'function' ? characterList.getKey() : [],
+        characterWeights: [0, 1, 2, 3].map((index) => (
+            typeof characterList?.getTextValue === 'function' ? characterList.getTextValue(index) : ''
+        )),
+        views: typeof globalThis.viewList?.getValue === 'function' ? globalThis.viewList.getValue() : [],
+        viewWeights: [0, 1, 2, 3].map((index) => (
+            typeof globalThis.viewList?.getTextValue === 'function' ? globalThis.viewList.getTextValue(index) : ''
+        )),
+        hf: {
+            model: readComponentValue(globalThis.hifix?.model),
+            scale: readComponentValue(globalThis.hifix?.scale),
+            denoise: readComponentValue(globalThis.hifix?.denoise),
+            steps: readComponentValue(globalThis.hifix?.steps),
+            randomSeed: readComponentValue(globalThis.hifix?.randomSeed),
+            colorTransfer: readComponentValue(globalThis.hifix?.colorTransfer)
+        },
+        refiner: {
+            enable: readComponentValue(globalThis.generate?.refiner),
+            model: readComponentValue(globalThis.refiner?.model),
+            ratio: readComponentValue(globalThis.refiner?.ratio)
+        },
+        lora: readSlotValues(globalThis.lora),
+        json: readSlotValues(globalThis.jsonlist),
+        adetailer: readSlotValues(globalThis.aDetailer),
+        controlnet: readSlotValues(globalThis.controlnet, false)
+    };
+    return fnv1aHash(JSON.stringify(snapshot));
+}
+
+export function rememberHiresSubmit(hash) {
+    if (!hash) return true;
+    if (globalThis.generate.lastHiresHash === hash) return false;
+    globalThis.generate.lastHiresHash = hash;
+    return true;
+}
+
+export function clearHiresSubmitHash() {
+    if (globalThis.generate) {
+        globalThis.generate.lastHiresHash = null;
+    }
+}
+
 function createViewTag(view_list, in_tag, seed, weight) {
     let out_tag = '';
 
@@ -289,12 +396,9 @@ function packWeight(character, tag, weight, seperate = ', ') {
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
-async function getCharacters() {
+async function getCharacters(seedOverride = null) {
     const brownColor = (globalThis.globalSettings.css_style==='dark')?'BurlyWood':'Brown';
-    let random_seed = globalThis.generate.seed.getValue();
-    if (random_seed === -1){
-        random_seed = generateRandomSeed();
-    }
+    const random_seed = resolveGenerateSeed(seedOverride);
     const seeds = [random_seed, Math.floor(random_seed /3), Math.floor(random_seed /7), 4294967296 - random_seed];
 
     let character = '';
@@ -524,7 +628,7 @@ export async function replaceWildcardsAsync(pos, seed) {
     return pos;
 }
 
-async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
+async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverride = null){
     let finalInfo = ''
     let randomSeed = -1;
     let positivePrompt = '';
@@ -545,7 +649,7 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
         charactersName = globalThis.generate.lastCharacter;
         img_prefix = globalThis.generate.lastImagePrefix;
     } else {            
-        const {thumb, characters_tag, information, seed, characters, negative_tags, image_prefix} = await getCharacters();
+        const {thumb, characters_tag, information, seed, characters, negative_tags, image_prefix} = await getCharacters(seedOverride);
         randomSeed = seed;
         finalInfo = information;
 
@@ -577,10 +681,16 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1){
     return {finalInfo, randomSeed, positivePrompt, positivePromptColored, negativePrompt, thumbImage, charactersName, img_prefix}
 }
 
-export function createHiFix(randomSeed, apiInterface, brownColor){
+export function formatQueueJobSeed(seed, hifixEnabled, lang) {
+    if (!hifixEnabled) return `${seed}`;
+    const mark = lang?.generate_hires_mark || 'Hires';
+    return `${seed} ${mark}`;
+}
+
+export function createHiFix(randomSeed, apiInterface, brownColor, forceEnable = false){
     const hfSeed = generateRandomSeed();
     let hifix = {
-        enable: globalThis.generate.hifix.getValue(),
+        enable: forceEnable || globalThis.generate.hifix.getValue(),
         model: globalThis.hifix.model.getValue(),
         colorTransfer: globalThis.hifix.colorTransfer.getValue(),
         randomSeed: globalThis.hifix.randomSeed.getValue(),
@@ -908,7 +1018,7 @@ export function getImageSavePrefix(apiInterface, character_prefix) {
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export async function generateImage(dataPack){
-    const {loops, runSame} = dataPack;
+    const {loops, runSame, hiresOneShot = false, seedOverride = null} = dataPack;
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
@@ -947,12 +1057,12 @@ export async function generateImage(dataPack){
         if(!globalThis.inGenerating)
             globalThis.generate.loadingMessage = LANG.generate_warmup.replace('{0}', `${loop+1}`).replace('{1}', loops);
 
-        const createPromptResult = await createPrompt(runSame, aiPromot, apiInterface, (loops > 1)?loop:-1);
+        const createPromptResult = await createPrompt(runSame, aiPromot, apiInterface, (loops > 1)?loop:-1, seedOverride);
         const landscape = globalThis.generate.landscape.getValue();
         const width = landscape?globalThis.generate.height.getValue():globalThis.generate.width.getValue();
         const height = landscape?globalThis.generate.width.getValue():globalThis.generate.height.getValue();
         
-        const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor);
+        const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor, hiresOneShot);
         const refiner = createRefiner();
 
         const vae = globalThis.dropdownList.vae_sdxl.getValue();
@@ -1052,9 +1162,10 @@ export async function generateImage(dataPack){
         generateData.queueManager.finalInfo = finalInfo;
         
         const nameList = generateData.queueManager.id.replaceAll('\n', ' | ');
+        const seedLabel = formatQueueJobSeed(createPromptResult.randomSeed, hifix.enable, LANG);
         globalThis.queueManager.attach(
-            [   (nameList === '') ? LANG.generate_normal.replace('{0}', `${createPromptResult.randomSeed} | ${createPromptResult.positivePrompt}`) : 
-                LANG.generate_normal.replace('{0}', `${createPromptResult.randomSeed} | ${nameList}`), 
+            [   (nameList === '') ? LANG.generate_normal.replace('{0}', `${seedLabel} | ${createPromptResult.positivePrompt}`) : 
+                LANG.generate_normal.replace('{0}', `${seedLabel} | ${nameList}`), 
                 createPromptResult.positivePrompt
             ], 
             generateData
@@ -1063,7 +1174,8 @@ export async function generateImage(dataPack){
 
     globalThis.generate.generate_single.setClickable(true);
     globalThis.generate.generate_batch.setClickable(true);
-    globalThis.generate.generate_same.setClickable(true);    
+    globalThis.generate.generate_same.setClickable(true);
+    globalThis.generate.generate_hires?.syncFromGallery?.();
     
     if(globalThis.globalSettings.generate_auto_start) {
         await startQueue();

@@ -1,5 +1,5 @@
 import { decodeThumb } from './customThumbGallery.js';
-import { generateImage, startQueue } from './generate.js';
+import { generateImage, startQueue, clearHiresSubmitHash } from './generate.js';
 import { generateRegionalImage } from './generate_regional.js';
 import { generateMiraITU } from './generate_miraITU.js';
 import { doSwap, reloadFiles } from './components/myCollapsed.js';
@@ -272,6 +272,7 @@ export async function callback_generate_start(runType='normal', dataPack=null){
     globalThis.generate.generate_single.setClickable(false);
     globalThis.generate.generate_batch.setClickable(false);
     globalThis.generate.generate_same.setClickable(false);
+    globalThis.generate.generate_hires?.setClickable(false);
 
     globalThis.generate.skipClicked = false;
     globalThis.generate.skipCurrentClicked = false;
@@ -342,6 +343,7 @@ export async function callback_generate_skip_current() {
         cancelAutoRetry();
         globalThis.generate.showCancelButtons(false);
         globalThis.mainGallery.hideLoading('success', '');
+        clearHiresSubmitHash();
         return;
     }
     globalThis.generate.generate_skip_current.setClickable(true);
@@ -355,6 +357,7 @@ export async function callback_generate_cancel() {
     cancelAutoRetry();
     globalThis.queueManager.removeAll();
     globalThis.generate.showCancelButtons(false);
+    clearHiresSubmitHash();
 
     await cancelBackendIfNeeded();
 }

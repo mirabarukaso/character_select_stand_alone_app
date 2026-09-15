@@ -2,6 +2,7 @@ import { setupTextbox } from '../components/myTextbox.js';
 import { generateGUID } from './myLoRASlot.js';
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
 import { cancelAutoRetry } from '../tools/autoRetry.js';
+import { clearHiresSubmitHash } from '../generate.js';
 import { refreshTabLabelHints } from '../uiLayoutTabs.js';
 let instanceQueueManager = null;
 
@@ -48,6 +49,7 @@ async function deleteSlot(slotClass) {
         cancelAutoRetry();
         globalThis.mainGallery.hideLoading('success', '');
         globalThis.generate.showCancelButtons(false);
+        clearHiresSubmitHash();
     }
 }
 

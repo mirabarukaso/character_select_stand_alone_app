@@ -235,7 +235,10 @@ export const sharedBodyHTML = `
               <div id="generate-buttons-1">
                 <div class="generate-button-single"></div>
                 <div class="generate-button-batch"></div>
-                <div class="generate-button-same"></div>
+                <div class="generate-button-slot-3">
+                  <div class="generate-button-hires"></div>
+                  <div class="generate-button-skip-current"></div>
+                </div>
               </div>
             </div>
             <div id="generate-settings-static">
@@ -243,11 +246,6 @@ export const sharedBodyHTML = `
               <div class="generate-sampler"></div>
               <div class="generate-scheduler"></div>
               <div class="generate-batch"></div>              
-            </div>       
-            <div id="generate-buttons-2">
-              <div class="generate-button-cancel"></div>
-              <div class="generate-button-skip"></div>
-              <div class="generate-button-skip-current"></div>
             </div>
           </div>
 

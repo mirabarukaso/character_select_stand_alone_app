@@ -187,8 +187,12 @@
         
         "run_button": "Create Image",
         "run_button_paused": "Create Image (Paused)",
+        "run_batch_button": "Batch",
         "run_random_button": "Batch (Random)",
         "run_same_button": "Batch (Last)",
+        "run_hires_button": "Hires Fix",
+        "run_hires_button_tip": "Run Hires Fix once using the selected Gallery image.\nUses that image's seed with your current prompts and settings. The Hires Fix switch and Seed slider are not changed.\nSplit or Grid full view: the image currently shown. Grid thumbnails only: the last image.\nA second click with the same seed and current settings is ignored.",
+        "run_hires_button_empty": "Gallery has no images. Generate at least one image first.",
         "run_skip_button": "Cancel follow-up",
         "run_skip_current_button": "Cancel current",
         "run_cancel_button": "Cancel and Clear Queue",
@@ -208,6 +212,7 @@
         "generate_auto_start": "Enable Generate",
         "generate_normal": "{0}",
         "generate_regional": "Regional: {0}",
+        "generate_hires_mark": "Hires",
         "generate_controlnet_process": "Processing ControlNet...\n",
         
         "lora_info": "LoRA info",
@@ -521,8 +526,12 @@
 
         "run_button": "单图生成",
         "run_button_paused": "单图生成（暂停）",
+        "run_batch_button": "批量",
         "run_random_button": "批量（随机）",
         "run_same_button": "批量（上次）",
+        "run_hires_button": "高清修复",
+        "run_hires_button_tip": "对 Gallery 当前选中的图片做一次高清修复。\n仅使用该图的 Seed，提示词和其它设置保持当前界面，不会改动 Hires Fix 开关或 Seed 滑条。\n分栏或 Grid 全图：当前显示的图；Grid 仅缩略图：最后一张。\n连续提交相同内容（同一 Seed 且当前设置未变）会被忽略。",
+        "run_hires_button_empty": "Gallery 中没有图片，请先生成至少一张图。",
         "run_skip_button": "清除后续队列",
         "run_skip_current_button": "取消当前任务",
         "run_cancel_button": "取消并清除队列",
@@ -542,6 +551,7 @@
         "generate_auto_start": "启动生成",
         "generate_normal": "{0}",
         "generate_regional": "分区：{0}",
+        "generate_hires_mark": "高清",
         "generate_controlnet_process": "ControlNet处理中……\n",
         
         "lora_info": "LoRA信息：",

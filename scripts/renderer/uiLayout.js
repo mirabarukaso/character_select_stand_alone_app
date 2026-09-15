@@ -320,6 +320,7 @@ function placeLayoutEntry(column, entry, panelMap, placed) {
     }
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 export function applyLayout(layout) {
     const leftCol = getColumn('left');
     const rightCol = getColumn('right');
@@ -610,6 +611,7 @@ function columnOf(el) {
     return el?.closest?.('#left, #right, #full-width') || null;
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 function findMergeHost(x, y, dragging) {
     if (isTabHost(dragging)) {
         return null;
@@ -913,6 +915,7 @@ function mergeDraggedIntoHost(panel, host) {
     bindHostDrag(host);
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 async function endDrag() {
     if (!dragState) {
         return;
@@ -935,7 +938,7 @@ async function endDrag() {
         clearFloatStyles(panel);
         movePageInHost(sourceHost, panel, reorderBefore);
     } else {
-        let mergeTarget = mergeHost && mergeHost.isConnected ? mergeHost : null;
+        let mergeTarget = mergeHost?.isConnected ? mergeHost : null;
         if (mergeTarget && !isTabHost(mergeTarget) && columnOf(mergeTarget)?.id !== 'full-width') {
             mergeTarget = ensureHostForPanel(mergeTarget);
         }
@@ -1220,7 +1223,7 @@ function getGalleryMain() {
 function isGalleryInFullWidth() {
     const full = getFullWidthColumn();
     const gallery = getPanel('gallery-main');
-    return Boolean(full && gallery && gallery.parentElement === full);
+    return Boolean(full && gallery?.parentElement === full);
 }
 
 function isGalleryMainCollapsed() {
@@ -1236,7 +1239,7 @@ function getFullWidthItems(full) {
 function hasItemsBelowGallery() {
     const full = getFullWidthColumn();
     const gallery = getPanel('gallery-main');
-    if (!full || !gallery || gallery.parentElement !== full) {
+    if (!full || gallery?.parentElement !== full) {
         return false;
     }
     const items = getFullWidthItems(full);
@@ -1254,7 +1257,7 @@ function isGalleryCompressMode() {
 function isBelowGalleryFullyVisible() {
     const full = getFullWidthColumn();
     const gallery = getPanel('gallery-main');
-    if (!full || !gallery || gallery.parentElement !== full) {
+    if (!full || gallery?.parentElement !== full) {
         return true;
     }
     const items = getFullWidthItems(full);
@@ -1523,6 +1526,7 @@ function findScrollableAncestor(start, boundary, deltaY) {
     return null;
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 function onFullWidthWheel(event) {
     if (!isGalleryCompressMode()) {
         return;

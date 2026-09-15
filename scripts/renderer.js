@@ -12,7 +12,7 @@ import { callback_mySettingList, callback_api_model_select, callback_api_model_t
  } from './renderer/callbacks.js';
 import { setupSlider } from './renderer/components/mySlider.js';
 import { setupCheckbox, setupRadiobox } from './renderer/components/myCheckbox.js';
-import { setupButtons, toggleButtons, showCancelButtons } from './renderer/components/myButtons.js';
+import { setupButtons, setupSplitButton, createSplitMenuApi, toggleButtons, showCancelButtons } from './renderer/components/myButtons.js';
 import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, setupModelReloadToggle, 
     setupFuctionKeys, setupSwapToggle, reloadFiles, doSwap } from './renderer/components/myCollapsed.js';
 import { setupTextbox, setupInfoBox } from './renderer/components/myTextbox.js';
@@ -26,7 +26,7 @@ import { setBlur, setNormal, showDialog } from './renderer/components/myDialog.j
 import { setupImageUploadOverlay } from './renderer/imageInfo.js';
 import { setupThemeToggle } from './renderer/theme.js';
 import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/components/myRightClickMenu.js';
-import { extractHostPort } from './renderer/generate.js';
+import { extractHostPort, hashHiresSubmit, rememberHiresSubmit } from './renderer/generate.js';
 import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from './types.js';
 import { flushSlots } from './renderer/slots/slotsManager.js';
 import { set_prompt_textBox_Heights } from './renderer/components/componentsManager.js';
@@ -155,6 +155,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         skipClicked: false,
         skipCurrentClicked: false,
         cancelClicked: false,
+        lastHiresHash: null,
         nowAPI: 'none',
         lastPos: 'solo, masterpiece, best quality, amazing quality',
         lastPosColored: 'solo, masterpiece, best quality, amazing quality',
@@ -198,61 +199,60 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
             }, async () =>{
                 await callback_generate_start('normal', {loops:1, runSame:false});
             }),
-        generate_batch: setupButtons('generate-button-batch', LANG.run_random_button, {
+        generate_batch: setupSplitButton('generate-button-batch', LANG.run_batch_button, {
                 defaultColor: 'rgb(185,28,28)',
                 hoverColor: 'rgb(153,27,27)',
                 disabledColor: 'rgb(134, 103, 103)',
-                width: '100%',
                 height: '100%',
                 hidden: false,
-                clickable: true              
+                clickable: true,
+                title: LANG.run_random_button
             }, async () =>{
                 await callback_generate_start('normal', {loops:globalThis.generate.batch.getValue(), runSame:false});
-            }),
-        generate_same: setupButtons('generate-button-same', LANG.run_same_button, {
-                defaultColor: 'rgb(20,28,46)',
-                hoverColor: 'rgb(40,48,66)',
-                disabledColor: 'rgb(112, 123, 148)',
+            }, [{
+                text: LANG.run_same_button,
+                callback: async () => {
+                    await callback_generate_start('normal', {loops:globalThis.generate.batch.getValue(), runSame:true});
+                }
+            }]),
+        generate_hires: setupButtons('generate-button-hires', LANG.run_hires_button, {
+                defaultColor: 'rgb(52, 112, 186)',
+                hoverColor: 'rgb(37, 90, 155)',
+                disabledColor: 'rgb(120, 138, 168)',
                 width: '100%',
                 height: '100%',
                 hidden: false,
-                clickable: true              
+                clickable: false,
+                title: LANG.run_hires_button_empty
             }, async () =>{
-                await callback_generate_start('normal', {loops:globalThis.generate.batch.getValue(), runSame:true});
-            }),            
-        generate_cancel: setupButtons('generate-button-cancel', LANG.run_cancel_button, {
-                defaultColor: 'rgb(82,82,91)',
-                hoverColor: 'rgb(63,63,70)',
-                disabledColor: 'rgb(175, 175, 182)',
-                width: '100%',
-                height: '100%',
-                hidden: false,
-                clickable: true              
-            }, () =>{
-                callback_generate_cancel();
+                const seed = globalThis.mainGallery?.getHiresTargetSeed?.();
+                if (seed === null || seed === undefined) return;
+                const hash = hashHiresSubmit(seed);
+                if (!rememberHiresSubmit(hash)) return;
+                await callback_generate_start('normal', {loops:1, runSame:false, hiresOneShot:true, seedOverride: seed});
             }),
-        generate_skip: setupButtons('generate-button-skip', LANG.run_skip_button, {
+        generate_skip_current: setupSplitButton('generate-button-skip-current', LANG.run_skip_current_button, {
                 defaultColor: 'rgb(82,82,91)',
                 hoverColor: 'rgb(63,63,70)',
                 disabledColor: 'rgb(175, 175, 182)',
-                width: '100%',
                 height: '100%',
                 hidden: false,
-                clickable: true              
-            }, () =>{
-                callback_generate_skip();
-            }),
-        generate_skip_current: setupButtons('generate-button-skip-current', LANG.run_skip_current_button, {
-                defaultColor: 'rgb(82,82,91)',
-                hoverColor: 'rgb(63,63,70)',
-                disabledColor: 'rgb(175, 175, 182)',
-                width: '100%',
-                height: '100%',
-                hidden: false,
-                clickable: true              
+                clickable: true,
+                title: LANG.run_skip_current_button
             }, () =>{
                 callback_generate_skip_current();
-            }),
+            }, [{
+                text: LANG.run_cancel_button,
+                destructive: true,
+                callback: () => {
+                    callback_generate_cancel();
+                }
+            }, {
+                text: LANG.run_skip_button,
+                callback: () => {
+                    callback_generate_skip();
+                }
+            }]),
         api_interface: mySimpleList('system-settings-api-interface', LANG.api_interface, ['None', 'ComfyUI', 'WebUI'], callback_api_interface, 5, false, true),
         api_address: setupTextbox('system-settings-api-address', LANG.api_addr, {
             value: SETTINGS.api_addr,
@@ -328,6 +328,20 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 await callback_queue_autostart(value, true);
         }),
     };
+
+    globalThis.generate.generate_same = createSplitMenuApi(globalThis.generate.generate_batch, 0);
+    globalThis.generate.generate_cancel = createSplitMenuApi(globalThis.generate.generate_skip_current, 0);
+    globalThis.generate.generate_skip = createSplitMenuApi(globalThis.generate.generate_skip_current, 1);
+
+    globalThis.generate.generate_hires.syncFromGallery = function () {
+        const seed = globalThis.mainGallery?.getHiresTargetSeed?.();
+        const hasImage = seed !== null && seed !== undefined;
+        const files = globalThis.cachedFiles;
+        const lang = files?.language?.[globalThis.globalSettings.language] || LANG;
+        globalThis.generate.generate_hires.setClickable(hasImage);
+        globalThis.generate.generate_hires.setTooltip(hasImage ? lang.run_hires_button_tip : lang.run_hires_button_empty);
+    };
+    globalThis.generate.generate_hires.syncFromGallery();
 }
 
 export async function createPrompt(SETTINGS, FILES, LANG) {
