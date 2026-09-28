@@ -7,6 +7,11 @@ const CAT = '[GlobalSettings]'
 const appPath = app.isPackaged ? path.join(path.dirname(app.getPath('exe')), 'resources', 'app') : app.getAppPath();
 let SETTINGFILES = [];
 let globalSettings;
+let preserveWsServiceSettings = null;
+
+function setPreserveWsServiceSettings(fn) {
+    preserveWsServiceSettings = typeof fn === 'function' ? fn : null;
+}
 
 const defaultSettings = {
     "version": "2.8.1",
@@ -39,7 +44,7 @@ const defaultSettings = {
     
     "thumb_select": "waiIllustriousSDXL_v160",
     "thumb_select_list": [`waiIllustriousSDXL_v160`, `waiANIMA_v10Base10`, `waiNSFWIllustrious_v120`],
-    "character1": "Random",
+    "character1": "Random All",
     "character2": "None",
     "character3": "None",
     "tag_assist": true,
@@ -250,6 +255,10 @@ function loadSettings(fineName) {
         console.error(CAT, `Failed to load settings directory: ${settingsDir}`);
         console.log(CAT, 'Reset to default');
     }
+
+    if (typeof preserveWsServiceSettings === 'function') {
+        preserveWsServiceSettings(globalSettings);
+    }
     
     return globalSettings;
 }
@@ -373,5 +382,6 @@ export {
     updateMiraITUSettingFiles,
     loadMiraITUSettings,
     saveMiraITUSettings,
-    deleteSettings
+    deleteSettings,
+    setPreserveWsServiceSettings
 };

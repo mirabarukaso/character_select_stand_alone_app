@@ -89,7 +89,7 @@ python saa-agent.py \
 ### Connection Settings
 
 - `--api-address`: API address (default: `127.0.0.1:58188`)
-- `--api-interface`: Backend interface - `ComfyUI` or `WebUI` (default: `ComfyUI`)
+- `--api-interface`: Backend interface - `ComfyUI` or `WebUI` / Forge Neo (default: `ComfyUI`)
 - `--username`: Username for authentication (default: `saac_user`)
 - `--password`: Password for authentication (default: empty)
 - `--timeout`: Connection timeout in seconds (default: 600)
@@ -129,8 +129,8 @@ python saa-agent.py \
 - `--refiner`: Enable refiner model
 - `--refiner-model`: Refiner model name (default: None)
 - `--refiner-ratio`: Switch ratio for refiner (default: 0.4)
-- `--vpred`: VPred setting for main model - 0 (auto), 1 (vpred), 2 (no vpred)
-- `--refiner-vpred`: VPred setting for refiner
+- `--vpred`: Main model v-prediction - 0 auto, 1 on, 2 on+ZSNR, 3 off
+- `--refiner-vpred`: Refiner v-prediction, same values as `--vpred`
 
 ### Output Options
 
@@ -151,8 +151,10 @@ Error: ComfyUI is busy, cannot run new generation, please try again later.
 ```
 
 **This means:**
-- Another process is currently using the SAA backend, OR
-- The backend is locked due to a previous error
+- Another job is using this same API address, OR
+- That address is locked due to a previous error
+
+The busy lock is per backend address. A different ComfyUI or WebUI address can still generate.
 
 **What to do:**
 1. Wait 20-60 seconds for the current generation to complete

@@ -56,8 +56,39 @@ function setNormal() {
     }
 }
 
+function playDialogBeep() {
+    if (globalThis.api?.systemBeep) {
+        void globalThis.api.systemBeep();
+        return;
+    }
+    try {
+        const AudioCtx = globalThis.AudioContext || globalThis.webkitAudioContext;
+        if (!AudioCtx) {
+            return;
+        }
+        const ctx = new AudioCtx();
+        const oscillator = ctx.createOscillator();
+        const gain = ctx.createGain();
+        oscillator.type = 'sine';
+        oscillator.frequency.value = 880;
+        gain.gain.value = 0.08;
+        oscillator.connect(gain);
+        gain.connect(ctx.destination);
+        oscillator.start();
+        oscillator.stop(ctx.currentTime + 0.18);
+        oscillator.onended = () => {
+            void ctx.close();
+        };
+    } catch (error) {
+        console.warn('[Dialog] Failed to play beep:', error);
+    }
+}
+
 function showDialog(type, options = {}) {
     return new Promise((resolve) => {
+        if (options.beep) {
+            playDialogBeep();
+        }
         const { backdrop, dialog } = createDialogContainer();
         let result = null;
 

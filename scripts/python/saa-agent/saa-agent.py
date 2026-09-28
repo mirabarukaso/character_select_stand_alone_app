@@ -4,11 +4,11 @@ SAA CLI Tool
 
 A command-line interface for interacting with Character Select SAA via WebSocket connections. 
 Supports both ComfyUI and WebUI backends.
-Requires SAA above 2.5.0
+Requires SAA 2.9.0 or newer
 
 Author: mirabarukaso
 License: MIT
-Version: 1.1.0
+Version: 1.2.0
 
 https://github.com/mirabarukaso/character_select_stand_alone_app
 """
@@ -30,28 +30,32 @@ from enum import Enum
 # ============ Constants ============
 
 SAMPLER_COMFYUI = [
-    "euler_ancestral", "euler", "euler_cfg_pp", "euler_ancestral_cfg_pp", "heun", "heunpp2",
-    "dpm_2", "dpm_2_ancestral", "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", 
-    "dpmpp_2s_ancestral_cfg_pp", "dpmpp_sde", "dpmpp_sde_gpu", "dpmpp_2m", "dpmpp_2m_cfg_pp", 
-    "dpmpp_2m_sde", "dpmpp_2m_sde_gpu", "dpmpp_3m_sde", "dpmpp_3m_sde_gpu", "ddpm", "lcm",
-    "ipndm", "ipndm_v", "deis", "res_multistep", "res_multistep_cfg_pp", "res_multistep_ancestral", 
-    "res_multistep_ancestral_cfg_pp", "gradient_estimation", "er_sde", "seeds_2", "seeds_3"
+    "euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2",
+    "exp_heun_2_x0", "exp_heun_2_x0_sde", "dpm_2", "dpm_2_ancestral", "lms", "dpm_fast",
+    "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_2s_ancestral_cfg_pp", "dpmpp_sde", "dpmpp_sde_gpu",
+    "dpmpp_2m", "dpmpp_2m_cfg_pp", "dpmpp_2m_sde", "dpmpp_2m_sde_gpu", "dpmpp_2m_sde_heun",
+    "dpmpp_2m_sde_heun_gpu", "dpmpp_3m_sde", "dpmpp_3m_sde_gpu", "ddpm", "lcm", "ipndm", "ipndm_v",
+    "deis", "cfgpp_ud10_ab", "res_multistep", "res_multistep_cfg_pp", "res_multistep_ancestral",
+    "res_multistep_ancestral_cfg_pp", "gradient_estimation", "gradient_estimation_cfg_pp", "er_sde",
+    "seeds_2", "seeds_3", "sa_solver", "sa_solver_pece"
 ]
 
 SCHEDULER_COMFYUI = [
-    "normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform", 
+    "normal", "karras", "exponential", "sgm_uniform", "simple", "ddim_uniform",
     "beta", "linear_quadratic", "kl_optimal"
 ]
 
 SAMPLER_WEBUI = [
-    "Euler a", "Euler", "DPM++ 2M", "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 2M SDE Heun", 
-    "DPM++ 2S a", "DPM++ 3M SDE", "LMS", "Heun", "DPM2", "DPM2 a", "DPM fast", 
-    "DPM adaptive", "Restart"
+    "DPM++ 2M", "DPM++ SDE", "DPM++ 2M SDE", "DPM++ 3M SDE", "DPM++ 2s a RF",
+    "Euler a", "Euler", "ER SDE", "LCM", "LMS", "Heun", "DPM2", "Res Multistep",
+    "Kohaku LoNyu Yog", "Restart", "UniPC", "DDIM", "PLMS", "DPM++ 2M CFG++",
+    "Euler a CFG++", "Euler CFG++"
 ]
 
 SCHEDULER_WEBUI = [
-    "Automatic", "Uniform", "Karras", "Exponential", "Polyexponential", "SGM Uniform", 
-    "KL Optimal", "Align Your Steps", "Simple", "Normal", "DDIM", "Beta"
+    "Automatic", "Karras", "Exponential", "Polyexponential", "Normal", "Simple", "Uniform",
+    "SGM Uniform", "Linear Quadratic", "KL Optimal", "DDIM", "Align Your Steps", "Beta",
+    "Turbo", "Bong Tangent", "FlowMatchEulerDiscrete", "Flux2"
 ]
 
 WSS = "wss://"
@@ -114,7 +118,7 @@ class GenerationConfig:
     refiner_model: str = "None"
     refiner_ratio: float = 0.4
     
-    # vpred settings: 0 auto, 1 vpred, 2 no vpred
+    # vpred: 0 auto, 1 v-prediction, 2 v-prediction+ZSNR, 3 off
     vpred: int = 0
     refiner_vpred: int = 0
     
@@ -313,6 +317,11 @@ class GenerateDataPacker:
             ),
             "controlnet": [],
             "adetailer": [],
+            "vae": {"vae_override": False, "vae": "None"},
+            "img_prefix": kwargs.get(
+                "img_prefix",
+                "%date" if self.api_interface == "ComfyUI" else "[date]"
+            ),
         }
 
         if regional:
@@ -853,7 +862,7 @@ EXAMPLES:
 
 SUPPORTED INTERFACES:
     - ComfyUI (default)
-    - WebUI (A1111/Forge)
+    - WebUI (Forge Neo)
 
 OUTPUT FORMATS:
     - PNG file (always)
@@ -1052,21 +1061,21 @@ def create_parser() -> argparse.ArgumentParser:
         '--refiner-ratio',
         type=float,
         default=0.4,
-        help='Refiner switch ratio (default: 0.8)'
+        help='Refiner switch ratio (default: 0.4)'
     )
     enhance_group.add_argument(
         '--vpred',
         type=int,
-        choices=[0,1,2],
+        choices=[0, 1, 2, 3],
         default=0,
-        help='VPred setting for main model: 0 auto, 1 vpred, 2 no vpred (default: 0)'
+        help='VPred for the main model: 0 auto, 1 v-prediction, 2 v-prediction+ZSNR, 3 off (default: 0)'
     )
     enhance_group.add_argument(
         '--refiner-vpred',
         type=int,
-        choices=[0,1,2],
+        choices=[0, 1, 2, 3],
         default=0,
-        help='VPred setting for refiner: 0 auto, 1 vpred, 2 no vpred (default: 0)'
+        help='VPred for the refiner: 0 auto, 1 v-prediction, 2 v-prediction+ZSNR, 3 off (default: 0)'
     )
     
     # Output options

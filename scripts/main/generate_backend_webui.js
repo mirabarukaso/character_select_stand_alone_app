@@ -1,11 +1,34 @@
 import { ipcMain, net } from 'electron';
 import path from 'node:path';
 import { sendToRenderer } from './generate_backend_comfyui.js';
-import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
+import { makeBackendLockKey, tryAcquireBackendBusy, releaseBackendBusy, forceReleaseBackendBusy } from '../../main-common.js';
 
 const CAT = '[WebUI]';
-let backendWebUI = null;
-let cancelMark = false;
+const webuiBackends = new Map();
+const WEBUI_BUSY = 'Error: WebUI is busy, cannot run new generation, please try again later.';
+
+function getWebUIBackend(addr) {
+    const key = makeBackendLockKey('WebUI', addr);
+    if (!webuiBackends.has(key)) {
+        webuiBackends.set(key, new WebUI(addr));
+    }
+    return webuiBackends.get(key);
+}
+
+async function beginWebUIJob(generateData) {
+    const addr = generateData.addr;
+    const uuid = generateData.uuid || 'none';
+    const got = await tryAcquireBackendBusy('WebUI', addr, uuid);
+    if (!got.acquired) {
+        console.warn(CAT, WEBUI_BUSY);
+        return { ok: false, error: WEBUI_BUSY };
+    }
+    const backend = getWebUIBackend(addr);
+    backend.addr = addr;
+    backend.uuid = uuid;
+    backend.cancelMark = false;
+    return { ok: true, backend, uuid, addr };
+}
 
 let contronProcessorList = 'none';
 let contronNetModelHashList = 'none';
@@ -115,6 +138,7 @@ class WebUI {
         this.auth = '';
         this.uuid = 'none';
         this.isForge = null; // null = not detected, true = Forge, false = A1111
+        this.cancelMark = false;
     }
 
     async detectBackendType(addr, auth) {
@@ -303,7 +327,7 @@ class WebUI {
 
             const override_settings = this.create_override_settings_Forge(model, generateData?.unet, generateData?.vae, img_prefix);
 
-            backendWebUI.startPolling();
+            this.startPolling();
 
             let payload = {        
                 "prompt": positive,
@@ -412,14 +436,14 @@ class WebUI {
                     console.error(CAT, 'Request failed:', error.message);
                     ret = `Error: Request failed:, ${error.message}`;
                 }
-                setMutexBackendBusy(false); // Release the mutex lock
+                void releaseBackendBusy('WebUI', this.addr, this.uuid || 'none');
                 resolve(ret);
             });
     
             request.on('timeout', () => {
                 request.destroy();
                 console.error(`${CAT} Request timed out after ${this.timeout}ms`);
-                setMutexBackendBusy(false); // Release the mutex lock
+                void releaseBackendBusy('WebUI', this.addr, this.uuid || 'none');
                 resolve(`Error: Request timed out after ${this.timeout}ms`);
             });
 
@@ -450,7 +474,7 @@ class WebUI {
             const weight_left = Number.parseFloat(regional.str_left);
             const weight_right = Number.parseFloat(regional.str_right);
 
-            backendWebUI.startPolling();            
+            this.startPolling();            
 
             let payload = {        
                 "prompt": positive,
@@ -596,14 +620,14 @@ class WebUI {
                     console.error(CAT, 'Request failed:', error.message);
                     ret = `Error: Request failed:, ${error.message}`;
                 }
-                setMutexBackendBusy(false); // Release the mutex lock
+                void releaseBackendBusy('WebUI', this.addr, this.uuid || 'none');
                 resolve(ret);
             });
     
             request.on('timeout', () => {
                 request.destroy();
                 console.error(`${CAT} Request timed out after ${this.timeout}ms`);
-                setMutexBackendBusy(false); // Release the mutex lock
+                void releaseBackendBusy('WebUI', this.addr, this.uuid || 'none');
                 resolve(`Error: Request timed out after ${this.timeout}ms`);
             });
 
@@ -858,7 +882,6 @@ class WebUI {
 }
 
 async function setupGenerateBackendWebUI() {
-    backendWebUI = new WebUI('127.0.0.1:7860');
 
     ipcMain.handle('generate-backend-webui-run', async (event, generateData) => {
         return await runWebUI(generateData);
@@ -881,7 +904,7 @@ async function setupGenerateBackendWebUI() {
     });
 
     ipcMain.handle('generate-backend-webui-cancel', async (event) => {        
-        cancelWebUI();
+        cancelWebUI('none');
     });
     
     ipcMain.handle('generate-backend-webui-get-module-list', async (event) => {
@@ -902,13 +925,14 @@ async function setupGenerateBackendWebUI() {
 }
 
 async function getListFromBAckend(generateData, url){
-    let result = await backendWebUI.makeHttpRequestControlnet(
+    const backend = getWebUIBackend(generateData.addr);
+    let result = await backend.makeHttpRequestControlnet(
         url,
         generateData.auth,
         'GET',
         null,
         null,
-        backendWebUI.timeout
+        backend.timeout
     );
 
     if (typeof result === 'string' && result.startsWith('Error:')) {
@@ -972,8 +996,9 @@ async function updateUpscalerModelList(generateData) {
 }
 
 async function refreshModelLists(generateData) {
-    if (backendWebUI.isForge === null)
-        backendWebUI.isForge = await backendWebUI.detectBackendType(generateData.addr, generateData.auth);
+    const backend = getWebUIBackend(generateData.addr);
+    if (backend.isForge === null)
+        backend.isForge = await backend.detectBackendType(generateData.addr, generateData.auth);
 
     if (contronNetModelHashList === 'none') {
         console.log(CAT, "Refresh controlNet model hash list:");
@@ -1001,21 +1026,20 @@ async function refreshModelLists(generateData) {
 }
 
 async function runWebUI(generateData){
-    const isBusy = await getMutexBackendBusy();
-    if (isBusy) {
+    const started = await beginWebUIJob(generateData);
+    if (!started.ok) {
         console.warn(CAT, '[runWebUI] WebUI is busy, cannot run new generation, please try again later.');
-        return 'Error: WebUI is busy, cannot run new generation, please try again later.';
+        return started.error;
     }
-    setMutexBackendBusy(true); // Acquire the mutex lock
-    cancelMark = false;
+    const backend = started.backend;
+    const uuid = started.uuid;
+    const addr = started.addr;
 
     await refreshModelLists(generateData);
     
     let result = '';
-    if(!backendWebUI.isForge) {
-        // legacy A1111 set options
-        // Forge neo  use override_settings in run
-        result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
+    if(!backend.isForge) {
+        result = await backend.setModel(generateData.addr, generateData.model, generateData.auth, 
             generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null, generateData.img_prefix);
     } else {
         result = '200';
@@ -1023,12 +1047,12 @@ async function runWebUI(generateData){
     
     if(result === '200') {
         try {
-            if(backendWebUI.uuid !== 'none')
+            if(backend.uuid !== 'none')
                 console.log(CAT, 'Running A1111 with uuid:', generateData.uuid);
-            const imageData = await backendWebUI.run(generateData);
-            setMutexBackendBusy(false); // Release the mutex lock
+            const imageData = await backend.run(generateData);
+            await releaseBackendBusy('WebUI', addr, uuid);
 
-            if(cancelMark) {
+            if(backend.cancelMark) {
                 return 'Error: Cancelled';
             }
 
@@ -1038,38 +1062,37 @@ async function runWebUI(generateData){
             }
 
             const jsonData =  JSON.parse(imageData);
-            sendToRenderer(backendWebUI.uuid, `updateProgress`, `100`, '100%');
+            sendToRenderer(uuid, `updateProgress`, `100`, '100%');
             const image = jsonData.images[0];
-            // parameters info
             console.log(CAT, 'Image retrieved from WebUI run, sending to renderer');
             return `data:image/png;base64,${image}`;
         } catch (error) {            
             console.error(CAT, 'Image not found or invalid:', error);
+            await releaseBackendBusy('WebUI', addr, uuid);
             return `Error: Image not found or invalid: ${error}`;
         }
     }
 
     console.log(CAT, 'result is not 200', result);
-    setMutexBackendBusy(false); // Release the mutex lock in case of early return
+    await releaseBackendBusy('WebUI', addr, uuid);
     return result;
 } 
 
 async function runWebUI_Regional(generateData){
-    const isBusy = await getMutexBackendBusy();
-    if (isBusy) {
+    const started = await beginWebUIJob(generateData);
+    if (!started.ok) {
         console.warn(CAT, '[runWebUI] WebUI is busy, cannot run new generation, please try again later.');
-        return 'Error: WebUI is busy, cannot run new generation, please try again later.';
+        return started.error;
     }
-    setMutexBackendBusy(true); // Acquire the mutex lock
-    cancelMark = false;
+    const backend = started.backend;
+    const uuid = started.uuid;
+    const addr = started.addr;
 
     await refreshModelLists(generateData);
 
     let result = '';
-    if(!backendWebUI.isForge) {
-        // legacy A1111 set options
-        // Forge neo  use override_settings in run
-        result = await backendWebUI.setModel(generateData.addr, generateData.model, generateData.auth, 
+    if(!backend.isForge) {
+        result = await backend.setModel(generateData.addr, generateData.model, generateData.auth, 
             generateData.vae?generateData.vae:{vae_override: false, vae: 'Automatic'}, null, generateData.img_prefix);
     } else {
         result = '200';
@@ -1077,12 +1100,12 @@ async function runWebUI_Regional(generateData){
 
     if(result === '200') {
         try {
-            if(backendWebUI.uuid !== 'none')
+            if(backend.uuid !== 'none')
                 console.log(CAT, 'Running Regional A1111 with uuid:', generateData.uuid);
-            const imageData = await backendWebUI.runRegional(generateData);
-            setMutexBackendBusy(false); // Release the mutex lock
+            const imageData = await backend.runRegional(generateData);
+            await releaseBackendBusy('WebUI', addr, uuid);
 
-            if(cancelMark) {
+            if(backend.cancelMark) {
                 return 'Error: Cancelled';
             }
 
@@ -1092,30 +1115,31 @@ async function runWebUI_Regional(generateData){
             }
 
             const jsonData =  JSON.parse(imageData);
-            sendToRenderer(backendWebUI.uuid, `updateProgress`, `100`, '100%');
+            sendToRenderer(uuid, `updateProgress`, `100`, '100%');
             const image = jsonData.images[0];
-            // parameters info
             console.log(CAT, 'Image retrieved from WebUI Regional run, sending to renderer');
             return `data:image/png;base64,${image}`;
         } catch (error) {            
             console.error(CAT, 'Image not found or invalid:', error);
+            await releaseBackendBusy('WebUI', addr, uuid);
             return `Error: Image not found or invalid: ${error}`;
         }
     }
 
     console.log(CAT, 'result is not 200', result);
-    setMutexBackendBusy(false); // Release the mutex lock in case of early return
+    await releaseBackendBusy('WebUI', addr, uuid);
     return result;
 }
 
 async function runWebUI_ControlNet(generateData) {
-    const isBusy = await getMutexBackendBusy();
-    if (isBusy) {
+    const started = await beginWebUIJob(generateData);
+    if (!started.ok) {
         console.warn(CAT, '[runWebUI_ControlNet] WebUI is busy, cannot run new generation, please try again later.');
-        return 'Error: WebUI is busy, cannot run new generation, please try again later.';
+        return started.error;
     }
-    setMutexBackendBusy(true); // Acquire lock for the entire operation
-    cancelMark = false;
+    const backend = started.backend;
+    const uuid = started.uuid;
+    const addr = started.addr;
 
     try {
         await updateControlNetHashList(generateData);
@@ -1130,13 +1154,13 @@ async function runWebUI_ControlNet(generateData) {
             "low_vram": false
         };
 
-        const result = await backendWebUI.makeHttpRequestControlnet(
+        const result = await backend.makeHttpRequestControlnet(
             `http://${generateData.addr}/controlnet/detect`,
             generateData.auth,
             'POST',
             null,
             controlNetDetect,
-            backendWebUI.timeout
+            backend.timeout
         );
 
         if (typeof result === 'string' && result.startsWith('Error:')) {
@@ -1149,23 +1173,22 @@ async function runWebUI_ControlNet(generateData) {
         console.error(CAT, 'Unexpected error in ControlNet run:', error);
         return `Error: Unexpected failure - ${error.message}`;
     } finally {
-        setMutexBackendBusy(false); // Release lock after everything (success or error)
+        await releaseBackendBusy('WebUI', addr, uuid);
     }
 }
 
 async function python_runWebUI(generateData, isRegional=false, skeletonKey=false) {
-    backendWebUI.uuid = generateData.uuid;
+    const uuid = generateData.uuid || 'none';
     if(skeletonKey) {
         console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
-        setMutexBackendBusy(false);
-        sendToRenderer(backendWebUI.uuid, `updateProgress`, 'warn', CAT,  'The Skeleton Key triggerd, Mutex Lock set to false');
+        await forceReleaseBackendBusy('WebUI', generateData.addr);
+        sendToRenderer(uuid, `updateProgress`, 'warn', CAT,  'The Skeleton Key triggerd, Mutex Lock set to false');
     }
 
-    const infoMsg = `Running WebUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${backendWebUI.uuid}`;
-    sendToRenderer(backendWebUI.uuid, `updateProgress`, 'log', CAT, infoMsg);
+    const infoMsg = `Running WebUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${uuid}`;
+    sendToRenderer(uuid, `updateProgress`, 'log', CAT, infoMsg);
     console.log(CAT, infoMsg);
 
-    // Ensure VAE settings for saa-agent
     if (!generateData.vae) {
         generateData.vae = { vae_override: false, vae: 'None' };
     }
@@ -1182,25 +1205,52 @@ async function python_runWebUI(generateData, isRegional=false, skeletonKey=false
         return newImage;
     } 
 
-    // Use Callback to send image to renderer, not APIResponse
     console.log(CAT, 'Image retrieved from WebUI Python run.');
-    sendToRenderer(backendWebUI.uuid, `updateProgress`, newImage);
+    sendToRenderer(uuid, `updateProgress`, newImage);
     return "Success";
 }
 
-function cancelWebUI() {
-    console.log(CAT, 'Processing interrupted');
-    cancelMark = true;
-    backendWebUI.cancelGenerate();
-    stopPollingWebUI();
+function cancelWebUI(uuid) {
+    const owner = uuid || 'none';
+    console.log(CAT, 'Processing interrupted for', owner);
+    for (const backend of webuiBackends.values()) {
+        if (backend.uuid === owner) {
+            backend.cancelMark = true;
+            backend.cancelGenerate();
+            backend.stopPolling();
+        }
+    }
 }
 
-function startPollingWebUI() {
-    backendWebUI.startPolling();
+function cancelAllWebUI() {
+    console.log(CAT, 'Cancelling all WebUI jobs');
+    for (const backend of webuiBackends.values()) {
+        backend.cancelMark = true;
+        try {
+            backend.cancelGenerate();
+        } catch (error) {
+            console.warn(CAT, 'Failed to cancel WebUI job:', error);
+        }
+        backend.stopPolling();
+    }
 }
 
-function stopPollingWebUI() {
-    backendWebUI.stopPolling();    
+function startPollingWebUI(uuid) {
+    const owner = uuid || 'none';
+    for (const backend of webuiBackends.values()) {
+        if (backend.uuid === owner) {
+            backend.startPolling();
+        }
+    }
+}
+
+function stopPollingWebUI(uuid) {
+    const owner = uuid || 'none';
+    for (const backend of webuiBackends.values()) {
+        if (backend.uuid === owner) {
+            backend.stopPolling();
+        }
+    }
 }
 
 function getControlNetProcessorList() {
@@ -1220,8 +1270,9 @@ function resetModelLists() {
     contronNetModelHashList = 'none';
     aDetailerModelList = 'none';
     upscalersModelList = 'none';
-    // reset isForge to null, so next time it will re-detect backend type, in case user switch between Forge and A1111
-    backendWebUI.isForge = null;
+    for (const backend of webuiBackends.values()) {
+        backend.isForge = null;
+    }
 }
 
 export {
@@ -1230,6 +1281,7 @@ export {
     runWebUI_Regional,
     runWebUI_ControlNet,
     cancelWebUI,
+    cancelAllWebUI,
     startPollingWebUI,
     stopPollingWebUI,
     getControlNetProcessorList,

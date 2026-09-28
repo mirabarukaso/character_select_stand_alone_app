@@ -220,6 +220,9 @@ function normalizeLayout(raw) {
     if (typeof source.galleryHeight === 'number' && source.galleryHeight >= 384 && source.galleryHeight <= 872) {
         layout.galleryHeight = Math.round(source.galleryHeight);
     }
+    if (typeof source.buttonOverlayMinimized === 'boolean') {
+        layout.buttonOverlayMinimized = source.buttonOverlayMinimized;
+    }
     if (typeof source.enabled === 'boolean') {
         layout.enabled = source.enabled;
     }
@@ -288,6 +291,9 @@ function persistNormalizedLayout(filePath, original, normalized, extra = {}) {
     }
     if (typeof normalized.galleryHeight === 'number') {
         stored.galleryHeight = normalized.galleryHeight;
+    }
+    if (typeof normalized.buttonOverlayMinimized === 'boolean') {
+        stored.buttonOverlayMinimized = normalized.buttonOverlayMinimized;
     }
     if (typeof extra.enabled !== 'boolean' && typeof original?.enabled === 'boolean') {
         stored.enabled = original.enabled;
@@ -392,6 +398,9 @@ export function saveUiLayout(settingsName, layout, mode) {
             stored.left = kept.left;
             stored.right = kept.right;
             stored.full = kept.full || [];
+            if (typeof kept.buttonOverlayMinimized === 'boolean') {
+                stored.buttonOverlayMinimized = kept.buttonOverlayMinimized;
+            }
         }
         return writeSidecar(sidecarPath, stored);
     }
@@ -443,6 +452,9 @@ export function setUiLayoutMode(settingsName, mode, currentLayout) {
             stored.left = kept.left;
             stored.right = kept.right;
             stored.full = kept.full || [];
+            if (typeof kept.buttonOverlayMinimized === 'boolean') {
+                stored.buttonOverlayMinimized = kept.buttonOverlayMinimized;
+            }
         }
         writeSidecar(sidecarPath, stored);
         return packResult('factory', factoryLayout());

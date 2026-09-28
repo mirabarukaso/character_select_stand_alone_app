@@ -345,7 +345,16 @@ export function setupTextbox(containerId, placeholder = 'Enter text...', options
             scheduleAdjust();
         },
         getElement: () => textbox,  
-        isNumberOnly: () => numberOnly 
+        isNumberOnly: () => numberOnly,
+        setEnable: (enable) => {
+            const allowed = !!enable;
+            textbox.disabled = !allowed;
+            if (allowed) {
+                container.classList.remove('myTextbox-disabled');
+            } else {
+                container.classList.add('myTextbox-disabled');
+            }
+        }
     };
 }
 

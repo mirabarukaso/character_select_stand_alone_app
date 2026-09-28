@@ -1,5 +1,5 @@
 import { decodeThumb } from './customThumbGallery.js';
-import { generateRandomSeed, resolveGenerateSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, getRandomIndex, formatCharacterInfo, formatOriginalCharacterInfo,
+import { generateRandomSeed, resolveGenerateSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, characterRandomMode, pickRandomCharacterEntry, formatCharacterInfo, formatOriginalCharacterInfo,
     getViewTags, createHiFix, formatQueueJobSeed, createRefiner, extractHostPort, checkVpred, extractAPISecure,
     createControlNet, createADetailer, toggleQueueColor, startQueue, REPLACE_AI_MARK,
     updateADetailerModelList, getImageSavePrefix } from './generate.js';
@@ -172,18 +172,23 @@ async function createCharacters(index, seeds) {
 
 async function handleStandardCharacter(character, seed, isValueOnly, index, FILES) {
     let tag, thumb, info, name;
-    if (character.toLowerCase() === 'random') {
-        const selectedIndex = getRandomIndex(seed, FILES.characterListArray.length);
-        tag = FILES.characterListArray[selectedIndex][1];
-        thumb = await decodeThumb(FILES.characterListArray[selectedIndex][0]);
+    const randomMode = characterRandomMode(character);
+    if (randomMode) {
+        const picked = pickRandomCharacterEntry(FILES.characterListArray, seed, randomMode);
+        if (!picked) {
+            console.warn('[handleStandardCharacter] No favorite characters to randomize');
+            return { tag: '', thumb: null, info: '', weight: globalThis.characterListRegional.getTextValue(index), name: '' };
+        }
+        tag = picked[1];
+        thumb = await decodeThumb(picked[0]);
         info = formatCharacterInfo(index, isValueOnly, {
-        key: FILES.characterListArray[selectedIndex][0],
-        value: FILES.characterListArray[selectedIndex][1]
+        key: picked[0],
+        value: picked[1]
         });
         if(globalThis.globalSettings.language === 'en-US')
-            name = FILES.characterListArray[selectedIndex][1];
+            name = picked[1];
         else
-            name = FILES.characterListArray[selectedIndex][0];
+            name = picked[0];
     } else {
         tag = FILES.characterList[character];
         thumb = await decodeThumb(character);
@@ -202,14 +207,19 @@ async function handleStandardCharacter(character, seed, isValueOnly, index, FILE
 
 function handleOriginalCharacter(character, seed, isValueOnly, index, FILES) {
     let tag, info, name;
-    if (character.toLowerCase() === 'random') {
-        const selectedIndex = getRandomIndex(seed, FILES.ocListArray.length);
-        tag = FILES.ocListArray[selectedIndex][1];
+    const randomMode = characterRandomMode(character);
+    if (randomMode) {
+        const picked = pickRandomCharacterEntry(FILES.ocListArray, seed, randomMode);
+        if (!picked) {
+            console.warn('[handleOriginalCharacter] No favorite characters to randomize');
+            return { tag: '', thumb: null, info: '', weight: globalThis.characterListRegional.getTextValue(index), name: '' };
+        }
+        tag = picked[1];
         info = formatOriginalCharacterInfo({
-        key: FILES.ocListArray[selectedIndex][0],
-        value: FILES.ocListArray[selectedIndex][1]
+        key: picked[0],
+        value: picked[1]
         });
-        name = FILES.ocListArray[selectedIndex][0];
+        name = picked[0];
     } else {
         tag = FILES.ocList[character];
         info = formatOriginalCharacterInfo({ key: character, value: tag }, isValueOnly);
@@ -662,9 +672,9 @@ async function runComfyUI(apiInterface, generateData){
                     breakNow = true;
                 } finally {
                     if (globalThis.inBrowser) {
-                        sendWebSocketMessage({ type: 'API', method: 'closeWsComfyUI' });
+                        sendWebSocketMessage({ type: 'API', method: 'closeWsComfyUI', params: [parsedResult.prompt_id] });
                     } else {
-                        globalThis.api.closeWsComfyUI();
+                        globalThis.api.closeWsComfyUI(parsedResult.prompt_id);
                     }
                 }                
             } else {

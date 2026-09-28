@@ -1,5 +1,6 @@
 import { parseTaggedContent } from './components/myTextbox.js';
 import { setupCheckbox } from './components/myCheckbox.js';
+import { getButtonOverlayMinimized, persistButtonOverlayMinimized } from './uiLayout.js';
 
 let customOverlayCounter = 0;
 
@@ -334,10 +335,19 @@ export function setupButtonOverlay() {
         }
     }
 
+    function setMinimized(next) {
+        const want = Boolean(next);
+        if (want === isMinimized) {
+            return;
+        }
+        isMinimized = want;
+        setMinimizedState(buttonOverlay, buttonContainer, minimizeButton, isMinimized);
+    }
+
     minimizeButton.addEventListener('click', (e) => {
         e.stopPropagation();
-        isMinimized = !isMinimized;
-        setMinimizedState(buttonOverlay, buttonContainer, minimizeButton, isMinimized);
+        setMinimized(!isMinimized);
+        persistButtonOverlayMinimized();
     });
 
     function movePreviewControls(target) {
@@ -392,11 +402,13 @@ export function setupButtonOverlay() {
     }
 
     toggleButtonOverlayVisibility();
+    setMinimized(getButtonOverlayMinimized());
 
     const observer = new MutationObserver(toggleButtonOverlayVisibility);
     observer.observe(document.body, { childList: true, subtree: false });
 
-    return { 
+    return {
+        setMinimized,
         reload: () => {            
             buttonContainer.innerHTML = '';
 

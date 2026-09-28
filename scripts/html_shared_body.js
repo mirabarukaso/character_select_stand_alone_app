@@ -122,6 +122,15 @@ export const sharedBodyHTML = `
                 <div class="system-settings-busy-retry-seconds"></div>
                 <div class="system-settings-busy-retry-counts"></div>
               </div>
+              <div class="system-settings-main-saac">
+                <div class="system-settings-saac-enable"></div>
+                <div class="system-settings-saac-addr"></div>
+                <div class="system-settings-saac-port"></div>
+              </div>
+              <div class="system-settings-main-3">
+                <div class="system-settings-backend-log"></div>
+                <div class="system-settings-backend-log-copy"></div>
+              </div>
               <div class="system-settings-main-2">
                 <div></div>
                 <div class="system-settings-api-fliter"></div>

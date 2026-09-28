@@ -148,6 +148,11 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.webui_auth_enable.setTitle(LANG.webui_auth_enable);
     globalThis.generate.busy_retry_seconds.setTitle(LANG.busy_retry_seconds);
     globalThis.generate.busy_retry_counts.setTitle(LANG.busy_retry_counts);
+    globalThis.generate.ws_service?.setTitle(LANG.saac_enable);
+    globalThis.generate.ws_addr?.setTitle(LANG.saac_addr);
+    globalThis.generate.ws_port?.setTitle(LANG.saac_port);
+    globalThis.generate.backend_log?.setTitle(LANG.backend_log);
+    globalThis.generate.backend_log_copy?.setTitle(LANG.backend_log_copy);
     globalThis.generate.queueAutostart.setTitle(LANG.generate_auto_start);
     globalThis.generate.queueAutostart_dummy.setTitle(LANG.generate_auto_start);
 
@@ -247,6 +252,7 @@ export function updateSettings() {
     globalThis.generate.webui_auth_enable.updateDefaults(SETTINGS.webui_auth_enable);
     globalThis.generate.busy_retry_seconds.setValue(SETTINGS.busy_retry_seconds);
     globalThis.generate.busy_retry_counts.setValue(SETTINGS.busy_retry_counts);
+    applyWsServiceSettings();
     globalThis.generate.queueAutostart.setValue(SETTINGS.generate_auto_start);
     globalThis.generate.queueAutostart_dummy.setValue(SETTINGS.generate_auto_start);
     updateQueuePausedBorder();
@@ -366,4 +372,36 @@ export function updateSettings() {
     callback_ai_promot_role(globalThis.globalSettings.ai_prompt_role);  //AI Prompt Role
     
     globalThis.generate.galleryPreviewToggle?.setValue(globalThis.globalSettings.gallery_preview);  // Update the gallery preview toggle checkbox to reflect the current setting
+}
+
+export function applyWsServiceLock(running) {
+    if (!globalThis.generate?.ws_addr || !globalThis.generate?.ws_port) {
+        return;
+    }
+    globalThis.generate.ws_addr.setEnable(!running);
+    globalThis.generate.ws_port.setEnable(!running);
+}
+
+export function applyWsServiceSettings() {
+    if (globalThis.inBrowser || !globalThis.generate?.ws_service) {
+        return;
+    }
+
+    const SETTINGS = globalThis.globalSettings;
+    const runtime = globalThis.wsServiceRuntime;
+    if (runtime?.running) {
+        SETTINGS.ws_service = true;
+        SETTINGS.ws_addr = runtime.addr;
+        SETTINGS.ws_port = runtime.port;
+        globalThis.generate.ws_service.setValue(true);
+        globalThis.generate.ws_addr.setValue(runtime.addr);
+        globalThis.generate.ws_port.setValue(String(runtime.port));
+        applyWsServiceLock(true);
+    } else {
+        SETTINGS.ws_service = false;
+        globalThis.generate.ws_service.setValue(false);
+        globalThis.generate.ws_addr.setValue(SETTINGS.ws_addr);
+        globalThis.generate.ws_port.setValue(String(SETTINGS.ws_port));
+        applyWsServiceLock(false);
+    }
 }

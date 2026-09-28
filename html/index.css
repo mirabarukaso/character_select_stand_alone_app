@@ -322,7 +322,7 @@ body.layout-is-resizing-full * {
 .layout-tab-label.layout-tab-active.layout-tab-hint-on {
     opacity: 1;
     font-weight: 600;
-    color: #0f7a4a;
+    color: #145c32;
     background: #b7e0c4;
     border-color: #2e8b57;
 }
@@ -613,6 +613,12 @@ body.layout-is-resizing-full * {
 
 .myCheckbox-disabled span {
   color: #888;
+}
+
+.cg-custom-overlay[data-group="backend-log"] .cg-custom-textbox-data {
+  font-family: Consolas, "Courier New", monospace;
+  font-size: 12px;
+  line-height: 1.45;
 }
 
 #settings-save-icon {

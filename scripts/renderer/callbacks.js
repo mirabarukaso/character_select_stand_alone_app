@@ -96,7 +96,14 @@ export async function callback_mySettingList(index, selectedValue) {
         await callback_api_interface(0, [globalThis.globalSettings.api_interface]);
     }
 
-    updateLanguage(true, globalThis.inBrowser); 
+    updateLanguage(true, globalThis.inBrowser);
+    if (!globalThis.inBrowser && globalThis.api?.getWsServiceStatus) {
+        try {
+            globalThis.wsServiceRuntime = await globalThis.api.getWsServiceStatus();
+        } catch (error) {
+            console.warn('Failed to refresh SAAC runtime status after loading settings:', error);
+        }
+    }
     updateSettings();
 
     // reLoad slots stuff: LoRA, aDetailer

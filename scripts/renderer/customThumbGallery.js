@@ -443,7 +443,11 @@ export async function decodeThumb(character, random_seed = -1) {
 
 function isValidCharacter(character, random_seed) {
     if (!character || character === 'None') return false;
-    return !(character === 'Random' && random_seed === -1);
+    const name = String(character).trim().toLowerCase();
+    if (name === 'random' || name === 'random all' || name === 'random fav' || name === 'random_fav') {
+        return random_seed !== -1;
+    }
+    return true;
 }
 
 function getCharacterData(character) {

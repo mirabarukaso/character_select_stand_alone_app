@@ -4,6 +4,11 @@ function normalizeFavoriteCharacter(value) {
     return String(value ?? '').trim();
 }
 
+function isReservedCharacterToken(value) {
+    const name = String(value ?? '').trim().toLowerCase();
+    return name === '' || name === 'none' || name === 'random' || name === 'random all' || name === 'random fav' || name === 'random_fav';
+}
+
 function sortFavoriteList(list) {
     return [...list]
         .map(item => normalizeFavoriteCharacter(item))
@@ -59,7 +64,7 @@ export function addFavorites(character) {
         : [];
 
     const normalizedCharacter = String(character ?? '').trim();
-    if (!normalizedCharacter || normalizedCharacter.toLowerCase() === 'none' || normalizedCharacter.toLowerCase() === 'random') {
+    if (isReservedCharacterToken(normalizedCharacter)) {
         return false;
     }
 
@@ -82,7 +87,7 @@ export function delFavorites(character) {
         : [];
 
     const normalizedCharacter = String(character ?? '').trim();
-    if (!normalizedCharacter || normalizedCharacter.toLowerCase() === 'none' || normalizedCharacter.toLowerCase() === 'random') {
+    if (isReservedCharacterToken(normalizedCharacter)) {
         return false;
     }
 

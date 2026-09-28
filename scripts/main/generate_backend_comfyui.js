@@ -1,7 +1,7 @@
 import { ipcMain, BrowserWindow, net } from 'electron';
 import { WebSocket } from 'ws';
 import * as wsService from '../webserver/back/wsService.js';
-import { getMutexBackendBusy, setMutexBackendBusy } from '../../main-common.js';
+import { makeBackendLockKey, tryAcquireBackendBusy, releaseBackendBusy, forceReleaseBackendBusy } from '../../main-common.js';
 import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, 
   WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_REIONAL_UNET, 
   WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, VAE_LOADER} from './comfyui_workflow.js';
@@ -9,8 +9,64 @@ import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET,
 const CAT = '[ComfyUI]';
 const TIMEOUT = 5000; // 5 seconds timeout for backend response
 
-let backendComfyUI = null;
-let cancelMark = false;
+const comfyBackends = new Map();
+const comfyByPrompt = new Map();
+const COMFY_BUSY = 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+const COMFY_API_BUSY = 'Error: ComfyUI API is busy, cannot run new generation, please try again later.';
+
+let lastComfyBackend = null;
+
+function getComfyBackend(addr) {
+  const key = makeBackendLockKey('ComfyUI', addr);
+  if (!comfyBackends.has(key)) {
+    const inst = new ComfyUI(crypto.randomUUID());
+    inst.addr = addr;
+    comfyBackends.set(key, inst);
+  }
+  return comfyBackends.get(key);
+}
+
+function rememberComfyPrompt(backend, result) {
+  try {
+    const parsed = JSON.parse(result);
+    if (parsed?.prompt_id) {
+      comfyByPrompt.set(String(parsed.prompt_id), backend);
+      lastComfyBackend = backend;
+    }
+  } catch {
+    // ignore non-JSON results
+  }
+}
+
+function resolveComfyBackend(prompt_id) {
+  const id = prompt_id == null ? '' : String(prompt_id);
+  if (id && comfyByPrompt.has(id)) {
+    return comfyByPrompt.get(id);
+  }
+  if (lastComfyBackend) {
+    return lastComfyBackend;
+  }
+  if (comfyBackends.size === 1) {
+    return comfyBackends.values().next().value;
+  }
+  return null;
+}
+
+async function beginComfyJob(generateData) {
+  const addr = generateData.addr;
+  const uuid = generateData.uuid || 'none';
+  const got = await tryAcquireBackendBusy('ComfyUI', addr, uuid);
+  if (!got.acquired) {
+    console.warn(CAT, COMFY_BUSY);
+    return { ok: false, error: COMFY_BUSY };
+  }
+  const backend = getComfyBackend(addr);
+  backend.addr = addr;
+  backend.uuid = uuid;
+  backend.cancelMark = false;
+  lastComfyBackend = backend;
+  return { ok: true, backend, uuid, addr };
+}
 
 function sendToRendererEx(channel, data) {
     const window = BrowserWindow.getAllWindows();
@@ -29,27 +85,91 @@ function sendToRenderer(uuid, functionName, ...args) {
     const success = wsService.sendToClient(uuid, 'Callback', { callbackName, args }); 
     if(!success) {
       console.warn('Got error from WS. Set uuid to "error" for current generation');
-      backendComfyUI.uuid = 'error';
+      if (lastComfyBackend) {
+        lastComfyBackend.uuid = 'error';
+      }
     }
   }
 }
 
 function processImage(imageData) {
     try {
-        if (Buffer.isBuffer(imageData)) {
-            return imageData.toString('base64');
-        } 
-        else if (ArrayBuffer.isView(imageData) || Array.isArray(imageData)) {
-            const buffer = Buffer.from(imageData);
-            return buffer.toString('base64');
-        } else {
-            console.error(CAT, 'Invalid image data type:', typeof imageData);
-            return null;
+        const buf = toPreviewBuffer(imageData);
+        if (buf) {
+            return buf.toString('base64');
         }
+        console.error(CAT, 'Invalid image data type:', typeof imageData);
+        return null;
     } catch (error) {
         console.error(CAT, 'Error converting image data to Base64:', error);
         return null;
     }
+}
+
+function toPreviewBuffer(data) {
+    if (Buffer.isBuffer(data)) {
+        return data;
+    }
+    if (data instanceof ArrayBuffer) {
+        return Buffer.from(data);
+    }
+    if (ArrayBuffer.isView(data)) {
+        return Buffer.from(data.buffer, data.byteOffset, data.byteLength);
+    }
+    if (typeof data === 'string') {
+        return Buffer.from(data, 'latin1');
+    }
+    return null;
+}
+
+function extractPreviewImage(buf) {
+    if (!buf || buf.length < 12) {
+        return null;
+    }
+    const eventType = buf.readUInt32BE(0);
+    if (eventType === 1) {
+        return buf.subarray(8);
+    }
+    if (eventType === 4) {
+        const metaLen = buf.readUInt32BE(4);
+        const start = 8 + metaLen;
+        if (start > 8 && start < buf.length) {
+            return buf.subarray(start);
+        }
+        return null;
+    }
+    if (buf[0] === 0xff && buf[1] === 0xd8) {
+        return buf;
+    }
+    if (buf[0] === 0x89 && buf[1] === 0x50) {
+        return buf;
+    }
+    return buf.length > 256 ? buf.subarray(8) : null;
+}
+
+function sendPreviewFrame(backend, data) {
+    if (backend.refresh === 0) {
+        return;
+    }
+    if (backend.preview !== 0 && backend.preview % backend.refresh === 0) {
+        try {
+            const buf = toPreviewBuffer(data);
+            const previewData = buf ? extractPreviewImage(buf) : null;
+            if (previewData && previewData.byteLength > 256) {
+                if (backend.firstValidPreview) {
+                    const base64Data = processImage(previewData);
+                    if (base64Data) {
+                        sendToRenderer(backend.uuid, `updatePreview`, `data:image/png;base64,${base64Data}`);
+                    }
+                } else {
+                    backend.firstValidPreview = true;
+                }
+            }
+        } catch (err) {
+            console.error(CAT, 'Error processing preview image:', err);
+        }
+    }
+    backend.preview += 1;
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
@@ -724,6 +844,33 @@ class ComfyUI {
     this.firstValidPreview = false;
     this.uuid = 'none';
     this.pythonRun = false;
+    this.cancelMark = false;
+  }
+
+  connectWS() {
+    const wsUrl = `ws://${this.addr}/ws?clientId=${this.clientID}`;
+    if (this.webSocket && this.webSocket.readyState === WebSocket.OPEN) {
+      return Promise.resolve();
+    }
+    if (this.webSocket && this.webSocket.readyState === WebSocket.CONNECTING) {
+      return new Promise((resolve, reject) => {
+        this.webSocket.once('open', resolve);
+        this.webSocket.once('error', reject);
+      });
+    }
+    return new Promise((resolve, reject) => {
+      this.webSocket = new WebSocket(wsUrl);
+      const onOpen = () => {
+        this.webSocket.off('error', onErr);
+        resolve();
+      };
+      const onErr = (err) => {
+        this.webSocket.off('open', onOpen);
+        reject(err);
+      };
+      this.webSocket.once('open', onOpen);
+      this.webSocket.once('error', onErr);
+    });
   }
 
   cancelGenerate() {
@@ -751,9 +898,16 @@ class ComfyUI {
   }
 
   async openWS(prompt_id, skipFirst = true, index='29'){
-    if (this.webSocket && (this.webSocket.readyState === WebSocket.OPEN || this.webSocket.readyState === WebSocket.CONNECTING)) {
-      console.warn(CAT, 'ComfyUI WebSocket already open, refusing to replace in-flight generation');
-      return 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+    const wsUrl = `ws://${this.addr}/ws?clientId=${this.clientID}`;
+    const alreadyOpen = this.webSocket && this.webSocket.readyState === WebSocket.OPEN;
+    const alreadyConnecting = this.webSocket && this.webSocket.readyState === WebSocket.CONNECTING;
+    if (!alreadyOpen && !alreadyConnecting) {
+      this.webSocket = new WebSocket(wsUrl);
+    } else {
+      this.webSocket.removeAllListeners('message');
+      this.webSocket.removeAllListeners('open');
+      this.webSocket.removeAllListeners('error');
+      this.webSocket.removeAllListeners('close');
     }
 
     return new Promise((resolve) => {
@@ -762,8 +916,8 @@ class ComfyUI {
       this.step = 0;
       this.firstValidPreview = !skipFirst;
 
-      const wsUrl = `ws://${this.addr}/ws?clientId=${this.clientID}`;
-      this.webSocket = new WebSocket(wsUrl);
+      const jobAddr = this.addr;
+      const lockOwner = this.uuid || 'none';
 
       let settled = false;
       let timeoutTimer = null;
@@ -777,7 +931,7 @@ class ComfyUI {
         if (settled) return;            
         settled = true;
         cleanupTimers();
-        setMutexBackendBusy(false);  // Release the mutex after getting image or error
+        void releaseBackendBusy('ComfyUI', jobAddr, lockOwner);
         resolve(ret);
       }
 
@@ -801,10 +955,9 @@ class ComfyUI {
       // start initial timeout watcher
       scheduleConnTimeout();
 
-      this.webSocket.on('open', () => {
+      const onWsOpen = () => {
         if (settled) return;
         cleanupTimers();
-        // attach underlying socket timeout to detect idle socket; reuse same HTTP-check logic
         try {
           const sock = this.webSocket._socket;
           if (sock && typeof sock.setTimeout === 'function' && !sockTimeoutAttached) {
@@ -829,19 +982,38 @@ class ComfyUI {
           console.error(CAT, 'WebSocket open error:', e.message ?? e);
           finalize(`Error:${e.message ?? e}`);
         }
-      });
+      };
+
+      this.webSocket.on('open', onWsOpen);
+      if (alreadyOpen) {
+        onWsOpen();
+      }
 
       // eslint-disable-next-line sonarjs/cognitive-complexity
-      this.webSocket.on('message', async (data) => {
+      this.webSocket.on('message', async (data, isBinary) => {
         if (settled) return;
         // any incoming message -> reset timeout watcher
         cleanupTimers();
         scheduleConnTimeout();
 
+        const buf = toPreviewBuffer(data);
+        const looksBinary = isBinary === true || (buf && buf.length >= 8 && buf[0] === 0);
+        if (looksBinary) {
+          sendPreviewFrame(this, buf || data);
+          return;
+        }
+
+        let message;
         try {
-          const message = JSON.parse(data.toString('utf8'));
+          message = JSON.parse((buf || data).toString('utf8'));
+        } catch {
+          sendPreviewFrame(this, buf || data);
+          return;
+        }
+
+        try {
           if (message.type === 'executing' || message.type === 'status') {
-            const msgData = message.data;
+            const msgData = message.data || {};
             if (msgData.node === null && msgData.prompt_id === this.prompt_id && this.step !== 0) {
               try {
                   const image = await this.getImage(index);
@@ -855,7 +1027,7 @@ class ComfyUI {
                         return;
                       }
                   }
-                  if(cancelMark)
+                  if(this.cancelMark)
                     finalize('Error: Cancelled');
                   else 
                     finalize('Error: Image not found or invalid');
@@ -865,8 +1037,8 @@ class ComfyUI {
                   finalize(`Error: ${err.message ?? err}`);
                   return;
               }
-            } else if(msgData?.status.exec_info.queue_remaining === 0 && this.step === 0) {    
-              if(cancelMark) {
+            } else if(msgData?.status?.exec_info?.queue_remaining === 0 && this.step === 0) {    
+              if(this.cancelMark) {
                 finalize('Error: Cancelled');                  
               } else {
                 // Check if this is a cached result (has sid) or a new result (no sampling but config changed like VAE)
@@ -910,28 +1082,8 @@ class ComfyUI {
               sendToRenderer(this.uuid, `updateProgress`, progress.value, progress.max);
             }                    
           }
-        } catch {
-          // preview
-          if (this.refresh !== 0) {
-            if (this.preview !== 0 && this.preview % this.refresh === 0) {
-              try {
-                const previewData = data.slice(8);  //skip websocket header
-                if(previewData.byteLength > 256){ // json parse failed 'executing' 110 ~ 120
-                  if(this.firstValidPreview) { // skip 1st preview, might last image
-                    const base64Data = processImage(previewData);
-                    if (base64Data) {
-                        sendToRenderer(this.uuid, `updatePreview`, `data:image/png;base64,${base64Data}`);
-                    }
-                  } else {
-                    this.firstValidPreview = true;
-                  }
-                }
-              } catch (err) {
-                console.error(CAT, 'Error processing preview image:', err);
-              }
-            }
-            this.preview += 1;  
-          }                                        
+        } catch (handleErr) {
+          console.error(CAT, 'WebSocket JSON handler error:', handleErr?.message || handleErr);
         }
       });
 
@@ -972,7 +1124,7 @@ class ComfyUI {
         
         const jsonData = JSON.parse(historyResponse);
         if (!jsonData[prompt_id ||this.prompt_id]?.outputs[index]?.images) {
-          if(!cancelMark) {
+          if(!this.cancelMark) {
             console.error(CAT, `No images found in history for prompt_id: ${prompt_id || this.prompt_id}, index: ${index}`);
           }
           return null;
@@ -986,11 +1138,9 @@ class ComfyUI {
             return null;
         }
         console.log(CAT, `Image retrieved: ${imageInfo.filename}`);
-        setMutexBackendBusy(false); // Release the mutex lock after successful image retrieval        
         return imageData;
     } catch (error) {
         console.error(CAT, 'Error in getImage:', error.message);
-        setMutexBackendBusy(false); // Ensure mutex is released even on error
         return null;
     }
   }
@@ -2334,8 +2484,13 @@ class ComfyUI {
     return workflow;
   }
 
-  run(workflow, pythonRun=false) {
+  async run(workflow, pythonRun=false) {
     this.pythonRun = pythonRun;
+    try {
+      await this.connectWS();
+    } catch (error) {
+      console.warn(CAT, 'WebSocket preconnect failed, submitting prompt anyway:', error?.message || error);
+    }
     return new Promise((resolve, reject) => {
       const requestBody = {
         prompt: workflow,
@@ -2376,14 +2531,14 @@ class ComfyUI {
           console.error(CAT, 'Request failed:', error.message);
           ret = `Error: Request failed:, ${error.message}`;
         }
-        setMutexBackendBusy(false); // Release the mutex lock
+        void releaseBackendBusy('ComfyUI', this.addr, this.uuid || 'none');
         resolve(ret);
       });
 
       request.on('timeout', () => {
         req.destroy();
         console.error(`${CAT} Request timed out after ${timeout}ms`);
-        setMutexBackendBusy(false); // Release the mutex lock
+        void releaseBackendBusy('ComfyUI', this.addr, this.uuid || 'none');
         resolve(`Error: Request timed out after ${timeout}ms`);
       });
 
@@ -2394,8 +2549,6 @@ class ComfyUI {
 }
 
 async function setupGenerateBackendComfyUI() {
-  backendComfyUI = new ComfyUI(crypto.randomUUID());
-
   ipcMain.handle('generate-backend-comfyui-run', async (event, generateData) => {
       return await runComfyUI(generateData);
   });
@@ -2413,197 +2566,248 @@ async function setupGenerateBackendComfyUI() {
   });
 
   ipcMain.handle('generate-backend-comfyui-open-ws', async (event, prompt_id, skipFirst, isIndex) => {
-      return await backendComfyUI.openWS(prompt_id, skipFirst, isIndex);
+      const backend = resolveComfyBackend(prompt_id) || lastComfyBackend;
+      if (!backend) {
+        console.warn(CAT, 'No ComfyUI session for prompt', prompt_id);
+        return 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+      }
+      return await backend.openWS(prompt_id, skipFirst, isIndex);
   });
 
-  ipcMain.handle('generate-backend-comfyui-close-ws', (event) => {
-      closeWsComfyUI();
+  ipcMain.handle('generate-backend-comfyui-close-ws', (event, prompt_id) => {
+      closeWsComfyUI(prompt_id);
   });
 
   ipcMain.handle('generate-backend-comfyui-cancel', async (event) => {
-      await cancelComfyUI();
+      await cancelComfyUI('none');
   });
 }
 
-async function runComfyUI(generateData) {
-  const isBusy = await getMutexBackendBusy();
-  if (isBusy) {
-    console.warn(CAT, 'ComfyUI is busy, cannot run new generation, please try again later.');
-    return 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+function isComfyRunError(result) {
+  return typeof result === 'string' && (result.startsWith('Error') || result.startsWith('Error HTTP'));
+}
+
+async function finishComfySubmit(backend, generateData, result) {
+  if (isComfyRunError(result)) {
+    await releaseBackendBusy('ComfyUI', generateData.addr, generateData.uuid || 'none');
+    return result;
   }
-  setMutexBackendBusy(true); // Acquire the mutex lock
-  cancelMark = false;
+  try {
+    const parsed = JSON.parse(result);
+    if (parsed?.prompt_id) {
+      rememberComfyPrompt(backend, result);
+      return result;
+    }
+  } catch {
+    // fall through and release
+  }
+  await releaseBackendBusy('ComfyUI', generateData.addr, generateData.uuid || 'none');
+  return result;
+}
+
+async function runComfyUI(generateData) {
+  const started = await beginComfyJob(generateData);
+  if (!started.ok) {
+    return started.error;
+  }
+  const backend = started.backend;
 
   let workflow;
   if (generateData.unet?.enable){
-    workflow = backendComfyUI.createWorkflowUNet(generateData);
-    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow
+    workflow = backend.createWorkflowUNet(generateData);
+    backend.timeout = 15000;
   } else {
-    workflow = backendComfyUI.createWorkflow(generateData);
-    backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
+    workflow = backend.createWorkflow(generateData);
+    backend.timeout = TIMEOUT;
   }
   
-  if(backendComfyUI.uuid !== 'none')
-    console.log(CAT, 'Running ComfyUI with uuid:', backendComfyUI.uuid);
+  if(backend.uuid !== 'none')
+    console.log(CAT, 'Running ComfyUI with uuid:', backend.uuid);
 
-  const result = await backendComfyUI.run(workflow);  
-  return result;
+  const result = await backend.run(workflow);
+  return finishComfySubmit(backend, generateData, result);
 }
 
 async function runComfyUI_Regional(generateData) {
-  const isBusy = await getMutexBackendBusy();
-  if (isBusy) {
-    console.warn(CAT, 'ComfyUI API is busy, cannot run new generation, please try again later.');
-    return 'Error: ComfyUI API is busy, cannot run new generation, please try again later.';
+  const started = await beginComfyJob(generateData);
+  if (!started.ok) {
+    console.warn(CAT, COMFY_API_BUSY);
+    return COMFY_API_BUSY;
   }
-  setMutexBackendBusy(true); // Acquire the mutex lock
-  cancelMark = false;
+  const backend = started.backend;
 
   let workflow;
   if (generateData.unet?.enable) {
-    workflow = backendComfyUI.createWorkflowRegionalUnet(generateData);
-    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow
+    workflow = backend.createWorkflowRegionalUnet(generateData);
+    backend.timeout = 15000;
   } else {
-    workflow = backendComfyUI.createWorkflowRegional(generateData);
-    backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow
+    workflow = backend.createWorkflowRegional(generateData);
+    backend.timeout = TIMEOUT;
   }
   
-  if(backendComfyUI.uuid !== 'none')
-    console.log(CAT, 'Running ComfyUI Regional with uuid:', backendComfyUI.uuid);
-  const result = await backendComfyUI.run(workflow);
-  return result;
+  if(backend.uuid !== 'none')
+    console.log(CAT, 'Running ComfyUI Regional with uuid:', backend.uuid);
+  const result = await backend.run(workflow);
+  return finishComfySubmit(backend, generateData, result);
 }
 
 async function runComfyUI_MiraITU(generateData){
-  const isBusy = await getMutexBackendBusy();
-  if (isBusy) {
-    console.warn(CAT, 'ComfyUI API is busy, cannot run new generation, please try again later.');
-    return 'Error: ComfyUI API is busy, cannot run new generation, please try again later.';
+  const started = await beginComfyJob(generateData);
+  if (!started.ok) {
+    console.warn(CAT, COMFY_API_BUSY);
+    return COMFY_API_BUSY;
   }
-  setMutexBackendBusy(true); // Acquire the mutex lock
-  cancelMark = false;
+  const backend = started.backend;
 
   let workflow;
   if (generateData.taggerOptions.method === 'Checkpoint') {
     console.log(CAT, 'Using MiraITU with Checkpoint method');
-    workflow = backendComfyUI.createWorkflowMiraITU_Normal(generateData);
-    backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
-  } else {  // Diffusion
+    workflow = backend.createWorkflowMiraITU_Normal(generateData);
+    backend.timeout = TIMEOUT;
+  } else {
     console.log(CAT, 'Using MiraITU with UNet method');
-    workflow = backendComfyUI.createWorkflowMiraITU_Unet(generateData);    
-    backendComfyUI.timeout = 15000; // Set timeout to 15s for UNet workflow    
+    workflow = backend.createWorkflowMiraITU_Unet(generateData);    
+    backend.timeout = 15000;
   }
 
-  if(backendComfyUI.uuid !== 'none')
-    console.log(CAT, 'Running ComfyUI MiraITU with uuid:', backendComfyUI.uuid);
-  const result = await backendComfyUI.run(workflow);
-  return result;
+  if(backend.uuid !== 'none')
+    console.log(CAT, 'Running ComfyUI MiraITU with uuid:', backend.uuid);
+  const result = await backend.run(workflow);
+  return finishComfySubmit(backend, generateData, result);
 }
 
 async function runComfyUI_ControlNet(generateData){
-  const isBusy = await getMutexBackendBusy();
-  if (isBusy) {
-    console.warn(CAT, 'ComfyUI API is busy, cannot run new generation, please try again later.');
-    return 'Error: ComfyUI API is busy, cannot run new generation, please try again later.';
+  const started = await beginComfyJob(generateData);
+  if (!started.ok) {
+    return started.error;
   }
-  setMutexBackendBusy(true); // Acquire the mutex lock
-  cancelMark = false;
+  const backend = started.backend;
 
-  const workflow = backendComfyUI.createWorkflowControlnet(generateData)
-  backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow
-  console.log(CAT, 'Running ComfyUI ControlNet with uuid:', backendComfyUI.uuid);
-  const result = await backendComfyUI.run(workflow);
+  const workflow = backend.createWorkflowControlnet(generateData)
+  backend.timeout = TIMEOUT;
+  console.log(CAT, 'Running ComfyUI ControlNet with uuid:', backend.uuid);
+  const result = await backend.run(workflow);
 
-  if(result.startsWith('Error')){
-    console.log("Error with ControlNet:", result);    
-  } else {
-    const parsedResult = JSON.parse(result);
+  if(isComfyRunError(result)){
+    console.log("Error with ControlNet:", result);
+    await releaseBackendBusy('ComfyUI', generateData.addr, generateData.uuid || 'none');
+    return result;
+  }
+
+  const parsedResult = JSON.parse(result);
+  if (parsedResult.prompt_id) {
+    rememberComfyPrompt(backend, result);
     let newImage;
-    if (parsedResult.prompt_id) {
-      try {                
-        newImage = await openWsComfyUI(parsedResult.prompt_id, false, '3');
-      } catch (error){
-        console.log("Error with ControlNet:", error);
-      } finally {
-        closeWsComfyUI();
-      }
-      return newImage;
-    } 
+    try {
+      newImage = await openWsComfyUI(parsedResult.prompt_id, false, '3');
+    } catch (error){
+      console.log("Error with ControlNet:", error);
+    } finally {
+      closeWsComfyUI(parsedResult.prompt_id);
+    }
+    return newImage;
   }
 
+  await releaseBackendBusy('ComfyUI', generateData.addr, generateData.uuid || 'none');
   return result;
 }
 
-async function python_runComfyUI(generateData, isRegional=false, skeletonKey=false) {  
-  backendComfyUI.uuid = generateData.uuid;
+async function python_runComfyUI(generateData, isRegional=false, skeletonKey=false) {
+  const uuid = generateData.uuid || 'none';
   if(skeletonKey) {
     console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
-    setMutexBackendBusy(false);
-    sendToRenderer(backendComfyUI.uuid, `updateProgress`, 'warn', CAT,  'The Skeleton Key triggerd, Mutex Lock set to false');
+    await forceReleaseBackendBusy('ComfyUI', generateData.addr);
+    sendToRenderer(uuid, `updateProgress`, 'warn', CAT,  'The Skeleton Key triggerd, Mutex Lock set to false');
   }
 
-  const isBusy = await getMutexBackendBusy();
-  if (isBusy) {
-    console.warn(CAT, 'ComfyUI is busy, cannot run new generation, please try again later.');
-    return 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+  const started = await beginComfyJob(generateData);
+  if (!started.ok) {
+    return started.error;
   }
-  setMutexBackendBusy(true); // Acquire the mutex lock
-  cancelMark = false;
+  const backend = started.backend;
 
-  const infoMsg = `Running ComfyUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${backendComfyUI.uuid}`;
-  sendToRenderer(backendComfyUI.uuid, `updateProgress`, 'log', CAT, infoMsg);
+  const infoMsg = `Running ComfyUI ${isRegional ? 'Regional ' : ''}from Python with uuid: ${backend.uuid}`;
+  sendToRenderer(backend.uuid, `updateProgress`, 'log', CAT, infoMsg);
   console.log(CAT, infoMsg);
 
-  // Ensure VAE settings for saa-agent
   if (!generateData.vae) {
     generateData.vae = { vae_override: false, vae: 'None' };
   }
 
-  const workflow = isRegional ? backendComfyUI.createWorkflowRegional(generateData) : backendComfyUI.createWorkflow(generateData);  
-  backendComfyUI.timeout = TIMEOUT; // Reset timeout to TIMEOUT(5s) for normal workflow    
-  const result = await backendComfyUI.run(workflow, true);
+  const workflow = isRegional ? backend.createWorkflowRegional(generateData) : backend.createWorkflow(generateData);
+  backend.timeout = TIMEOUT;
+  const result = await backend.run(workflow, true);
 
-  if(result.startsWith('Error')){
-    console.log("Error:", result);    
-  } else {
-    const parsedResult = JSON.parse(result);
-    let newImage;
-    if (parsedResult.prompt_id) {
-      try {                
-        newImage = await openWsComfyUI(parsedResult.prompt_id, true, '29');
-      } catch (error){
-        console.log("Error:", error);
-      } finally {
-        closeWsComfyUI();
-      }
-
-      if (newImage.startsWith('Error')) {
-        console.log(CAT, 'Failed to retrieve image from ComfyUI Python run:', newImage);
-        return newImage;
-      } 
-
-      // Use Callback to send image to renderer, not APIResponse
-      console.log(CAT, 'Image retrieved from ComfyUI Python run.');
-      sendToRenderer(backendComfyUI.uuid, `updateProgress`, newImage);
-      return "Success";
-    } 
+  if(isComfyRunError(result)){
+    console.log("Error:", result);
+    await releaseBackendBusy('ComfyUI', generateData.addr, uuid);
+    return result;
   }
 
+  const parsedResult = JSON.parse(result);
+  if (parsedResult.prompt_id) {
+    rememberComfyPrompt(backend, result);
+    let newImage;
+    try {
+      newImage = await openWsComfyUI(parsedResult.prompt_id, true, '29');
+    } catch (error){
+      console.log("Error:", error);
+    } finally {
+      closeWsComfyUI(parsedResult.prompt_id);
+    }
+
+    if (newImage.startsWith('Error')) {
+      console.log(CAT, 'Failed to retrieve image from ComfyUI Python run:', newImage);
+      return newImage;
+    }
+
+    console.log(CAT, 'Image retrieved from ComfyUI Python run.');
+    sendToRenderer(backend.uuid, `updateProgress`, newImage);
+    return "Success";
+  }
+
+  await releaseBackendBusy('ComfyUI', generateData.addr, uuid);
   return result;
 }
 
 async function openWsComfyUI(prompt_id, skipFirst=true, index='29') {
-  return await backendComfyUI.openWS(prompt_id, skipFirst, index);
+  const backend = resolveComfyBackend(prompt_id);
+  if (!backend) {
+    console.warn(CAT, 'No ComfyUI session for prompt', prompt_id);
+    return 'Error: ComfyUI is busy, cannot run new generation, please try again later.';
+  }
+  if (prompt_id) {
+    comfyByPrompt.set(prompt_id, backend);
+  }
+  return await backend.openWS(prompt_id, skipFirst, index);
 }
 
-function closeWsComfyUI() {
-  backendComfyUI.closeWS();
+function closeWsComfyUI(prompt_id) {
+  const backend = resolveComfyBackend(prompt_id);
+  backend?.closeWS();
 }
 
-async function cancelComfyUI() {
-  console.log(CAT, 'Processing interrupted');
-  cancelMark = true;
-  await backendComfyUI.cancelGenerate();  
+async function cancelComfyUI(uuid) {
+  const owner = uuid || 'none';
+  console.log(CAT, 'Processing interrupted for', owner);
+  for (const backend of comfyBackends.values()) {
+    if (backend.uuid === owner) {
+      backend.cancelMark = true;
+      await backend.cancelGenerate();
+    }
+  }
+}
+
+async function cancelAllComfyUI() {
+  console.log(CAT, 'Cancelling all ComfyUI jobs');
+  for (const backend of comfyBackends.values()) {
+    backend.cancelMark = true;
+    try {
+      await backend.cancelGenerate();
+    } catch (error) {
+      console.warn(CAT, 'Failed to cancel ComfyUI job:', error);
+    }
+  }
 }
 
 export {
@@ -2616,5 +2820,6 @@ export {
   openWsComfyUI,
   closeWsComfyUI,
   cancelComfyUI,
+  cancelAllComfyUI,
   python_runComfyUI
 };

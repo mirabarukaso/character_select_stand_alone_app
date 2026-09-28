@@ -1,7 +1,7 @@
 import * as fs from 'node:fs';
 import path from 'node:path';
 import { app, ipcMain } from 'electron';
-import { setMutexBackendBusy } from '../../main-common.js';
+import { forceReleaseAllBackendBusy } from '../../main-common.js';
 import * as yaml from 'js-yaml';
 
 const CAT = '[ModelList]';
@@ -913,7 +913,7 @@ function updateModelAndLoRAList(args, unlockMutex = false) {
     // Loading a settings file must not steal an in-flight SAA/SAAC generation.
     if (unlockMutex) {
         console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
-        setMutexBackendBusy(false);
+        forceReleaseAllBackendBusy();
     }
 }
 

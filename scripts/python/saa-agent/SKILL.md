@@ -11,7 +11,7 @@ A command-line interface for interacting with Character Select Stand Alone App (
 ## Prerequisites
 
 **CRITICAL:** Before invoking this tool, confirm with the user that:
-1. The SAA backend is running, and version is above 2.4.0
+1. The SAA backend is running, and version is 2.9.0 or newer
 2. The SAAC (SAA Client) feature is enabled
 3. The WebSocket address is available
 4. Some Mac users uses `python3` instead of `python` to invoke Python 3.x
@@ -90,7 +90,7 @@ Error: ComfyUI is busy, cannot run new generation, please try again later.
 **Actions to take:**
 
 1. **DO NOT** automatically retry the generation
-2. Inform the user: "The SAA backend is currently busy. This could mean another process is generating an image, or the backend is locked from a previous error."
+2. Inform the user: "That backend address is currently busy. The lock is per API address, so another ComfyUI or WebUI address can still run. This address is generating, or it is locked from a previous error."
 3. Advise: "Please wait 20-60 seconds before trying again."
 4. Let the user manually retry
 

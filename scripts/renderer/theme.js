@@ -5,9 +5,6 @@ export function setupThemeToggle() {
         return null;
     }
 
-    const baseTheme = 'html/index.css'; 
-    loadCSS(baseTheme, 'base-theme');    
-
     const savedTheme = globalThis.globalSettings.css_style || 'dark';
     applyTheme(savedTheme);
 
@@ -27,32 +24,7 @@ export function applyTheme(theme) {
         console.error(CAT, '[applyTheme] Theme button or icon not found');
         return null;
     }
-    const baseTheme = 'html/index.css'; 
-    loadCSS(baseTheme, 'base-theme');   
-    
-    const galleryDarkTheme = 'html/gallery_dark.css'; 
-    const galleryLightTheme = 'html/gallery_light.css';     
-    const lightTheme = 'html/index_light.css'; 
-    const darkTheme = 'html/index_dark.css'; 
-
-    if (theme === 'dark') {
-        loadCSS(darkTheme, 'theme-style');
-        loadCSS(galleryDarkTheme, 'gallery-theme');
-        themeIcon.src = 'scripts/svg/sun.svg';
-    } else {
-        loadCSS(lightTheme, 'theme-style');
-        loadCSS(galleryLightTheme, 'gallery-theme');
-        themeIcon.src = 'scripts/svg/moon.svg';
-    }
-}
-
-function loadCSS(href, id) {
-    let link = document.getElementById(id);
-    if (!link) {
-        link = document.createElement('link');
-        link.rel = 'stylesheet';
-        link.id = id;
-        document.head.appendChild(link);
-    }
-    link.href = href;
+    const next = theme === 'light' ? 'light' : 'dark';
+    document.documentElement.dataset.theme = next;
+    themeIcon.src = next === 'dark' ? 'scripts/svg/sun.svg' : 'scripts/svg/moon.svg';
 }

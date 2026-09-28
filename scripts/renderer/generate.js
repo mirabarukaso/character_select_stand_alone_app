@@ -258,18 +258,23 @@ async function createCharacters(index, seeds) {
 
 async function handleStandardCharacter(character, seed, isValueOnly, index, FILES) {
     let tag, thumb, info, name;
-    if (character.toLowerCase() === 'random') {
-        const selectedIndex = getRandomIndex(seed, FILES.characterListArray.length);
-        tag = FILES.characterListArray[selectedIndex][1];
-        thumb = await decodeThumb(FILES.characterListArray[selectedIndex][0]);
+    const randomMode = characterRandomMode(character);
+    if (randomMode) {
+        const picked = pickRandomCharacterEntry(FILES.characterListArray, seed, randomMode);
+        if (!picked) {
+            console.warn('[handleStandardCharacter] No favorite characters to randomize');
+            return { tag: '', thumb: null, info: '', weight: globalThis.characterList.getTextValue(index), name: '' };
+        }
+        tag = picked[1];
+        thumb = await decodeThumb(picked[0]);
         info = formatCharacterInfo(index, isValueOnly, {
-        key: FILES.characterListArray[selectedIndex][0],
-        value: FILES.characterListArray[selectedIndex][1]
+        key: picked[0],
+        value: picked[1]
         });
         if(globalThis.globalSettings.language === 'en-US')
-            name = FILES.characterListArray[selectedIndex][1];
+            name = picked[1];
         else
-            name = FILES.characterListArray[selectedIndex][0];
+            name = picked[0];
     } else {
         tag = FILES.characterList[character];
         thumb = await decodeThumb(character);
@@ -288,14 +293,19 @@ async function handleStandardCharacter(character, seed, isValueOnly, index, FILE
 
 function handleOriginalCharacter(character, seed, isValueOnly, index, FILES) {
     let tag, info, name;
-    if (character.toLowerCase() === 'random') {
-        const selectedIndex = getRandomIndex(seed, FILES.ocListArray.length);
-        tag = FILES.ocListArray[selectedIndex][1];
+    const randomMode = characterRandomMode(character);
+    if (randomMode) {
+        const picked = pickRandomCharacterEntry(FILES.ocListArray, seed, randomMode);
+        if (!picked) {
+            console.warn('[handleOriginalCharacter] No favorite characters to randomize');
+            return { tag: '', thumb: null, info: '', weight: globalThis.characterList.getTextValue(index), name: '' };
+        }
+        tag = picked[1];
         info = formatOriginalCharacterInfo({
-        key: FILES.ocListArray[selectedIndex][0],
-        value: FILES.ocListArray[selectedIndex][1]
+        key: picked[0],
+        value: picked[1]
         });
-        name = FILES.ocListArray[selectedIndex][0];
+        name = picked[0];
     } else {
         tag = FILES.ocList[character];
         info = formatOriginalCharacterInfo({ key: character, value: tag }, isValueOnly);
@@ -308,6 +318,49 @@ function handleOriginalCharacter(character, seed, isValueOnly, index, FILES) {
 export function getRandomIndex(seed, listLength) {
     const idx = seed % listLength;
     return idx;
+}
+
+export function characterRandomMode(character) {
+    const name = String(character ?? '').trim().toLowerCase();
+    if (name === 'random fav' || name === 'random_fav') {
+        return 'fav';
+    }
+    if (name === 'random' || name === 'random all') {
+        return 'all';
+    }
+    return '';
+}
+
+function favoriteNameSet() {
+    const list = Array.isArray(globalThis.globalSettings?.fav_characters)
+        ? globalThis.globalSettings.fav_characters
+        : [];
+    const names = new Set();
+    for (const item of list) {
+        const name = String(item ?? '').trim().toLowerCase();
+        if (name) {
+            names.add(name);
+        }
+    }
+    return names;
+}
+
+export function pickRandomCharacterEntry(entries, seed, mode) {
+    let pool = Array.isArray(entries) ? entries : [];
+    if (mode === 'fav') {
+        const favorites = favoriteNameSet();
+        if (favorites.size > 0) {
+            pool = pool.filter((entry) => {
+                const key = String(entry?.[0] ?? '').trim().toLowerCase();
+                const value = String(entry?.[1] ?? '').trim().toLowerCase();
+                return favorites.has(key) || favorites.has(value);
+            });
+        }
+    }
+    if (pool.length === 0) {
+        return null;
+    }
+    return pool[getRandomIndex(seed, pool.length)];
 }
 
 export function formatCharacterInfo(index, isValueOnly, { key, value }) {
@@ -989,7 +1042,8 @@ export async function generateControlnetImage(imageData, controlNetSelect, contr
 }
 
 function check_character(character){
-    if(character.toLowerCase() !== 'none' && character.toLowerCase() !== 'random') {
+    const name = String(character ?? '').trim().toLowerCase();
+    if (name !== 'none' && !characterRandomMode(character)) {
         return character;
     }
     return '';
@@ -1385,9 +1439,9 @@ async function runComfyUI(apiInterface, generateData){
                     breakNow = true;
                 } finally {
                     if (globalThis.inBrowser) {
-                        sendWebSocketMessage({ type: 'API', method: 'closeWsComfyUI' });
+                        sendWebSocketMessage({ type: 'API', method: 'closeWsComfyUI', params: [parsedResult.prompt_id] });
                     } else {
-                        globalThis.api.closeWsComfyUI();
+                        globalThis.api.closeWsComfyUI(parsedResult.prompt_id);
                     }
                 }                
             } else {

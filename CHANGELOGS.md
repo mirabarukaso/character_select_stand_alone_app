@@ -1,3 +1,17 @@
+2026.09.28 v2.9.5      
+Add, `Backend log` button in `Settings` to view main-process console in overlay     
+Add, SAAC connected client count on the main window title     
+Add, confirm before quit when SAAC clients are connected            
+Add, `SAAC start/stop toggle`, `listen address` and `port` in `Settings`      
+Add, `Random All/Fav` in character list       
+Bugfix, `preview` and `result` stay on the SAA/SAAC instance that submitted the job      
+Change, `SAAC listen address/port` can be modified when stopped, locked while running     
+Change, `generate busy lock` is per backend IP address, different addresses can run in parallel     
+Change, light and dark themes share one stylesheet, colors are in `theme.css`      
+Change, `Button overlay` remembers minimized state in every UI layout except `Factory Layout`      
+Update, `saa-agent` to `1.2.0`       
+
+
 2026.09.16 v2.9.4       
 Add, `Hires Fix` button, one-click from selected Gallery image seed     
 Add, `Hires` mark on Queue job after `Seed` when `Hires Fix` is `Enabled`      

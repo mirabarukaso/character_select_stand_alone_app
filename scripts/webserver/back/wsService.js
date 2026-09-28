@@ -12,6 +12,7 @@ import helmet from 'helmet';
 import rateLimit from 'express-rate-limit';
 import bcrypt from 'bcrypt';
 import { WebSocketServer } from 'ws';
+import { Mutex } from 'async-mutex';
 import { getGlobalSettings, getSettingFiles, updateSettingFiles, loadSettings, saveSettings, deleteSettings,
     updateMiraITUSettingFiles, loadMiraITUSettings, saveMiraITUSettings
  } from '../../main/globalSettings.js';
@@ -28,7 +29,7 @@ import { runWebUI, runWebUI_Regional, cancelWebUI, startPollingWebUI, stopPollin
 import { remoteAI, localAI } from '../../main/remoteAI_backend.js';
 import { loadFile, readImage, readSafetensors, readBase64Image } from '../../main/fileHandlers.js';
 import { runImageTagger } from '../../main/imageTagger.js';
-import { getAppVersion, compressGzipThenBase64 } from '../../../main-common.js';
+import { getAppVersion, compressGzipThenBase64, getBackendLogText, setSaacClientCount } from '../../../main-common.js';
 import { loadUiLayout, saveUiLayout, setUiLayoutMode, setUiLayoutIndependent, deleteUiLayout } from '../../main/uiLayout_backend.js';
 
 const CAT = '[WSS]';
@@ -37,6 +38,7 @@ let server; // HTTP or HTTPS server instance
 let wss; // WebSocket or WebSocket Secure server instance
 let clients = new Map(); // Track clients with UUIDs
 let useHttps = false;
+const lifecycleMutex = new Mutex();
 
 const blockedIPs = new Map();   // Block IP timeouts
 const LOGIN_TIMEOUT = 30000;    // 30 seconds for test
@@ -48,6 +50,20 @@ const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
 const LOG_DIR = path.join(__dirname, '../../../logs');
 const LOG_FILE = path.join(LOG_DIR, 'auth.log');
+
+function countConnectedSaacClients() {
+    let count = 0;
+    for (const client of clients.values()) {
+        if (client.ws && client.ws.readyState === client.ws.OPEN) {
+            count += 1;
+        }
+    }
+    return count;
+}
+
+function publishSaacClientCount() {
+    setSaacClientCount(countConnectedSaacClients());
+}
 
 function ensureLogDir() {
   if (!existsSync(LOG_DIR)) {
@@ -68,6 +84,58 @@ function writeLog(message) {
 
 const MIN_WS_PORT = 10001;
 const DEFAULT_WS_PORT = 51028;
+const DEFAULT_WS_ADDR = '0.0.0.0';
+
+const listenState = {
+  running: false,
+  addr: DEFAULT_WS_ADDR,
+  port: DEFAULT_WS_PORT,
+  https: false,
+  basePath: null,
+  error: '',
+};
+
+function getWsServiceStatus() {
+  return {
+    running: listenState.running,
+    addr: listenState.addr,
+    port: listenState.port,
+    https: listenState.https,
+    error: listenState.error,
+  };
+}
+
+function applyRunningWsServiceGuard(settings, status) {
+  if (!settings || typeof settings !== 'object') {
+    return settings;
+  }
+  if (status?.running) {
+    settings.ws_service = true;
+    settings.ws_addr = status.addr;
+    settings.ws_port = status.port;
+  }
+  return settings;
+}
+
+function preserveRunningWsServiceSettings(settings) {
+  return applyRunningWsServiceGuard(settings, getWsServiceStatus());
+}
+
+function setWsServiceBasePath(basePath) {
+  if (typeof basePath === 'string' && basePath) {
+    listenState.basePath = basePath;
+  }
+}
+
+function normalizeWsAddr(wsAddr) {
+  if (typeof wsAddr !== 'string') {
+    return DEFAULT_WS_ADDR;
+  }
+
+  const candidate = wsAddr.trim();
+  const ipv4Regex = /^(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)(\.(25[0-5]|2[0-4]\d|1\d\d|[1-9]?\d)){3}$/;
+  return ipv4Regex.test(candidate) ? candidate : DEFAULT_WS_ADDR;
+}
 
 function normalizeWsPort(wsPort) {
   const port = Number(wsPort);
@@ -102,16 +170,73 @@ function isPortAvailable(port, host) {
   });
 }
 
+function listenServer(httpServer, wsAddr, wsPort) {
+  return new Promise((resolve, reject) => {
+    const onError = (error) => {
+      httpServer.off('listening', onListening);
+      reject(error);
+    };
+    const onListening = () => {
+      httpServer.off('error', onError);
+      resolve();
+    };
+    httpServer.once('error', onError);
+    httpServer.listen(wsPort, wsAddr, onListening);
+  });
+}
+
 // Function to set up the HTTP or HTTPS server based on certificate availability
 async function setupHttpServer(basePatch, wsAddr, wsPort) {
+    const release = await lifecycleMutex.acquire();
+    try {
+        return await setupHttpServerUnlocked(basePatch, wsAddr, wsPort);
+    } catch (error) {
+        listenState.error = error.message || String(error);
+        console.error(CAT, 'Failed to start SAAC service:', error);
+        writeLog(`${CAT} Failed to start SAAC service: ${listenState.error}`);
+        await closeWebSocketServerUnlocked();
+        listenState.error = error.message || String(error);
+        return false;
+    } finally {
+        release();
+    }
+}
+
+// eslint-disable-next-line sonarjs/cognitive-complexity
+async function setupHttpServerUnlocked(basePatch, wsAddr, wsPort) {
+    if (basePatch) {
+        listenState.basePath = basePatch;
+    }
+    const basePath = listenState.basePath;
+    if (!basePath) {
+        listenState.error = 'No base path configured for HTTP server.';
+        console.error(CAT, listenState.error);
+        return false;
+    }
+
+    wsAddr = normalizeWsAddr(wsAddr);
     wsPort = normalizeWsPort(wsPort);
+
+    if (listenState.running) {
+        if (listenState.addr === wsAddr && listenState.port === wsPort) {
+            listenState.error = '';
+            return true;
+        }
+        listenState.error = `SAAC is already running at ${listenState.addr}:${listenState.port}`;
+        console.warn(CAT, listenState.error);
+        writeLog(`${CAT} ${listenState.error}`);
+        return false;
+    }
+
     const portAvailable = await isPortAvailable(wsPort, wsAddr);
     if (!portAvailable) {
-      const warning = `${CAT} Port ${wsPort} is already in use or unavailable; aborting HTTP server startup.`;
+      listenState.error = `Port ${wsPort} is already in use or unavailable`;
+      const warning = `${CAT} ${listenState.error}; aborting HTTP server startup.`;
       console.warn(warning);
       writeLog(warning);
       return false;
     }
+    listenState.error = '';
     // Check for certificate files
     const certPath = process.env.SSL_CERT_PATH || path.join(__dirname, '../../../html/ca/cert.pem');
     const keyPath = process.env.SSL_KEY_PATH || path.join(__dirname, '../../../html/ca/key.pem');
@@ -163,7 +288,7 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
         legacyHeaders: false,
     });
 
-    expressApp.use(express.static(basePatch));
+    expressApp.use(express.static(basePath));
 
     // Serve index_browser.html for browser access
     expressApp.get('/', indexLimiter, (req, res) => {
@@ -230,12 +355,19 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
                 key: fs.readFileSync(keyPath),
             };
             USERS = loadUsersFromCSV(usersDataPath);
-            server = https.createServer(options, expressApp).listen(wsPort, wsAddr, () => {
-                console.log(CAT, `HTTPS server running at https://${wsAddr}:${wsPort}`);
-            });
+            server = https.createServer(options, expressApp);
+            await listenServer(server, wsAddr, wsPort);
+            console.log(CAT, `HTTPS server running at https://${wsAddr}:${wsPort}`);
         } catch (error) {
             console.error(CAT, 'Failed to start HTTPS server:', error);
-            throw error;
+            listenState.error = error.message || String(error);
+            if (server) {
+                await new Promise((resolve) => {
+                    server.close(() => resolve());
+                });
+                server = null;
+            }
+            return false;
         }
     } else {
         // Start HTTP server
@@ -250,30 +382,81 @@ async function setupHttpServer(basePatch, wsAddr, wsPort) {
             res.json({ token: loginToken });
         });
 
-        server = http.createServer(expressApp).listen(wsPort, wsAddr, () => {
-            console.log(CAT, `HTTP server running at http://${wsAddr}:${wsPort}`);
-        });
+        server = http.createServer(expressApp);
+        await listenServer(server, wsAddr, wsPort);
+        console.log(CAT, `HTTP server running at http://${wsAddr}:${wsPort}`);
     }
 
     // Set up WebSocket server
     wss = createWebSocketServer(server, useHttps);
+    listenState.running = wss !== null;
+    listenState.addr = wsAddr;
+    listenState.port = wsPort;
+    listenState.https = useHttps;
+    if (!listenState.running) {
+        listenState.error = 'Failed to create WebSocket server';
+        if (server) {
+            await new Promise((resolve) => {
+                server.close(() => resolve());
+            });
+            server = null;
+        }
+        return false;
+    }
 
-    return wss!==null;
+    return true;
 }
 
+/**
+ * @returns {Promise<void>}
+ */
 function closeWebSocketServer() {
+    return lifecycleMutex.runExclusive(() => closeWebSocketServerUnlocked());
+}
+
+async function closeWebSocketServerUnlocked() {
+    for (const client of clients.values()) {
+        try {
+            if (client.ws && client.ws.readyState === client.ws.OPEN) {
+                client.ws.close(1001, 'SAAC service stopped');
+            }
+        } catch (error) {
+            console.warn(CAT, 'Failed to close client socket:', error);
+        }
+    }
+    clients.clear();
+    publishSaacClientCount();
+
     if (wss) {
-        wss.close(() => {
-            console.log(CAT, 'WebSocket server closed');
+        await new Promise((resolve) => {
+            const timer = setTimeout(resolve, 5000);
+            wss.close(() => {
+                clearTimeout(timer);
+                console.log(CAT, 'WebSocket server closed');
+                resolve();
+            });
         });
-        clients.clear();
+        wss = null;
     }
 
     if (server) {
-        server.close(() => {
-            console.log(CAT, 'Server closed');
+        if (typeof server.closeAllConnections === 'function') {
+            server.closeAllConnections();
+        }
+        await new Promise((resolve) => {
+            const timer = setTimeout(resolve, 5000);
+            server.close(() => {
+                clearTimeout(timer);
+                console.log(CAT, 'Server closed');
+                resolve();
+            });
         });
+        server = null;
     }
+
+    listenState.running = false;
+    listenState.https = false;
+    listenState.error = '';
 }
 
 function createWebSocketServer(server, useHttps) {
@@ -315,6 +498,7 @@ function createWebSocketServer(server, useHttps) {
                         
                         clients.set(uuid, { ws, uuid, ip: clientIP, username: clients.get(uuid).username });
                         console.log(CAT, `Client registered with UUID: ${uuid}`);
+                        publishSaacClientCount();
                         ws.send(JSON.stringify({ type: 'registerUUIDResponse', id, value: uuid }));
                         return;
                     }                    
@@ -348,7 +532,7 @@ function createWebSocketServer(server, useHttps) {
                             ws.send(JSON.stringify({ type: 'APIError', id, error: 'Method not specified or invalid' }));                            
                             return;
                         }
-                        await handleApiRequest(ws, method, params, id);
+                        await handleApiRequest(ws, method, params, id, uuid);
                         return;
                     }
                     default:
@@ -371,6 +555,7 @@ function createWebSocketServer(server, useHttps) {
                     break;
                 }
             }
+            publishSaacClientCount();
         });
 
         ws.on('error', (error) => {
@@ -383,6 +568,7 @@ function createWebSocketServer(server, useHttps) {
                     break;
                 }
             }
+            publishSaacClientCount();
         });
     });
 
@@ -410,22 +596,32 @@ function sendToClient(uuid, type, data) {
 // Function to broadcast a message to all connected clients
 function broadcastMessage(type, data) {
     const message = JSON.stringify({ type, value: data });
-    for ( const { uuid, client } of clients ) {
-        if (client.ws.readyState === client.ws.OPEN) {
+    let sent = 0;
+    for (const [uuid, client] of clients) {
+        if (client?.ws && client.ws.readyState === client.ws.OPEN) {
             try {
                 client.ws.send(message);
+                sent += 1;
                 console.log(CAT, `Broadcasted message of type ${type} to client ${uuid}`);
             } catch (error) {
                 console.error(CAT, `Failed to broadcast to client ${uuid}:`, error);
             }
         }
     }
+    return sent;
+}
+
+async function notifySaacShutdownAndClose() {
+    broadcastMessage('ServerShutdown', { reason: 'host-quit' });
+    await new Promise((resolve) => setTimeout(resolve, 300));
+    await closeWebSocketServer();
 }
 
 // API method handler (unchanged)
 const methodHandlers = {
   // version
   'getAppVersion': ()=> getAppVersion(),
+  'getBackendLogs': ()=> getBackendLogText(),
 
   // cached files
   'getCachedFiles': ()=> getCachedFilesWithoutThumb(),
@@ -519,16 +715,16 @@ const methodHandlers = {
   'runComfyUI_ControlNet': (params)=> runComfyUI_ControlNet(...params),
   'runComfyUI_MiraITU': (params)=> runComfyUI_MiraITU(...params),
   'openWsComfyUI': (params)=> openWsComfyUI(...params),
-  'closeWsComfyUI': ()=> closeWsComfyUI(),
-  'cancelComfyUI': ()=> cancelComfyUI(),
+  'closeWsComfyUI': (params)=> closeWsComfyUI(params?.[0]),
+  'cancelComfyUI': (_params, uuid)=> cancelComfyUI(uuid),
 
   // webui
   'runWebUI': (params)=> runWebUI(...params),
   'runWebUI_Regional': (params)=> runWebUI_Regional(...params),
   'runWebUI_ControlNet': (params)=> runWebUI_ControlNet(...params),
-  'cancelWebUI': ()=> cancelWebUI(),
-  'startPollingWebUI': ()=> startPollingWebUI(),
-  'stopPollingWebUI': ()=> stopPollingWebUI(),
+  'cancelWebUI': (_params, uuid)=> cancelWebUI(uuid),
+  'startPollingWebUI': (_params, uuid)=> startPollingWebUI(uuid),
+  'stopPollingWebUI': (_params, uuid)=> stopPollingWebUI(uuid),
   'getControlNetProcessorListWebUI': ()=> getControlNetProcessorList(),
   'getADetailerModelListWebUI': ()=> getADetailerModelList(),
   'getUpscalersModelListWebUI': ()=> getUpscalersModelList(),
@@ -552,12 +748,12 @@ const methodHandlers = {
   'python_runWebUI': (params) => python_runWebUI(...params),
 };
 
-async function handleApiRequest(ws, method, params, id) {
+async function handleApiRequest(ws, method, params, id, uuid) {
     let result;
 
     const handler = methodHandlers[method];
     if (handler) {
-        result = await handler(params);
+        result = await handler(params, uuid);
     } else {
         ws.send(JSON.stringify({ type: 'APIError', method, id, error: `Unknown API method: ${method}` }));
         console.warn(CAT, `Unknown API method: ${method}`);
@@ -575,6 +771,12 @@ async function handleApiRequest(ws, method, params, id) {
 export {
     setupHttpServer,
     closeWebSocketServer,
+    notifySaacShutdownAndClose,
+    countConnectedSaacClients,
     broadcastMessage,
     sendToClient,
+    getWsServiceStatus,
+    setWsServiceBasePath,
+    applyRunningWsServiceGuard,
+    preserveRunningWsServiceSettings,
 };

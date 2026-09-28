@@ -1,4 +1,4 @@
-import { updateLanguage, updateSettings } from './renderer/language.js';
+import { updateLanguage, updateSettings, applyWsServiceSettings, applyWsServiceLock } from './renderer/language.js';
 import { setupGallery, GRID_SIZE_MIN, GRID_SIZE_MAX, GRID_SIZE_STEP, GRID_SIZE_DEFAULT } from './renderer/customGallery.js';
 import { setupThumbOverlay, setupThumb } from './renderer/customThumbGallery.js';
 import { setupSuggestionSystem } from './renderer/tagAutoComplete.js';
@@ -23,6 +23,7 @@ import { setupJsonSlot } from './renderer/slots/myJsonSlot.js';
 import { setupADetailer } from './renderer/slots/myADetailerSlot.js';
 import { setupQueue } from './renderer/slots/myQueueSlot.js';
 import { setBlur, setNormal, showDialog } from './renderer/components/myDialog.js';
+import { sendWebSocketMessage } from './webserver/front/wsRequest.js';
 import { setupImageUploadOverlay } from './renderer/imageInfo.js';
 import { setupThemeToggle } from './renderer/theme.js';
 import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/components/myRightClickMenu.js';
@@ -47,6 +48,7 @@ function afterDOMinit() {
         globalThis.okm.setup_customOverlay_updatePreview(from_main_updatePreview);
         globalThis.okm.setup_customOverlay_progressBar(from_main_customOverlayProgress);
         globalThis.okm.setup_rightClickMenu_spellCheck(addSpellCheckSuggestions);
+        globalThis.okm.setup_confirmQuitSaac?.(confirmQuitSaacClients);
         if (globalThis.initialized) {
             setNormal();
 
@@ -319,6 +321,45 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         busy_retry_counts: setupSlider('system-settings-busy-retry-counts', LANG.busy_retry_counts, {min:0, max:10, step:1, defaultValue:SETTINGS.busy_retry_counts},
             (value) => { globalThis.globalSettings.busy_retry_counts = value; resetAutoRetry(globalThis.globalSettings.busy_retry_seconds, value); }),
 
+        ws_service: setupCheckbox('system-settings-saac-enable', LANG.saac_enable, SETTINGS.ws_service, true, callback_ws_service),
+        ws_addr: setupTextbox('system-settings-saac-addr', LANG.saac_addr, {
+            value: SETTINGS.ws_addr,
+            maxLines: 1
+            }, true, (value) => {
+                if (globalThis.wsServiceRuntime?.running) return;
+                globalThis.globalSettings.ws_addr = value;
+            }),
+        ws_port: setupTextbox('system-settings-saac-port', LANG.saac_port, {
+            value: String(SETTINGS.ws_port),
+            maxLines: 1
+            }, true, (value) => {
+                if (globalThis.wsServiceRuntime?.running) return;
+                const port = Number(value);
+                globalThis.globalSettings.ws_port = Number.isInteger(port) ? port : value;
+            }, false, true),
+        backend_log: setupButtons('system-settings-backend-log', LANG.backend_log, {
+            defaultColor: 'rgb(71, 85, 105)',
+            hoverColor: 'rgb(51, 65, 85)',
+            disabledColor: 'rgb(136, 121, 115)',
+            width: '100%',
+            height: '32px',
+            hidden: false,
+            clickable: true
+        }, () => {
+            showBackendLogOverlay();
+        }),
+        backend_log_copy: setupButtons('system-settings-backend-log-copy', LANG.backend_log_copy, {
+            defaultColor: 'rgb(47, 111, 93)',
+            hoverColor: 'rgb(32, 84, 70)',
+            disabledColor: 'rgb(136, 121, 115)',
+            width: '100%',
+            height: '32px',
+            hidden: false,
+            clickable: true
+        }, () => {
+            copyBackendLog();
+        }),
+
         queueAutostart:setupCheckbox('queue-autostart-generate', LANG.generate_auto_start, SETTINGS.generate_auto_start,
             true, async (value) => {
                 await callback_queue_autostart(value, false);
@@ -342,6 +383,17 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         globalThis.generate.generate_hires.setTooltip(hasImage ? lang.run_hires_button_tip : lang.run_hires_button_empty);
     };
     globalThis.generate.generate_hires.syncFromGallery();
+
+    const saacRow = document.querySelector('.system-settings-main-saac');
+    if (globalThis.inBrowser) {
+        if (saacRow) {
+            saacRow.style.display = 'none';
+        }
+        globalThis.wsServiceRuntime = { running: false };
+    } else {
+        globalThis.wsServiceRuntime = await globalThis.api.getWsServiceStatus();
+        applyWsServiceSettings();
+    }
 }
 
 export async function createPrompt(SETTINGS, FILES, LANG) {
@@ -794,10 +846,28 @@ async function setupWizard(){
         });
         globalThis.globalSettings.ws_port = normalizeWsPort(globalThis.globalSettings.ws_port);
 
-         await showDialog('info', { 
-            message: LANG.setup_saac_start.replace('{0}', globalThis.globalSettings.ws_addr).replace('{1}', globalThis.globalSettings.ws_port),
-            buttonText: LANG.setup_ok
-        });
+        const startResult = await globalThis.api.startWsService(
+            globalThis.globalSettings.ws_addr,
+            globalThis.globalSettings.ws_port
+        );
+        globalThis.wsServiceRuntime = startResult;
+        applyWsServiceSettings();
+        if (startResult?.success) {
+            await showDialog('info', {
+                message: LANG.setup_saac_start.replace('{0}', startResult.addr).replace('{1}', startResult.port),
+                buttonText: LANG.setup_ok
+            });
+            const version = await globalThis.api.getAppVersion();
+            document.title = `Character Select SAA ${version}`;
+        } else {
+            globalThis.globalSettings.ws_service = false;
+            globalThis.wsServiceRuntime = { running: false };
+            applyWsServiceSettings();
+            await showDialog('info', {
+                message: LANG.saac_start_failed.replace('{0}', startResult?.error || ''),
+                buttonText: LANG.setup_ok
+            });
+        }
     }
 
     await globalThis.api.saveSettingFile('settings.json', globalThis.globalSettings);
@@ -806,6 +876,167 @@ async function setupWizard(){
     globalThis.dropdownList.settings.updateDefaults(`settings.json`);
     await reloadFiles();
     await showDialog('info', { message: LANG.setup_done, buttonText:SETTINGS.setup_ok});
+}
+
+async function confirmQuitSaacClients(count) {
+    const LANG = globalThis.cachedFiles.language[globalThis.globalSettings.language];
+    return await showDialog('confirm', {
+        message: LANG.quit_saac_connected.replace('{0}', String(count)),
+        yesText: LANG.setup_yes,
+        noText: LANG.setup_no,
+        beep: true
+    });
+}
+
+async function fetchBackendLogs() {
+    if (globalThis.inBrowser) {
+        return await sendWebSocketMessage({ type: 'API', method: 'getBackendLogs' });
+    }
+    return await globalThis.api.getBackendLogs();
+}
+
+function backendLogLanguage() {
+    return globalThis.cachedFiles?.language?.[globalThis.globalSettings?.language] || {};
+}
+
+async function copyBackendLog() {
+    const button = globalThis.generate?.backend_log_copy;
+    let text = '';
+    try {
+        const raw = await fetchBackendLogs();
+        const LANG = backendLogLanguage();
+        text = (typeof raw === 'string' && raw.trim()) ? raw : (LANG.backend_log_empty || 'No log entries yet.');
+    } catch (error) {
+        console.warn('Failed to read backend log:', error);
+        return;
+    }
+    try {
+        await navigator.clipboard.writeText(text);
+    } catch (error) {
+        console.warn('Failed to copy backend log:', error);
+        const LANG = backendLogLanguage();
+        globalThis.overlay?.custom?.createCustomOverlay?.(
+            'none',
+            (LANG.saac_macos_clipboard || '{0}').replace('{0}', text),
+            384,
+            'center',
+            'left',
+            null,
+            'Clipboard'
+        );
+        return;
+    }
+    if (!button?.setTitle) {
+        return;
+    }
+    button.setTitle(backendLogLanguage().backend_log_copied || 'Copied');
+    setTimeout(() => {
+        button.setTitle(backendLogLanguage().backend_log_copy || 'Copy log');
+    }, 1500);
+}
+
+function formatBackendLogText(raw) {
+    const LANG = globalThis.cachedFiles?.language?.[globalThis.globalSettings?.language] || {};
+    const header = LANG.backend_log_header || 'Backend log (auto-refresh)\n';
+    const body = (typeof raw === 'string' && raw.trim()) ? raw : (LANG.backend_log_empty || 'No log entries yet.');
+    return `${header}\n${body}`;
+}
+
+async function showBackendLogOverlay() {
+    const overlayApi = globalThis.overlay?.custom;
+    if (!overlayApi?.createCustomOverlay) {
+        return;
+    }
+
+    overlayApi.closeCustomOverlaysByGroup?.('backend-log');
+    const firstText = formatBackendLogText(await fetchBackendLogs());
+    const logView = overlayApi.createCustomOverlay(
+        'none',
+        firstText,
+        384,
+        'left',
+        'left',
+        'backend-log-host',
+        'backend-log'
+    );
+    if (!logView?.overlay || typeof logView.setText !== 'function') {
+        return;
+    }
+
+    const textbox = logView.overlay.querySelector('.cg-custom-textbox');
+    if (textbox) {
+        textbox.scrollTop = textbox.scrollHeight;
+    }
+
+    const timerId = setInterval(async () => {
+        if (!document.body.contains(logView.overlay)) {
+            clearInterval(timerId);
+            return;
+        }
+        try {
+            const nearBottom = textbox
+                ? (textbox.scrollHeight - textbox.scrollTop - textbox.clientHeight) < 48
+                : true;
+            logView.setText(formatBackendLogText(await fetchBackendLogs()));
+            if (textbox && nearBottom) {
+                textbox.scrollTop = textbox.scrollHeight;
+            }
+        } catch (error) {
+            console.warn('Failed to refresh backend log overlay:', error);
+        }
+    }, 1000);
+    logView.overlay.dataset.timerInterval = String(timerId);
+}
+
+async function callback_ws_service(value) {
+    if (globalThis.inBrowser) {
+        return;
+    }
+
+    const LANG = globalThis.cachedFiles.language[globalThis.globalSettings.language];
+    globalThis.generate.ws_service.setEnable(false);
+    try {
+        if (value) {
+            const addr = normalizeWsAddr(globalThis.generate.ws_addr.getValue());
+            const port = normalizeWsPort(globalThis.generate.ws_port.getValue());
+            globalThis.generate.ws_addr.setValue(addr);
+            globalThis.generate.ws_port.setValue(String(port));
+            const result = await globalThis.api.startWsService(addr, port);
+            if (!result?.success) {
+                globalThis.globalSettings.ws_service = false;
+                globalThis.wsServiceRuntime = { running: false, addr, port, https: false, error: result?.error || '' };
+                applyWsServiceSettings();
+                await showDialog('info', {
+                    message: LANG.saac_start_failed.replace('{0}', result?.error || ''),
+                    buttonText: LANG.setup_ok
+                });
+                return;
+            }
+            globalThis.globalSettings.ws_service = true;
+            globalThis.globalSettings.ws_addr = result.addr;
+            globalThis.globalSettings.ws_port = result.port;
+            globalThis.wsServiceRuntime = result;
+            applyWsServiceLock(true);
+        } else {
+            const result = await globalThis.api.stopWsService();
+            if (result?.running) {
+                globalThis.wsServiceRuntime = result;
+                applyWsServiceSettings();
+                await showDialog('info', {
+                    message: LANG.saac_stop_failed.replace('{0}', result?.error || ''),
+                    buttonText: LANG.setup_ok
+                });
+                return;
+            }
+            globalThis.globalSettings.ws_service = false;
+            globalThis.wsServiceRuntime = result || { running: false };
+            applyWsServiceLock(false);
+        }
+        const version = await globalThis.api.getAppVersion();
+        document.title = `Character Select SAA ${version}`;
+    } finally {
+        globalThis.generate.ws_service.setEnable(true);
+    }
 }
 
 function normalizeWsAddr(wsAddr) {

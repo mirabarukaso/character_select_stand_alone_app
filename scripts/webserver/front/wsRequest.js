@@ -12,6 +12,7 @@ const callbacks = new Map(); // Registry for message type callbacks
 
 let reconnectingTrigger = false;
 let securedConnection = false;
+let hostShutdown = false;
 
 // Store the instance of message by id
 const pendingMessages = new Map();
@@ -41,6 +42,7 @@ export async function initWebSocket(reConnect = false) {
         }
 
         await connectWebSocket(wsAddress, wsPort);
+        hostShutdown = false;
         setupBeforeUnloadListener();
 
         version = await sendWebSocketMessage({ type: 'API', method: 'getAppVersion' });
@@ -223,6 +225,9 @@ async function connectWebSocket(wsAddress, wsPort) {
                     case 'Callback':
                         handleCallbackMessage(data.value);
                         break;
+                    case 'ServerShutdown':
+                        handleHostShutdown();
+                        break;
                     default:
                         console.warn(`Unexpected message type: ${type}`);
                 }
@@ -250,11 +255,8 @@ async function connectWebSocket(wsAddress, wsPort) {
         };
 
         ws.onclose = () => {
-            const SETTINGS = globalThis.globalSettings;
-            const FILES = globalThis.cachedFiles;
-            const LANG = FILES.language[SETTINGS.language];
             console.warn('Disconnected from SAA');
-            globalThis.overlay.custom.createErrorOverlay(LANG.saac_disconnected , 'Disconnected from SAA');
+            showSaacDisconnectOverlay(hostShutdown);
 
             for (const [id, { reject }] of pendingMessages) {
                 reject(new Error('WebSocket connection closed, delete pending message'));
@@ -263,7 +265,7 @@ async function connectWebSocket(wsAddress, wsPort) {
             callbacks.clear();
             console.log('Cleared all pending messages and callbacks');
             ws = null;
-            setHTMLTitle('SAA Client (Disconnected)');
+            setHTMLTitle(hostShutdown ? 'SAA Client (Host shutting down)' : 'SAA Client (Disconnected)');
         };
 
         ws.onerror = (err) => {
@@ -295,9 +297,41 @@ async function attemptReconnection() {
 }
 
 // Function to send a message with reconnection handling
+function handleHostShutdown() {
+    hostShutdown = true;
+    reconnectingTrigger = false;
+    showSaacDisconnectOverlay(true);
+    setHTMLTitle('SAA Client (Host shutting down)');
+}
+
+function showSaacDisconnectOverlay(shutdown) {
+    const SETTINGS = globalThis.globalSettings;
+    const FILES = globalThis.cachedFiles;
+    const LANG = FILES?.language?.[SETTINGS?.language];
+    const overlay = globalThis.overlay?.custom;
+    if (!overlay?.createErrorOverlay) {
+        return;
+    }
+    if (shutdown) {
+        overlay.createErrorOverlay(
+            LANG?.saac_host_shutdown || 'SAA host is shutting down.\nThis session will not reconnect automatically.',
+            'SAA host shutting down'
+        );
+        return;
+    }
+    overlay.createErrorOverlay(
+        LANG?.saac_disconnected || 'Disconnected from SAA',
+        'Disconnected from SAA'
+    );
+}
+
 export async function sendWebSocketMessage(message) {
     const id = messageId++;
     const messageWithId = { ...message, id };
+
+    if (hostShutdown) {
+        throw new Error('SAA host has shut down');
+    }
 
     if (!isWebSocketOpen(ws)) {
         if (reconnectingTrigger) {

@@ -14,7 +14,8 @@ let okm = {
   mainGallery_appendImageData: null,
   customOverlay_updatePreview: null,
   customOverlay_progressBar: null,
-  rightClickMenu_spellCheck: null
+  rightClickMenu_spellCheck: null,
+  confirmQuitSaac: null
 }
 
 contextBridge.exposeInMainWorld('okm', {
@@ -37,6 +38,11 @@ contextBridge.exposeInMainWorld('okm', {
     if (typeof callback === 'function') {
       okm.rightClickMenu_spellCheck = callback;
     } 
+  },
+  setup_confirmQuitSaac: (callback) => {
+    if (typeof callback === 'function') {
+      okm.confirmQuitSaac = callback;
+    }
   }
 });
 
@@ -59,6 +65,18 @@ const generateFunctions = {
   }
 };
 
+ipcRenderer.on('quit-saac-confirm', async (event, count) => {
+  let confirmed = false;
+  try {
+    if (typeof okm.confirmQuitSaac === 'function') {
+      confirmed = !!(await okm.confirmQuitSaac(count));
+    }
+  } catch (error) {
+    console.error('[quit-saac-confirm] Dialog failed:', error);
+  }
+  ipcRenderer.send('quit-saac-confirm-result', confirmed);
+});
+
 ipcRenderer.on('generate-backend', (event, { functionName, args }) => {
   if (generateFunctions[functionName]) {
     generateFunctions[functionName](...args);
@@ -71,6 +89,8 @@ ipcRenderer.on('generate-backend', (event, { functionName, args }) => {
 contextBridge.exposeInMainWorld('api', {
   // version
   getAppVersion: async () => ipcRenderer.invoke('get-saa-version'),
+  getBackendLogs: async () => ipcRenderer.invoke('get-backend-logs'),
+  systemBeep: async () => ipcRenderer.invoke('system-beep'),
 
   // fileHandlers
   readFile: async (relativePath, prefix, filePath) => ipcRenderer.invoke('read-file', relativePath, prefix, filePath),
@@ -127,7 +147,7 @@ contextBridge.exposeInMainWorld('api', {
   runComfyUI_MiraITU: async (generateData) => ipcRenderer.invoke('generate-backend-comfyui-run-mira-itu', generateData),
   getImageComfyUI: async () => ipcRenderer.invoke('generate-backend-comfyui-get-image'),
   openWsComfyUI: async (prompt_id, skipFirst, isIndex) => ipcRenderer.invoke('generate-backend-comfyui-open-ws', prompt_id, skipFirst, isIndex),
-  closeWsComfyUI: async () => ipcRenderer.invoke('generate-backend-comfyui-close-ws'),
+  closeWsComfyUI: async (prompt_id) => ipcRenderer.invoke('generate-backend-comfyui-close-ws', prompt_id),
   cancelComfyUI: async () => ipcRenderer.invoke('generate-backend-comfyui-cancel'),
 
   // generate_backend WebUI
@@ -158,6 +178,11 @@ contextBridge.exposeInMainWorld('api', {
 
   // Image Tagger
   runImageTagger: async (args) => ipcRenderer.invoke('run-image-tagger', args),
+
+  // SAAC web service
+  getWsServiceStatus: async () => ipcRenderer.invoke('ws-service-status'),
+  startWsService: async (addr, port) => ipcRenderer.invoke('ws-service-start', addr, port),
+  stopWsService: async () => ipcRenderer.invoke('ws-service-stop'),
 });
 
 globalThis.addEventListener('DOMContentLoaded', () => {

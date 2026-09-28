@@ -103,6 +103,19 @@ function isSpecialSearchMode(searchText) {
     return typeof searchText === 'string' && searchText.startsWith('@');
 }
 
+function characterSentinelOptions() {
+    return [
+        { key: 'Random All', value: 'random' },
+        { key: 'Random Fav', value: 'random_fav' },
+        { key: 'None', value: 'none' }
+    ];
+}
+
+function isCharacterSentinelText(searchText) {
+    const name = String(searchText || '').trim().toLowerCase();
+    return name === 'none' || name === 'random' || name === 'random all' || name === 'random fav' || name === 'random_fav';
+}
+
 function handleCharacterOptions(options, filteredOptions, args, dropdownCount) {
     const [[keys, values], oc] = args;
     if (!Array.isArray(keys) || !Array.isArray(values) || keys.length !== values.length) {
@@ -114,13 +127,13 @@ function handleCharacterOptions(options, filteredOptions, args, dropdownCount) {
         return;
     }
 
-    const charOptions = [{ key: 'Random', value: 'random' }, { key: 'None', value: 'none' }].concat(keys.map((key, idx) => ({ key, value: values[idx] })));
+    const charOptions = characterSentinelOptions().concat(keys.map((key, idx) => ({ key, value: values[idx] })));
     for (let i = 0; i < dropdownCount - 1; i++) {
         options[i] = charOptions;
         filteredOptions[i] = [...charOptions];
     }
 
-    const originalOptions = [{ key: 'Random', value: 'random' }, { key: 'None', value: 'none' }].concat(oc.map(key => ({ key, value: key })));
+    const originalOptions = characterSentinelOptions().concat(oc.map(key => ({ key, value: key })));
     options[dropdownCount - 1] = originalOptions;
     filteredOptions[dropdownCount - 1] = [...originalOptions];
 }
@@ -173,13 +186,13 @@ function handleRegionalCharacterOptions(options, filteredOptions, args, dropdown
         return;
     }
 
-    const charOptions = [{ key: 'Random', value: 'random' }, { key: 'None', value: 'none' }].concat(keys.map((key, idx) => ({ key, value: values[idx] })));
+    const charOptions = characterSentinelOptions().concat(keys.map((key, idx) => ({ key, value: values[idx] })));
     for (let i = 0; i < 2; i++) {
         options[i] = charOptions;
         filteredOptions[i] = [...charOptions];
     }
 
-    const originalOptions = [{ key: 'Random', value: 'random' }, { key: 'None', value: 'none' }].concat(oc.map(key => ({ key, value: key })));
+    const originalOptions = characterSentinelOptions().concat(oc.map(key => ({ key, value: key })));
     for (let i = 2; i < dropdownCount; i++) {
         options[i] = originalOptions;
         filteredOptions[i] = [...originalOptions];
@@ -876,7 +889,7 @@ function createDropdown({
 
                 // Remove input by None or blank or selected item
                 const searchText = (input.value || '').toLowerCase();
-                if (searchText === 'none' || searchText === 'random' || filteredOptions[index].length === options[index].length) {
+                if (isCharacterSentinelText(searchText) || filteredOptions[index].length === options[index].length) {
                     input.value = '';
                     inputHistory[index] = '';
                 } 

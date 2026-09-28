@@ -166,9 +166,9 @@ async function runComfyUI(apiInterface, generateData){
                     breakNow = true;
                 } finally {
                     if (globalThis.inBrowser) {
-                        sendWebSocketMessage({ type: 'API', method: 'closeWsComfyUI' });
+                        sendWebSocketMessage({ type: 'API', method: 'closeWsComfyUI', params: [parsedResult.prompt_id] });
                     } else {
-                        globalThis.api.closeWsComfyUI();
+                        globalThis.api.closeWsComfyUI(parsedResult.prompt_id);
                     }
                 }                
             } else {

@@ -73,6 +73,7 @@ const INTERACTIVE_SELECTOR = [
 const MODE_ORDER = ['global', 'independent', 'factory'];
 
 let layoutMode = 'global';
+let buttonOverlayMinimized = false;
 let suppressHandleClick = false;
 let dragState = null;
 let independentBusy = false;
@@ -272,7 +273,25 @@ export function readCurrentLayout() {
     if (isGalleryInFullWidth() && hasItemsBelowGallery() && galleryHeight < GALLERY_MAIN_HEIGHT) {
         layout.galleryHeight = galleryHeight;
     }
+    layout.buttonOverlayMinimized = document.getElementById('cg-button-overlay')?.dataset.minimized === 'true';
     return layout;
+}
+
+export function getButtonOverlayMinimized() {
+    return layoutMode === 'factory' ? false : buttonOverlayMinimized;
+}
+
+function applyButtonOverlayMinimized(minimized) {
+    buttonOverlayMinimized = layoutMode === 'factory' ? false : Boolean(minimized);
+    globalThis.overlay?.buttons?.setMinimized?.(buttonOverlayMinimized);
+}
+
+export async function persistButtonOverlayMinimized() {
+    if (layoutMode === 'factory') {
+        return;
+    }
+    buttonOverlayMinimized = document.getElementById('cg-button-overlay')?.dataset.minimized === 'true';
+    await layoutApi('saveUiLayout', [getSettingsName(), readCurrentLayout(), layoutMode]);
 }
 
 function placeLayoutEntry(column, entry, panelMap, placed) {
@@ -377,6 +396,7 @@ export function applyLayout(layout) {
         setFullRegionHeight(null);
         resetGalleryHeight();
         syncFullWidthBehavior();
+        applyButtonOverlayMinimized(false);
         return;
     }
     ensureSeedHosts();
@@ -395,6 +415,7 @@ export function applyLayout(layout) {
     } else if (!isGalleryInFullWidth()) {
         resetGalleryHeight();
     }
+    applyButtonOverlayMinimized(layout.buttonOverlayMinimized === true);
     syncFullWidthBehavior();
 
     if (typeof globalThis.mainGallery?.updateMetaButtonsLayout === 'function') {
