@@ -3,6 +3,7 @@ import { hiresCalculate } from './tools/hiresCalculation.js';
 import { SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
 import { updateUiLayoutLanguage } from './uiLayout.js';
 import { GRID_SIZE_DEFAULT } from './customGallery.js';
+import { refreshFavoriteHotkeyButtons } from './components/myCollapsed.js';
 
 const CAT = '[Language]'
 
@@ -151,8 +152,11 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.ws_service?.setTitle(LANG.saac_enable);
     globalThis.generate.ws_addr?.setTitle(LANG.saac_addr);
     globalThis.generate.ws_port?.setTitle(LANG.saac_port);
+    globalThis.generate.ws_saac_readonly?.setTitle(LANG.saac_readonly);
+    applySaacReadonlyUi();
     globalThis.generate.backend_log?.setTitle(LANG.backend_log);
     globalThis.generate.backend_log_copy?.setTitle(LANG.backend_log_copy);
+    refreshFavoriteHotkeyButtons();
     globalThis.generate.queueAutostart.setTitle(LANG.generate_auto_start);
     globalThis.generate.queueAutostart_dummy.setTitle(LANG.generate_auto_start);
 
@@ -253,6 +257,8 @@ export function updateSettings() {
     globalThis.generate.busy_retry_seconds.setValue(SETTINGS.busy_retry_seconds);
     globalThis.generate.busy_retry_counts.setValue(SETTINGS.busy_retry_counts);
     applyWsServiceSettings();
+    applySaacReadonlyUi();
+    refreshFavoriteHotkeyButtons();
     globalThis.generate.queueAutostart.setValue(SETTINGS.generate_auto_start);
     globalThis.generate.queueAutostart_dummy.setValue(SETTINGS.generate_auto_start);
     updateQueuePausedBorder();
@@ -372,6 +378,23 @@ export function updateSettings() {
     callback_ai_promot_role(globalThis.globalSettings.ai_prompt_role);  //AI Prompt Role
     
     globalThis.generate.galleryPreviewToggle?.setValue(globalThis.globalSettings.gallery_preview);  // Update the gallery preview toggle checkbox to reflect the current setting
+}
+
+export function applySaacReadonlyUi() {
+    const readonlyBox = globalThis.generate?.ws_saac_readonly;
+    if (!readonlyBox) {
+        return;
+    }
+
+    const readonly = globalThis.globalSettings?.ws_saac_readonly !== false;
+    readonlyBox.setValue(readonly);
+
+    if (globalThis.inBrowser) {
+        readonlyBox.setEnable(false);
+        return;
+    }
+
+    readonlyBox.setEnable(true);
 }
 
 export function applyWsServiceLock(running) {

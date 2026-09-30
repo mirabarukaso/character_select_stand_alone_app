@@ -100,6 +100,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // globalSettings
   getGlobalSettings: async () => ipcRenderer.invoke('get-global-settings'),
+  setSaacReadonly: async (value) => ipcRenderer.invoke('set-saac-readonly', value),
   getSettingFiles: async () => ipcRenderer.invoke('get-all-settings-files'),
   updateSettingFiles: async () => ipcRenderer.invoke('update-all-setting-files'),
   loadSettingFile: async (fineName) => ipcRenderer.invoke('load-setting-file', fineName),

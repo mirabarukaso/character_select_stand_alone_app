@@ -6,7 +6,7 @@ import { doSwap, reloadFiles } from './components/myCollapsed.js';
 import { updateLanguage, updateSettings, setDropdownLanguage } from './language.js';
 import { setBlur, setNormal, showDialog } from './components/myDialog.js';
 import { applyTheme } from './theme.js';
-import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
+import { sendWebSocketMessage, isSaacReadonlyClient } from '../webserver/front/wsRequest.js';
 import { myCharacterList, myRegionalCharacterList } from './components/myDropdown.js';
 import { flushSlots } from './slots/slotsManager.js';
 import { compareAndMergeFavoriteLists } from './components/favoriteCharacters.js';
@@ -537,6 +537,10 @@ async function update_thumb_select(value) {
     if (!success) {
         console.error('Failed to load thumbnail files for selection:', globalThis.globalSettings.thumb_select);
         globalThis.globalSettings.thumb_select = bak_thumb_select;
+        if (isSaacReadonlyClient()) {
+            const LANG = globalThis.cachedFiles.language[globalThis.globalSettings.language];
+            await showDialog('info', { message: LANG.saac_readonly_thumb });
+        }
         return;
     }        
 

@@ -618,6 +618,38 @@ async function notifySaacShutdownAndClose() {
 }
 
 // API method handler (unchanged)
+const SAAC_SETTINGS_FILE = 'saac_settings.json';
+const SAAC_READONLY_BLOCKED = new Set([
+  'deleteSettingFile',
+  'saveMiraITUSettingFile',
+  'saveUiLayout',
+  'setUiLayoutIndependent',
+  'deleteUiLayout',
+]);
+
+function isSaacReadonly() {
+  return getGlobalSettings()?.ws_saac_readonly !== false;
+}
+
+function isSaacSettingsFile(fineName) {
+  return String(fineName || '').replace(/\.json$/i, '').trim().toLowerCase() === 'saac_settings';
+}
+
+function restoreSaacHostOnlySettings(settings) {
+  if (!settings || typeof settings !== 'object') {
+    return settings;
+  }
+  const host = getGlobalSettings();
+  if (!host) {
+    return settings;
+  }
+  settings.ws_saac_readonly = Boolean(host.ws_saac_readonly);
+  settings.ws_service = host.ws_service;
+  settings.ws_addr = host.ws_addr;
+  settings.ws_port = host.ws_port;
+  return settings;
+}
+
 const methodHandlers = {
   // version
   'getAppVersion': ()=> getAppVersion(),
@@ -634,21 +666,71 @@ const methodHandlers = {
 
   // global settings
   'getGlobalSettings': ()=> getGlobalSettings(),
-  'loadSettingFile': (params)=> loadSettings(...params),
-  'saveSettingFile': (params)=> saveSettings(...params),
-  'deleteSettingFile': (params)=> deleteSettings(...params),
+  'loadSettingFile': (params)=> {
+    const keepReadonly = Boolean(getGlobalSettings()?.ws_saac_readonly);
+    const loaded = loadSettings(...params);
+    if (loaded && typeof loaded === 'object') {
+      loaded.ws_saac_readonly = keepReadonly;
+    }
+    return loaded;
+  },
+  'saveSettingFile': (params)=> {
+    let fineName = params?.[0];
+    if (isSaacReadonly()) {
+      if (!isSaacSettingsFile(fineName)) {
+        console.warn(CAT, 'Blocked saveSettingFile: SAAC is read-only');
+        return false;
+      }
+      fineName = SAAC_SETTINGS_FILE;
+    }
+    const settings = restoreSaacHostOnlySettings(params?.[1]);
+    return saveSettings(fineName, settings);
+  },
+  'deleteSettingFile': (params)=> {
+    if (isSaacReadonly()) {
+      console.warn(CAT, 'Blocked deleteSettingFile: SAAC is read-only');
+      return false;
+    }
+    return deleteSettings(...params);
+  },
   'getSettingFiles': ()=> getSettingFiles(),
   'updateSettingFiles': ()=> updateSettingFiles(),
 
   'loadUiLayout': (params)=> loadUiLayout(...params),
-  'saveUiLayout': (params)=> saveUiLayout(...params),
-  'setUiLayoutMode': (params)=> setUiLayoutMode(...params),
-  'setUiLayoutIndependent': (params)=> setUiLayoutIndependent(...params),
-  'deleteUiLayout': (params)=> deleteUiLayout(...params),
+  'saveUiLayout': (params)=> {
+    if (isSaacReadonly()) {
+      console.warn(CAT, 'Blocked saveUiLayout: SAAC is read-only');
+      return false;
+    }
+    return saveUiLayout(...params);
+  },
+  'setUiLayoutMode': (params)=> {
+    return setUiLayoutMode(params?.[0], params?.[1], params?.[2], !isSaacReadonly());
+  },
+  'setUiLayoutIndependent': (params)=> {
+    if (isSaacReadonly()) {
+      console.warn(CAT, 'Blocked setUiLayoutIndependent: SAAC is read-only');
+      return null;
+    }
+    return setUiLayoutIndependent(...params);
+  },
+  'deleteUiLayout': (params)=> {
+    if (isSaacReadonly()) {
+      console.warn(CAT, 'Blocked deleteUiLayout: SAAC is read-only');
+      return false;
+    }
+    return deleteUiLayout(...params);
+  },
 
   'updateMiraITUSettingFiles': ()=> updateMiraITUSettingFiles(),
   'loadMiraITUSettingFile': (params)=> loadMiraITUSettings(...params),
-  'saveMiraITUSettingFile': (params)=> saveMiraITUSettings(...params),
+  'saveMiraITUSettingFile': (params)=> {
+    if (isSaacReadonly()) {
+      console.warn(CAT, 'Blocked saveMiraITUSettingFile: SAAC is read-only');
+      return false;
+    }
+    return saveMiraITUSettings(...params);
+  },
 
   // file lists
   'getModelList': (params)=> getModelList(...params),
@@ -679,7 +761,7 @@ const methodHandlers = {
 
   // character thumb
   'getCharacterThumb': (params)=> getCharacterThumb(...params),
-  'updateCharacterThumb': (params)=> updateCharacterThumb(...params),
+  'updateCharacterThumb': (params)=> updateCharacterThumb(params?.[0], { allowDownload: !isSaacReadonly() }),
 
   // md5 hash
   'md5Hash': (params) => {
@@ -750,6 +832,12 @@ const methodHandlers = {
 
 async function handleApiRequest(ws, method, params, id, uuid) {
     let result;
+
+    if (isSaacReadonly() && SAAC_READONLY_BLOCKED.has(method)) {
+        console.warn(CAT, `Blocked API method ${method}: SAAC is read-only`);
+        ws.send(JSON.stringify({ type: 'APIResponse', method, id, value: false }));
+        return;
+    }
 
     const handler = methodHandlers[method];
     if (handler) {

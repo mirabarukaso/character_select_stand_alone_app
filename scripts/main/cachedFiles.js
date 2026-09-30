@@ -143,15 +143,32 @@ function getCharacterThumb(md5Chara) {
     return cachedCharacterThumb[md5Chara];
 }
 
-async function updateCharacterThumb(thumbSelect) {
-    console.log(`${CAT}: Updating cached files for thumbnail selection: ${thumbSelect}`);
+function characterThumbFilesExist(thumbSelect) {
+    const names = [
+        `${thumbSelect}_thumbs.json`,
+        `${thumbSelect}_characters.csv`,
+        `${thumbSelect}_tag_assist.json`
+    ];
+    return names.every((name) => fs.existsSync(path.join(appPath, 'data', name)));
+}
 
-    if (thumbSelect === `waiNSFWIllustrious_v120`) {
-        console.log(`${CAT}: Requesting download of waiNSFWIllustrious_v120 thumbs...`);
-        await requestDownloadOldThumbs();
-    } else if (thumbSelect === `waiANIMA_v10Base10`) {
-        console.log(`${CAT}: Requesting download of waiANIMA_v10Base10 thumbs...`);
-        await requestDownloadAnimaThumbs();
+async function updateCharacterThumb(thumbSelect, options = {}) {
+    console.log(`${CAT}: Updating cached files for thumbnail selection: ${thumbSelect}`);
+    const allowDownload = options.allowDownload !== false;
+    const needsDownload = thumbSelect === `waiNSFWIllustrious_v120` || thumbSelect === `waiANIMA_v10Base10`;
+
+    if (needsDownload && !characterThumbFilesExist(thumbSelect)) {
+        if (!allowDownload) {
+            console.warn(`${CAT}: Thumb list ${thumbSelect} is not on disk and download is not allowed`);
+            return false;
+        }
+        if (thumbSelect === `waiNSFWIllustrious_v120`) {
+            console.log(`${CAT}: Requesting download of waiNSFWIllustrious_v120 thumbs...`);
+            await requestDownloadOldThumbs();
+        } else {
+            console.log(`${CAT}: Requesting download of waiANIMA_v10Base10 thumbs...`);
+            await requestDownloadAnimaThumbs();
+        }
     }
     
     const temp_cachedCharacterThumb = {};

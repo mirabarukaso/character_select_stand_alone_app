@@ -1,6 +1,13 @@
 import { setupButtons } from './myButtons.js';
 import { setupTextbox } from './myTextbox.js';
 import { setupRadiobox } from './myCheckbox.js';
+import {
+    HOTKEY_KEY_OPTIONS,
+    HOTKEY_MODIFIER_OPTIONS,
+    formatKeyLabel,
+    hotkeyToSelectValues,
+    validateHotkeyFromSelects
+} from './hotkey.js';
 
 const DIALOG_Z_INDEX = 100000;
 let blurBackdrop = null;
@@ -27,6 +34,40 @@ function createMessageElement(message) {
     messageDiv.style.wordBreak = 'break-word';
     messageDiv.textContent = message;
     return messageDiv;
+}
+
+function isDialogOpen() {
+    return Boolean(document.querySelector('.dialog-backdrop'));
+}
+
+function createLabeledSelect(labelText, options, selectedValue, optionLabel) {
+    const field = document.createElement('div');
+    field.className = 'dialog-hotkey-field';
+
+    const label = document.createElement('label');
+    label.textContent = labelText;
+    field.appendChild(label);
+
+    const select = document.createElement('select');
+    for (const optionValue of options) {
+        const option = document.createElement('option');
+        option.value = optionValue;
+        option.textContent = optionLabel(optionValue);
+        if (optionValue === selectedValue) {
+            option.selected = true;
+        }
+        select.appendChild(option);
+    }
+    field.appendChild(select);
+    return { field, select };
+}
+
+function formatHotkeyError(check, errors) {
+    const template = errors?.[check.code] || check.code;
+    if (check.code === 'blocked' && check.label) {
+        return String(template).replace('{0}', check.label);
+    }
+    return template;
 }
 
 function createButtonContainer(name) {
@@ -237,6 +278,118 @@ function showDialog(type, options = {}) {
                 break;
             }
 
+            case 'hotkey': {
+                const {
+                    message = 'Set shortcut',
+                    defaultValue = null,
+                    otherHotkey = null,
+                    labels = {},
+                    errors = {},
+                    buttonText = 'OK',
+                    cancelText = 'Cancel'
+                } = options;
+
+                dialog.classList.add('dialog-container-hotkey');
+                dialog.appendChild(createMessageElement(message));
+
+                const selected = hotkeyToSelectValues(defaultValue);
+                const row = document.createElement('div');
+                row.className = 'dialog-hotkey-row';
+
+                const modifierLabel = (value) => {
+                    if (value === 'none') {
+                        return labels.none || 'None';
+                    }
+                    if (value === 'ctrl') {
+                        return 'Ctrl';
+                    }
+                    if (value === 'alt') {
+                        return 'Alt';
+                    }
+                    if (value === 'shift') {
+                        return 'Shift';
+                    }
+                    return value;
+                };
+
+                const mod1 = createLabeledSelect(
+                    labels.mod1 || 'Modifier 1',
+                    HOTKEY_MODIFIER_OPTIONS,
+                    selected.mod1,
+                    modifierLabel
+                );
+                const mod2 = createLabeledSelect(
+                    labels.mod2 || 'Modifier 2',
+                    HOTKEY_MODIFIER_OPTIONS,
+                    selected.mod2,
+                    modifierLabel
+                );
+                const keySelect = createLabeledSelect(
+                    labels.key || 'Key',
+                    HOTKEY_KEY_OPTIONS,
+                    selected.key,
+                    (value) => formatKeyLabel(value)
+                );
+
+                row.appendChild(mod1.field);
+                row.appendChild(mod2.field);
+                row.appendChild(keySelect.field);
+                dialog.appendChild(row);
+
+                const errorDiv = document.createElement('div');
+                errorDiv.className = 'dialog-hotkey-error';
+                dialog.appendChild(errorDiv);
+
+                const buttonContainerOk = createButtonContainer('ok');
+                const buttonContainerCancel = createButtonContainer('cancel');
+                buttonContainerOk.style.marginTop = '10px';
+                buttonContainerCancel.style.marginTop = '10px';
+                dialog.appendChild(buttonContainerOk);
+                dialog.appendChild(buttonContainerCancel);
+
+                setupButtons(
+                    `dialog-button-container-ok`,
+                    buttonText,
+                    {
+                        defaultColor: '#007bff',
+                        hoverColor: '#0056b3',
+                        width: '80px',
+                        height: '36px'
+                    },
+                    () => {
+                        const check = validateHotkeyFromSelects(
+                            mod1.select.value,
+                            mod2.select.value,
+                            keySelect.select.value,
+                            otherHotkey
+                        );
+                        if (!check.ok) {
+                            errorDiv.textContent = formatHotkeyError(check, errors);
+                            return;
+                        }
+                        result = check.hotkey;
+                        cleanup();
+                        resolve(result);
+                    }
+                );
+                setupButtons(
+                    `dialog-button-container-cancel`,
+                    cancelText,
+                    {
+                        defaultColor: '#6c757d',
+                        hoverColor: '#5a6268',
+                        width: '80px',
+                        height: '36px'
+                    },
+                    () => {
+                        result = null;
+                        cleanup();
+                        resolve(null);
+                    }
+                );
+                break;
+            }
+
             case 'confirm': {
                 const { message = 'Are you sure?', yesText = 'Yes', noText = 'No' } = options;
                 dialog.appendChild(createMessageElement(message));
@@ -288,4 +441,4 @@ function showDialog(type, options = {}) {
     });
 }
 
-export { setBlur, setNormal, showDialog };
+export { setBlur, setNormal, showDialog, isDialogOpen };

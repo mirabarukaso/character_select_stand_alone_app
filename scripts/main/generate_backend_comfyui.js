@@ -147,6 +147,7 @@ function extractPreviewImage(buf) {
     return buf.length > 256 ? buf.subarray(8) : null;
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 function sendPreviewFrame(backend, data) {
     if (backend.refresh === 0) {
         return;
@@ -2787,8 +2788,7 @@ function closeWsComfyUI(prompt_id) {
   backend?.closeWS();
 }
 
-async function cancelComfyUI(uuid) {
-  const owner = uuid || 'none';
+async function cancelComfyUI(owner = 'none') {
   console.log(CAT, 'Processing interrupted for', owner);
   for (const backend of comfyBackends.values()) {
     if (backend.uuid === owner) {

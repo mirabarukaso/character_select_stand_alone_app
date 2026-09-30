@@ -10,7 +10,7 @@ import { setupADetailer } from '../renderer/slots/myADetailerSlot.js';
 import { setupQueue } from '../renderer/slots/myQueueSlot.js';
 import { setBlur, setNormal, showDialog } from '../renderer/components/myDialog.js';
 import { setupRightClickMenu } from '../renderer/components/myRightClickMenu.js';
-import { initWebSocket, isSecuredConnection, sendWebSocketMessage, registerCallback } from './front/wsRequest.js';
+import { initWebSocket, isSecuredConnection, isSaacReadonlyClient, sendWebSocketMessage, registerCallback } from './front/wsRequest.js';
 import { flushSlots } from '../renderer/slots/slotsManager.js';
 import { set_prompt_textBox_Heights } from '../renderer/components/componentsManager.js';
 import { setupHeader, setupLeftRight, createGenerate, createPrompt, createHifixRefiner, createRegional, createAI } from '../renderer.js';
@@ -30,10 +30,15 @@ function afterDOMinit() {
             if (globalThis.initialized) {
                 setNormal();                
 
-                // not localhost and not HTTPS
                 const SETTINGS = globalThis.globalSettings;
                 const FILES = globalThis.cachedFiles;
                 const LANG = FILES.language[SETTINGS.language];
+                if (isSaacReadonlyClient()) {
+                    await showDialog('info', {
+                        message: LANG.saac_readonly_notice,
+                        buttonText: LANG.setup_ok
+                    });
+                }
                 if(!isSecuredConnection()){
                     globalThis.overlay.custom.createErrorOverlay(LANG.saac_http_connection, LANG.saac_http_connection);
                 }

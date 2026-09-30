@@ -127,9 +127,37 @@ export const sharedBodyHTML = `
                 <div class="system-settings-saac-addr"></div>
                 <div class="system-settings-saac-port"></div>
               </div>
+              <div class="system-settings-saac-readonly-row">
+                <div class="system-settings-saac-readonly"></div>
+              </div>
               <div class="system-settings-main-3">
-                <div class="system-settings-backend-log"></div>
-                <div class="system-settings-backend-log-copy"></div>
+                <div class="system-settings-labeled">
+                  <div class="system-settings-labeled-hint" data-settings-hint="backend_log"></div>
+                  <div class="system-settings-backend-log"></div>
+                </div>
+                <div class="system-settings-labeled">
+                  <div class="system-settings-labeled-hint" data-settings-hint="backend_log_copy"></div>
+                  <div class="system-settings-backend-log-copy"></div>
+                </div>
+              </div>
+              <div class="system-settings-hotkeys">
+                <div class="system-settings-labeled">
+                  <div class="system-settings-labeled-hint" data-settings-hint="hotkey_favorite_add"></div>
+                  <div class="system-settings-hotkey-actions">
+                    <div class="system-settings-hotkey-add-current system-settings-hotkey-value"></div>
+                    <div class="system-settings-hotkey-add-change"></div>
+                    <div class="system-settings-hotkey-add-default"></div>
+                  </div>
+                </div>
+                <div class="system-settings-labeled">
+                  <div class="system-settings-labeled-hint" data-settings-hint="hotkey_favorite_del"></div>
+                  <div class="system-settings-hotkey-actions">
+                    <div class="system-settings-hotkey-del-current system-settings-hotkey-value"></div>
+                    <div class="system-settings-hotkey-del-change"></div>
+                    <div class="system-settings-hotkey-del-default"></div>
+                  </div>
+                </div>
+                <div class="system-settings-labeled-hint" data-settings-hint="hotkey_favorite_search"></div>
               </div>
               <div class="system-settings-main-2">
                 <div></div>

@@ -1,4 +1,4 @@
-import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
+import { sendWebSocketMessage, isSaacReadonlyClient } from '../webserver/front/wsRequest.js';
 import {
     CHARACTER_ID,
     collectColumnLayout,
@@ -287,7 +287,7 @@ function applyButtonOverlayMinimized(minimized) {
 }
 
 export async function persistButtonOverlayMinimized() {
-    if (layoutMode === 'factory') {
+    if (isSaacReadonlyClient() || layoutMode === 'factory') {
         return;
     }
     buttonOverlayMinimized = document.getElementById('cg-button-overlay')?.dataset.minimized === 'true';
@@ -491,6 +491,9 @@ export async function applySavedLayout() {
 }
 
 async function persistLayout() {
+    if (isSaacReadonlyClient()) {
+        return;
+    }
     if (layoutMode === 'factory') {
         layoutMode = 'independent';
         refreshLayoutModeToggle();
@@ -500,17 +503,19 @@ async function persistLayout() {
 
 /** Persist current on-screen layout as the independent sidecar for a settings name. */
 export async function persistIndependentLayoutFor(settingsName) {
-    if (layoutMode !== 'independent') {
+    if (isSaacReadonlyClient() || layoutMode !== 'independent') {
         return false;
     }
-    const name = (settingsName && String(settingsName).trim())
-        ? String(settingsName).trim()
-        : getSettingsName();
+    const trimmedName = String(settingsName ?? '').trim();
+    const name = trimmedName !== '' ? trimmedName : getSettingsName();
     return await layoutApi('saveUiLayout', [name, readCurrentLayout(), 'independent']);
 }
 
 /** Remove the independent layout sidecar for a settings name (orphan cleanup on config delete). */
 export async function deleteIndependentLayoutFor(settingsName) {
+    if (isSaacReadonlyClient()) {
+        return false;
+    }
     const name = String(settingsName || '').replace(/\.json$/i, '').trim();
     if (!name || name === '_global') {
         return false;

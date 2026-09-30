@@ -1,3 +1,10 @@
+2026.09.30 v2.9.6      
+Add, configurable `Add/Remove favorite` hotkeys in `Settings`      
+Add, hint in `Settings`: type `@` in character list to show `Favorite List`      
+Add, `SAAC read-only` in `Settings` (default on). SAAC can generate, load settings, switch layout mode, and save only `saac_settings.json`; dragged layout and a new thumbList are not written      
+Add, SAAC shows a read-only notice on first connect; host `SAAC read-only` stays with the live host when switching settings      
+ 
+
 2026.09.28 v2.9.5      
 Add, `Backend log` button in `Settings` to view main-process console in overlay     
 Add, SAAC connected client count on the main window title     

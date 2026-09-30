@@ -14,11 +14,12 @@ function setPreserveWsServiceSettings(fn) {
 }
 
 const defaultSettings = {
-    "version": "2.8.1",
+    "version": "2.9.6",
 
     "ws_service": false,
     "ws_addr": '0.0.0.0',
     "ws_port": 51028,
+    "ws_saac_readonly": true,
 
     "busy_retry_seconds": 20,
     "busy_retry_counts": 5,
@@ -137,6 +138,8 @@ const defaultSettings = {
     "ad_slot": [],
 
     "fav_characters" : [],
+    "hotkey_favorite_add": { "ctrl": false, "alt": true, "shift": false, "key": "d" },
+    "hotkey_favorite_del": { "ctrl": false, "alt": true, "shift": false, "key": "q" },
 
     "generate_auto_start": true,
     //4:3:2=9 views 0-3, characters 4-6, regional characters 7-8
@@ -180,6 +183,10 @@ function setupGlobalSettings() {
     
     ipcMain.handle('load-setting-file', async (event, fineName) => {
         return loadSettings(fineName);
+    });
+
+    ipcMain.handle('set-saac-readonly', async (event, value) => {
+        return setSaacReadonly(value);
     });
 
     ipcMain.handle('save-setting-file', async (event, fineName, settings) => {
@@ -238,7 +245,16 @@ function saveSettings(fineName, settings) {
     }
 }
 
+function setSaacReadonly(value) {
+    if (!globalSettings) {
+        return true;
+    }
+    globalSettings.ws_saac_readonly = value !== false;
+    return globalSettings.ws_saac_readonly;
+}
+
 function loadSettings(fineName) {
+    const previousSaacReadonly = globalSettings?.ws_saac_readonly;
     globalSettings = structuredClone(defaultSettings);
     const settingsDir = path.join(appPath, 'settings', fineName);
     console.log(CAT, `Loading ${settingsDir}`);
@@ -258,6 +274,9 @@ function loadSettings(fineName) {
 
     if (typeof preserveWsServiceSettings === 'function') {
         preserveWsServiceSettings(globalSettings);
+    }
+    if (previousSaacReadonly !== undefined) {
+        globalSettings.ws_saac_readonly = previousSaacReadonly !== false;
     }
     
     return globalSettings;
@@ -375,6 +394,7 @@ function saveMiraITUSettings(fineName, settings) {
 export {
     setupGlobalSettings,
     getGlobalSettings,
+    setSaacReadonly,
     getSettingFiles,
     updateSettingFiles,
     loadSettings,

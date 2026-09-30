@@ -837,6 +837,58 @@ body.right-to-left #cg-info-button {
     align-items: end;
 }
 
+.system-settings-saac-readonly-row {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 4px;
+    margin: 4px;
+    gap: 16px;
+    align-items: end;
+}
+
+.system-settings-hotkeys {
+    display: grid;
+    grid-template-columns: 1fr;
+    padding: 4px;
+    margin: 4px;
+    gap: 8px 16px;
+}
+
+.system-settings-labeled {
+    display: flex;
+    flex-direction: column;
+    gap: 4px;
+    min-width: 0;
+}
+
+.system-settings-labeled-hint {
+    text-align: left;
+    color: var(--text-muted);
+    font-size: 13px;
+    padding: 0 2px;
+    line-height: 1.3;
+}
+
+.system-settings-hotkey-actions {
+    display: grid;
+    grid-template-columns: 1.4fr 0.8fr 0.8fr;
+    gap: 8px 12px;
+    align-items: center;
+}
+
+.system-settings-hotkey-value {
+    display: flex;
+    align-items: center;
+    min-height: 32px;
+    padding: 0 10px;
+    border: 1px solid var(--line-soft);
+    border-radius: 4px;
+    background: var(--field);
+    color: var(--text);
+    font-size: 14px;
+    box-sizing: border-box;
+}
+
 .system-settings-ai-select {
     text-align: left;
     justify-content: flex-start;
@@ -1331,6 +1383,42 @@ body.right-to-left #cg-info-button {
     margin: 15% auto;
     z-index: 100001;
     color: var(--text);
+}
+
+.dialog-container-hotkey {
+    max-width: 560px;
+}
+
+.dialog-hotkey-row {
+    display: grid;
+    grid-template-columns: 1fr 1fr 1fr;
+    gap: 10px;
+    margin: 16px 0 8px;
+}
+
+.dialog-hotkey-field label {
+    display: block;
+    margin-bottom: 6px;
+    font-size: 13px;
+    color: var(--text);
+}
+
+.dialog-hotkey-field select {
+    width: 100%;
+    height: 32px;
+    border-radius: 4px;
+    border: 1px solid var(--line-soft);
+    background: var(--field);
+    color: var(--text);
+    font-size: 14px;
+    padding: 0 8px;
+}
+
+.dialog-hotkey-error {
+    color: var(--danger-text);
+    min-height: 1.4em;
+    font-size: 13px;
+    margin-bottom: 8px;
 }
 
 /* Global scroll bar style */

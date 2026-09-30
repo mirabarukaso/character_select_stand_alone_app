@@ -3,7 +3,7 @@ import { toBlob, getImageSizeFromBlob } from './imageInfoUtils.js'
 import { TileHelper, CropImageHelper } from './helper.js';
 import { callback_generate_start } from '../callbacks.js';
 import { fileToBase64 } from '../generate.js';
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { sendWebSocketMessage, isSaacReadonlyClient } from '../../webserver/front/wsRequest.js';
 import { setBlur, setNormal, showDialog } from './myDialog.js';
 import { CLIP_TYPE, SAMPLER_COMFYUI, SCHEDULER_COMFYUI } from '../../types.js';
 
@@ -1122,6 +1122,10 @@ function createHeader(imageData, imageWidth){
     settingsSave.style.maxWidth = '48px';
     settingsSave.addEventListener('click', handlesettingsSave);
     async function handlesettingsSave() {
+        if (isSaacReadonlyClient()) {
+            await showDialog('info', { message: LANG.saac_readonly_blocked });
+            return;
+        }
         setBlur();
         const inputResult = await showDialog('input', { 
             message: LANG.save_settings_title, 

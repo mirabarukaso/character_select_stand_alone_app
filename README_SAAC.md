@@ -16,7 +16,8 @@ Web Service / Ports / Addr can be changed in `Settings` while SAAC is stopped. A
 5. I have already set up a `Mutex Lock` for SAAC. You may receive an error message if your backend is working and you send another `Generate` job from a different tab to the **same** API address. Jobs aimed at a different IP/backend can run at the same time.    
 6. Just in case, there is a `Skeleton Key` to unlock the `Mutex Lock`; click `Reload Model` on the left of the `Model List`.    
 7. Start your Comfyui/WebUI API on `computer A`; start SAA on `computer B` and set API to `computer A`; connect SAAC from `computer C`...    
-8. You can modify/save `SAAC Settings` in `Settings` tab, but be noticed this is for your `SAA host PC`      
+8. SAAC is **read-only by default**. A notice dialog is shown on first connect. Generate, load host settings, edit prompt/favorites/hotkeys in memory, switch layout mode, and drag the layout are allowed. Save writes only `settings/saac_settings.json` (host listen keys stay on the host). Dragged layout is not saved. Deleting configs and downloading a new `thumbList` are blocked. The host `SAAC read-only` switch stays with the live host, the same as the SAAC service switch; loading another settings file does not change it. SAAC can see that switch but cannot change it. If a client should write any settings/layout file on this PC, uncheck it on the host and save.     
+ 
 9. Write to clipboard not working from remote with HTTP mode (except `localhost`), added a info window to show those message. Check `HTTPS mode` to solve that problem. [More information](https://webkit.org/blog/10855/async-clipboard-api/)       
 10. The SAAC listening port should NOT less than 10001, any incorrect settings will result to default port or failed to setup SAAC service         
 

@@ -306,6 +306,11 @@ function persistNormalizedLayout(filePath, original, normalized, extra = {}) {
     return normalized;
 }
 
+function readGlobalLayout() {
+    const stored = readLayoutFile(layoutFilePath(GLOBAL_FILE));
+    return normalizeLayout(stored || DEFAULT_UI_LAYOUT);
+}
+
 function loadGlobalLayout() {
     const filePath = layoutFilePath(GLOBAL_FILE);
     const stored = readLayoutFile(filePath);
@@ -320,6 +325,23 @@ function loadGlobalLayout() {
         });
     }
     return normalized;
+}
+
+function resolveUiLayoutForMode(settingsName, mode, currentLayout) {
+    const resolvedMode = resolveMode({ mode, enabled: mode === true });
+    const name = sanitizeLayoutName(settingsName);
+    const existing = readLayoutFile(layoutFilePath(`${name}.json`));
+
+    if (resolvedMode === 'independent') {
+        if (hasPanelLayout(existing)) {
+            return packResult('independent', normalizeLayout(existing));
+        }
+        return packResult('independent', normalizeLayout(currentLayout || readGlobalLayout()));
+    }
+    if (resolvedMode === 'factory') {
+        return packResult('factory', factoryLayout());
+    }
+    return packResult('global', readGlobalLayout());
 }
 
 function packResult(mode, layout) {
@@ -419,7 +441,11 @@ export function saveUiLayout(settingsName, layout, mode) {
     return writeLayoutFile(layoutFilePath(GLOBAL_FILE), normalized);
 }
 
-export function setUiLayoutMode(settingsName, mode, currentLayout) {
+export function setUiLayoutMode(settingsName, mode, currentLayout, persist = true) {
+    if (persist === false) {
+        return resolveUiLayoutForMode(settingsName, mode, currentLayout);
+    }
+
     ensureLayoutDir();
     const resolvedMode = resolveMode({ mode, enabled: mode === true });
     const name = sanitizeLayoutName(settingsName);

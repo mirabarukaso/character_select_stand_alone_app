@@ -30,6 +30,8 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(W
 > *Online Character Select* [Hugging Face Space](https://huggingface.co/spaces/flagrantia/character_select_saa)             
 >
 > For browser based SAAC, check [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)           
+> SAAC is **read-only by default**. It can generate, load host settings, switch layout mode, and save only to `saac_settings.json`. Dragged layout is not written, and a missing thumbList is not downloaded. The host `SAAC read-only` switch stays with the live host when switching settings. Turn it off in host `Settings` if a client should write this PC.       
+ 
 > For Python based CLI tool for OpenClaw [SAA Agent](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/saa-agent/README_HUMAN.md) and [ClawHub](https://clawhub.ai/mirabarukaso/saa-agent)         
 
 ## thumbList manually download guide
@@ -388,11 +390,13 @@ LoRA in `Common Prompt` also works if you have the same one. If you don't like L
 
 ## Character List
 ### Favorite Character List
-*SAVE your settings after you add/remove facorite list, there are NO HINTS at all*                  
+*SAVE your settings after you add/remove favorite list*                  
 
-*Add:* Select a character in `Character1` or `OC`, press `Alt` + `D`        
-*Remove:* Select a character in `Character3` or `OC`, press `Alt` + `Q`       
+*Add:* Select a character in `Character1` or `OC`, press `Alt` + `D` (default)        
+*Remove:* Select a character in `Character3` or `OC`, press `Alt` + `Q` (default)       
 *Search:* Use `@` in `ANY` character list to load your `Favorite Character List`      
+*Hotkeys:* Change add/remove shortcuts in `Settings`      
+
 
 *Merge/Overwrite/Replace*: So, when you switch settings files, you might find that the favourite lists aren't the same. An options dialogue box will pop up and ask you what you want to do next. It's a little annoying, but it will get better once you have merged all.         
 

@@ -21,6 +21,10 @@ export function isSecuredConnection(){
     return securedConnection;
 }
 
+export function isSaacReadonlyClient() {
+    return Boolean(globalThis.inBrowser) && globalThis.globalSettings?.ws_saac_readonly !== false;
+}
+
 export async function initWebSocket(reConnect = false) {
     try {
         let userpass = ':';

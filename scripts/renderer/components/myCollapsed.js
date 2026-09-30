@@ -1,11 +1,22 @@
-import { setBlur, setNormal, showDialog } from './myDialog.js';
-import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
+import { setBlur, setNormal, showDialog, isDialogOpen } from './myDialog.js';
+import { sendWebSocketMessage, isSaacReadonlyClient } from '../../webserver/front/wsRequest.js';
 import { setADetailerModelList } from '../slots/myADetailerSlot.js';
 import { addFavorites, delFavorites } from './favoriteCharacters.js';
 import { get_prompt_textBox_Heights } from './componentsManager.js';
 import { persistIndependentLayoutFor, deleteIndependentLayoutFor } from '../uiLayout.js';
+import { setupButtons } from './myButtons.js';
+import {
+    DEFAULT_HOTKEY_FAVORITE_ADD,
+    DEFAULT_HOTKEY_FAVORITE_DEL,
+    cloneHotkey,
+    ensureFavoriteHotkeys,
+    formatHotkey,
+    hotkeyEquals,
+    matchesHotkey
+} from './hotkey.js';
 
 const CAT = '[myCollapsed]'
+const SAAC_SETTINGS_BASENAME = 'saac_settings';
 
 export function setupCollapsed(containerId, collapsed = false) {
     const mainItem = document.querySelector(`.${containerId}-main`);
@@ -62,14 +73,27 @@ export async function setupSaveSettingsToggle() {
         return null;
     }  
 
+    // eslint-disable-next-line sonarjs/cognitive-complexity
     saveSettingsButton.addEventListener('click', async () => {
+        const LANG = globalThis.cachedFiles.language[globalThis.globalSettings.language];
+        const readonlySaac = isSaacReadonlyClient();
         setBlur();
         const previousSettingsName = globalThis.globalSettings.lastLoadedSettings;
-        const inputResult = await showDialog('input', { 
-            message: globalThis.cachedFiles.language[globalThis.globalSettings.language].save_settings_title, 
-            placeholder: 'tmp_settings', 
-            defaultValue: globalThis.globalSettings.lastLoadedSettings
-        });
+        let inputResult;
+        if (readonlySaac) {
+            const confirmed = await showDialog('confirm', {
+                message: LANG.saac_settings_save,
+                yesText: LANG.setup_yes,
+                noText: LANG.setup_no
+            });
+            inputResult = confirmed ? SAAC_SETTINGS_BASENAME : null;
+        } else {
+            inputResult = await showDialog('input', {
+                message: LANG.save_settings_title,
+                placeholder: 'tmp_settings',
+                defaultValue: globalThis.globalSettings.lastLoadedSettings
+            });
+        }
         if(inputResult){
             globalThis.globalSettings.lora_slot = globalThis.lora.getValues();
             globalThis.globalSettings.ad_slot = globalThis.aDetailer.getValues();
@@ -104,7 +128,7 @@ export async function setupSaveSettingsToggle() {
             }
 
             if(result === true) {
-                await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].save_settings_success.replace('{0}', inputResult) });
+                await showDialog('info', { message: LANG.save_settings_success.replace('{0}', inputResult) });
                 if (globalThis.inBrowser) {
                     globalThis.cachedFiles.settingList = await sendWebSocketMessage({ type: 'API', method: 'updateSettingFiles' });
                 } else {
@@ -114,17 +138,19 @@ export async function setupSaveSettingsToggle() {
                 globalThis.dropdownList.settings.updateDefaults(`${inputResult}.json`);
 
                 // Save As / new config name: bind current independent layout to the new settings name
-                const prevName = String(previousSettingsName || '').replace(/\.json$/i, '').trim();
-                const nextName = String(inputResult || '').replace(/\.json$/i, '').trim();
-                if (nextName && nextName !== prevName) {
+                const prevName = String(previousSettingsName ?? '').replace(/\.json$/i, '').trim();
+                const nextName = String(inputResult).replace(/\.json$/i, '').trim();
+                if (!readonlySaac && nextName !== '' && nextName !== prevName) {
                     await persistIndependentLayoutFor(nextName);
                 }
             } else {
-                await showDialog('info', { message: globalThis.cachedFiles.language[globalThis.globalSettings.language].save_settings_failed.replace('{0}', inputResult) });
+                await showDialog('info', { message: LANG.save_settings_failed.replace('{0}', inputResult) });
             }
-        }        
+        }
 
-        globalThis.globalSettings.lastLoadedSettings = inputResult;
+        if (inputResult || !readonlySaac) {
+            globalThis.globalSettings.lastLoadedSettings = inputResult;
+        }
         setNormal();
     });
 
@@ -143,6 +169,10 @@ export async function setupDeleteSettingsToggle() {
         const FILES = globalThis.cachedFiles;
         const LANG = FILES.language[SETTINGS.language];
 
+        if (isSaacReadonlyClient()) {
+            await showDialog('info', { message: LANG.saac_readonly_blocked });
+            return;
+        }
         setBlur();
         const inputResult = await showDialog('confirm', { 
             message: LANG.delete_settings_title.replace('{0}', globalThis.globalSettings.lastLoadedSettings),
@@ -292,8 +322,6 @@ export function setupFuctionKeys() {
     });
 
     document.addEventListener('keydown', (event) => {
-        const key = event.key.toLowerCase();
-
         // Refresh
         if (event.key === 'F5') {
             event.preventDefault(); 
@@ -301,8 +329,13 @@ export function setupFuctionKeys() {
             return;
         }
 
-        // Add to favorite list (Alt + D)
-        if (event.altKey && !event.ctrlKey && !event.metaKey && key === 'd') {
+        if (event.repeat || event.isComposing || event.metaKey || isDialogOpen()) {
+            return;
+        }
+
+        const { add, del } = ensureFavoriteHotkeys();
+
+        if (matchesHotkey(event, add)) {
             event.preventDefault();
             const c1 = globalThis.characterList.getValue()[0];
             const oc = globalThis.characterList.getKey()[3];
@@ -312,8 +345,7 @@ export function setupFuctionKeys() {
             return;
         }
 
-        // Remove from favorite list (Alt + R)
-        if (event.altKey && !event.ctrlKey && !event.metaKey && key === 'q') {
+        if (matchesHotkey(event, del)) {
             event.preventDefault();
             const c3 = globalThis.characterList.getValue()[2];
             const oc = globalThis.characterList.getKey()[3];
@@ -324,6 +356,181 @@ export function setupFuctionKeys() {
     });
 
     return refreshButton;
+}
+
+function getHotkeyLanguage() {
+    return globalThis.cachedFiles?.language?.[globalThis.globalSettings?.language] || {};
+}
+
+function setLabeledHint(key, text) {
+    const el = document.querySelector(`[data-settings-hint="${key}"]`);
+    if (el) {
+        el.textContent = text ?? '';
+    }
+}
+
+function refreshSettingsLabeledHints() {
+    const LANG = getHotkeyLanguage();
+    setLabeledHint('backend_log', LANG.backend_log_hint);
+    setLabeledHint('backend_log_copy', LANG.backend_log_copy_hint);
+    setLabeledHint('hotkey_favorite_add', LANG.hotkey_favorite_add_hint);
+    setLabeledHint('hotkey_favorite_del', LANG.hotkey_favorite_del_hint);
+    setLabeledHint('hotkey_favorite_search', LANG.hotkey_favorite_search_hint);
+}
+
+export function refreshFavoriteHotkeyButtons() {
+    const LANG = getHotkeyLanguage();
+    refreshSettingsLabeledHints();
+
+    const generate = globalThis.generate;
+    if (!generate?.hotkeyAddCurrent) {
+        return;
+    }
+
+    const { add, del } = ensureFavoriteHotkeys();
+    generate.hotkeyAddCurrent.setTitle(formatHotkey(add));
+    generate.hotkeyDelCurrent.setTitle(formatHotkey(del));
+    generate.hotkeyAddChange.setTitle(LANG.hotkey_favorite_change || 'Change');
+    generate.hotkeyDelChange.setTitle(LANG.hotkey_favorite_change || 'Change');
+    generate.hotkeyAddDefault.setTitle(LANG.hotkey_favorite_default || 'Default');
+    generate.hotkeyDelDefault.setTitle(LANG.hotkey_favorite_default || 'Default');
+}
+
+async function editFavoriteHotkey(action) {
+    const LANG = getHotkeyLanguage();
+    const { add, del } = ensureFavoriteHotkeys();
+    const current = action === 'add' ? add : del;
+    const other = action === 'add' ? del : add;
+
+    const result = await showDialog('hotkey', {
+        message: action === 'add' ? LANG.hotkey_dialog_add_title : LANG.hotkey_dialog_del_title,
+        defaultValue: current,
+        otherHotkey: other,
+        labels: {
+            mod1: LANG.hotkey_dialog_mod1,
+            mod2: LANG.hotkey_dialog_mod2,
+            key: LANG.hotkey_dialog_key,
+            none: LANG.hotkey_dialog_mod_none
+        },
+        buttonText: LANG.hotkey_dialog_ok || 'OK',
+        cancelText: LANG.hotkey_dialog_cancel || 'Cancel',
+        errors: {
+            need_modifier: LANG.hotkey_error_need_modifier,
+            duplicate_modifier: LANG.hotkey_error_duplicate_modifier,
+            need_key: LANG.hotkey_error_need_key,
+            blocked: LANG.hotkey_error_blocked,
+            conflict: LANG.hotkey_error_conflict
+        }
+    });
+
+    if (!result) {
+        return;
+    }
+
+    if (action === 'add') {
+        globalThis.globalSettings.hotkey_favorite_add = result;
+    } else {
+        globalThis.globalSettings.hotkey_favorite_del = result;
+    }
+    refreshFavoriteHotkeyButtons();
+}
+
+async function restoreFavoriteHotkey(action) {
+    const LANG = getHotkeyLanguage();
+    const defaults = action === 'add' ? DEFAULT_HOTKEY_FAVORITE_ADD : DEFAULT_HOTKEY_FAVORITE_DEL;
+    const { add, del } = ensureFavoriteHotkeys();
+    const other = action === 'add' ? del : add;
+
+    if (hotkeyEquals(defaults, other)) {
+        await showDialog('info', { message: LANG.hotkey_error_conflict });
+        return;
+    }
+
+    if (action === 'add') {
+        globalThis.globalSettings.hotkey_favorite_add = cloneHotkey(defaults);
+    } else {
+        globalThis.globalSettings.hotkey_favorite_del = cloneHotkey(defaults);
+    }
+    refreshFavoriteHotkeyButtons();
+}
+
+function setupHotkeyButton(containerId, text, colors, callback) {
+    return setupButtons(containerId, text, {
+        defaultColor: colors.defaultColor,
+        hoverColor: colors.hoverColor,
+        disabledColor: 'rgb(136, 121, 115)',
+        width: '100%',
+        height: '32px',
+        hidden: false,
+        clickable: true
+    }, callback);
+}
+
+function setupHotkeyValue(containerId, text) {
+    const container = document.querySelector(`.${containerId}`);
+    if (!container) {
+        console.error(CAT, '[setupHotkeyValue] Container not found', containerId);
+        return {
+            setTitle: () => {}
+        };
+    }
+
+    container.classList.add('system-settings-hotkey-value');
+    container.textContent = text ?? '';
+    return {
+        setTitle: (value) => {
+            container.textContent = value ?? '';
+        }
+    };
+}
+
+export function createFavoriteHotkeyControls() {
+    const { add, del } = ensureFavoriteHotkeys();
+    refreshSettingsLabeledHints();
+    const LANG = getHotkeyLanguage();
+    const changeColors = {
+        defaultColor: 'rgb(37, 99, 235)',
+        hoverColor: 'rgb(29, 78, 216)'
+    };
+    const defaultColors = {
+        defaultColor: 'rgb(100, 116, 139)',
+        hoverColor: 'rgb(71, 85, 105)'
+    };
+
+    return {
+        hotkeyAddCurrent: setupHotkeyValue(
+            'system-settings-hotkey-add-current',
+            formatHotkey(add)
+        ),
+        hotkeyAddChange: setupHotkeyButton(
+            'system-settings-hotkey-add-change',
+            LANG.hotkey_favorite_change || 'Change',
+            changeColors,
+            () => { void editFavoriteHotkey('add'); }
+        ),
+        hotkeyAddDefault: setupHotkeyButton(
+            'system-settings-hotkey-add-default',
+            LANG.hotkey_favorite_default || 'Default',
+            defaultColors,
+            () => { void restoreFavoriteHotkey('add'); }
+        ),
+        hotkeyDelCurrent: setupHotkeyValue(
+            'system-settings-hotkey-del-current',
+            formatHotkey(del)
+        ),
+        hotkeyDelChange: setupHotkeyButton(
+            'system-settings-hotkey-del-change',
+            LANG.hotkey_favorite_change || 'Change',
+            changeColors,
+            () => { void editFavoriteHotkey('del'); }
+        ),
+        hotkeyDelDefault: setupHotkeyButton(
+            'system-settings-hotkey-del-default',
+            LANG.hotkey_favorite_default || 'Default',
+            defaultColors,
+            () => { void restoreFavoriteHotkey('del'); }
+        )
+    };
 }
 
 export function doSwap(rightToLeft) {

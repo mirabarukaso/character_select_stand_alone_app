@@ -1,4 +1,4 @@
-import { updateLanguage, updateSettings, applyWsServiceSettings, applyWsServiceLock } from './renderer/language.js';
+import { updateLanguage, updateSettings, applyWsServiceSettings, applyWsServiceLock, applySaacReadonlyUi } from './renderer/language.js';
 import { setupGallery, GRID_SIZE_MIN, GRID_SIZE_MAX, GRID_SIZE_STEP, GRID_SIZE_DEFAULT } from './renderer/customGallery.js';
 import { setupThumbOverlay, setupThumb } from './renderer/customThumbGallery.js';
 import { setupSuggestionSystem } from './renderer/tagAutoComplete.js';
@@ -14,7 +14,7 @@ import { setupSlider } from './renderer/components/mySlider.js';
 import { setupCheckbox, setupRadiobox } from './renderer/components/myCheckbox.js';
 import { setupButtons, setupSplitButton, createSplitMenuApi, toggleButtons, showCancelButtons } from './renderer/components/myButtons.js';
 import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, setupModelReloadToggle, 
-    setupFuctionKeys, setupSwapToggle, reloadFiles, doSwap } from './renderer/components/myCollapsed.js';
+    setupFuctionKeys, setupSwapToggle, reloadFiles, doSwap, createFavoriteHotkeyControls } from './renderer/components/myCollapsed.js';
 import { setupTextbox, setupInfoBox } from './renderer/components/myTextbox.js';
 import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from './renderer/generate_backend.js';
 import { setupLoRA } from './renderer/slots/myLoRASlot.js';
@@ -337,6 +337,13 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 const port = Number(value);
                 globalThis.globalSettings.ws_port = Number.isInteger(port) ? port : value;
             }, false, true),
+        ws_saac_readonly: setupCheckbox('system-settings-saac-readonly', LANG.saac_readonly, SETTINGS.ws_saac_readonly !== false, true, (value) => {
+            if (globalThis.inBrowser) {
+                return;
+            }
+            globalThis.globalSettings.ws_saac_readonly = value;
+            void globalThis.api?.setSaacReadonly?.(value);
+        }),
         backend_log: setupButtons('system-settings-backend-log', LANG.backend_log, {
             defaultColor: 'rgb(71, 85, 105)',
             hoverColor: 'rgb(51, 65, 85)',
@@ -359,6 +366,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         }, () => {
             copyBackendLog();
         }),
+        ...createFavoriteHotkeyControls(),
 
         queueAutostart:setupCheckbox('queue-autostart-generate', LANG.generate_auto_start, SETTINGS.generate_auto_start,
             true, async (value) => {
@@ -390,9 +398,11 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
             saacRow.style.display = 'none';
         }
         globalThis.wsServiceRuntime = { running: false };
+        applySaacReadonlyUi();
     } else {
         globalThis.wsServiceRuntime = await globalThis.api.getWsServiceStatus();
         applyWsServiceSettings();
+        applySaacReadonlyUi();
     }
 }
 
