@@ -14,8 +14,7 @@
   },
   "devDependencies": {
     "adm-zip": "^0.6.1",
-    "electron": "^44.5.1",
-    "qs": "^6.16.0"
+    "electron": "^44.5.1"
   },
   "dependencies": {
     "async-mutex": "^0.5.0",
@@ -23,18 +22,17 @@
     "express": "^5.2.1",
     "express-rate-limit": "^8.7.0",
     "helmet": "^8.1.0",
-    "https": "^1.0.0",
-    "ip-address": "^10.7.2",
     "js-yaml": "^5.4.2",
     "onnxruntime-node": "^1.30.0",
-    "qs": "^6.16.0",
     "sharp": "^0.35.5",
-    "undici": "^8.11.2",
     "ws": "^8.22.0"
   },
   "overrides": {
     "onnxruntime-node": {
       "adm-zip": "^0.6.0"
+    },
+    "@electron/get": {
+      "undici": "^7.30.0"
     }
   }
 }
