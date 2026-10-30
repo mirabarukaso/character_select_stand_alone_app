@@ -235,6 +235,12 @@ function formatCudaFree(value) {
     return Number.isFinite(value) ? String(value) : 'unavailable';
 }
 
+function requestFailureDetail(result) {
+    if (result?.error) return result.error;
+    if (result?.status) return `HTTP ${result.status}`;
+    return 'request failed';
+}
+
 function cudaSystemFree(memory) {
     const value = memory?.cuda?.system?.free;
     return Number.isFinite(value) ? value : null;
@@ -1093,7 +1099,7 @@ class WebUI {
         while (Date.now() < deadline) {
             const progress = await this.jsonRequest('GET', '/sdapi/v1/progress');
             if (progress.ok && Number(progress.json?.state?.job_count) === 0) return true;
-            await delay(FORGE_IDLE_POLL);
+            await delay(FORGE_IDLE_POLL); // NOSONAR S9382 sequential poll until Forge is idle
         }
         return false;
     }
@@ -1127,7 +1133,7 @@ class WebUI {
         const before = beforePayload.ok ? cudaSystemFree(beforePayload.json) : null;
         const unloaded = await this.jsonRequest('POST', '/sdapi/v1/unload-checkpoint', {}, FORGE_UNLOAD_TIMEOUT);
         if (!unloaded.ok) {
-            const detail = unloaded.error || (unloaded.status ? `HTTP ${unloaded.status}` : 'request failed');
+            const detail = requestFailureDetail(unloaded);
             console.log(CAT, 'unload checkpoint:', reasons, `unload-checkpoint failed: ${detail}`, `cuda.system.free ${formatCudaFree(before)} -> unavailable`);
             return;
         }
@@ -1141,7 +1147,7 @@ class WebUI {
         const again = await this.jsonRequest('POST', '/sdapi/v1/unload-checkpoint', {}, FORGE_UNLOAD_TIMEOUT);
         const retryPayload = await this.jsonRequest('GET', '/sdapi/v1/memory');
         const retryFree = retryPayload.ok ? cudaSystemFree(retryPayload.json) : null;
-        const retryDetail = again.ok ? '' : ` ${again.error || (again.status ? `HTTP ${again.status}` : 'request failed')}`;
+        const retryDetail = again.ok ? '' : ` ${requestFailureDetail(again)}`;
         console.log(CAT, `unload checkpoint again:${retryDetail}`, `cuda.system.free ${formatCudaFree(after)} -> ${formatCudaFree(retryFree)}`);
     }
 }
