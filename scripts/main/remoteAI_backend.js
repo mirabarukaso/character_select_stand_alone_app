@@ -75,8 +75,9 @@ function requestRemote(options) {
             })
             response.on('end', () => {
                 if (response.statusCode !== 200) {
-                    console.error(`${CAT} HTTP error: ${response.statusCode} ${chatUrl} - ${responseData}`);
-                    finish(`Error: HTTP error: ${response.statusCode}`);
+                    const detail = `${CAT} HTTP error: ${response.statusCode} ${chatUrl} - ${responseData}`;
+                    console.error(detail);
+                    finish(detail);
                     return;
                 }
 
@@ -144,8 +145,9 @@ function requestLocal(options) {
             })
             response.on('end', () => {
                 if (response.statusCode !== 200) {
-                    console.error(`${CAT} HTTP error: ${response.statusCode} - ${responseData}`);
-                    finish(`Error: HTTP error: ${response.statusCode}`);
+                    const detail = `${CAT} HTTP error: ${response.statusCode} ${apiUrl} - ${responseData}`;
+                    console.error(detail);
+                    finish(detail);
                     return;
                 }
 

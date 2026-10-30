@@ -1,11 +1,16 @@
 import { ipcMain, net } from 'electron';
 import path from 'node:path';
 import { sendToRenderer } from './generate_backend_comfyui.js';
+import { forgeOverrideSettings, forgeResidentUnloadDecision } from './sageFp16Switch.js';
 import { makeBackendLockKey, tryAcquireBackendBusy, releaseBackendBusy, forceReleaseBackendBusy } from '../../main-common.js';
 
 const CAT = '[WebUI]';
 // Forge applies checkpoint and additional modules before /options returns.
 const SET_MODEL_TIMEOUT = 300000;
+const FORGE_IDLE_TIMEOUT = 30000;
+const FORGE_IDLE_POLL = 500;
+const FORGE_UNLOAD_RETRY_WAIT = 500;
+const FORGE_UNLOAD_TIMEOUT = 60000;
 const webuiBackends = new Map();
 const WEBUI_BUSY = 'Error: WebUI is busy, cannot run new generation, please try again later.';
 
@@ -207,6 +212,34 @@ function nextSdVae(base, vae) {
     return vae.vae;
 }
 
+function residentCheckpoint(base, model, unet) {
+    const next = nextCheckpoint(base, model, unet);
+    if (next !== undefined) return checkpointKey(next);
+    return checkpointKey(base?.sd_model_checkpoint);
+}
+
+function residentModules(base, unet, vae) {
+    if (!hasOption(base, 'forge_additional_modules')) {
+        return normalizedModuleNames(base?.forge_additional_modules);
+    }
+    const modules = forgeModuleNames(unet, vae);
+    if (!sameModuleList(modules, base.forge_additional_modules)) return normalizedModuleNames(modules);
+    return normalizedModuleNames(base.forge_additional_modules);
+}
+
+function delay(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+
+function formatCudaFree(value) {
+    return Number.isFinite(value) ? String(value) : 'unavailable';
+}
+
+function cudaSystemFree(memory) {
+    const value = memory?.cuda?.system?.free;
+    return Number.isFinite(value) ? value : null;
+}
+
 function nextFilenamePattern(base, img_prefix) {
     if (!hasOption(base, 'directories_filename_pattern') || base.directories_filename_pattern === img_prefix) {
         return undefined;
@@ -301,6 +334,8 @@ class WebUI {
         this.isForge = null; // null = not detected, true = Forge, false = A1111
         this.backendOptions = null; // last GET /sdapi/v1/options body
         this.forgeSkipLayer = null; // Forge moss SLG override, merged into override_settings only
+        this.forgeResident = null; // last txt2img checkpoint, modules, and FP16 switches
+        this.residentBaseline = null; // options snapshot taken before setModel
         this.cancelMark = false;
     }
 
@@ -411,6 +446,10 @@ class WebUI {
 
     async setModel(addr, model, auth, vae, unet, img_prefix = '[date]', skipLayer = null) {
         this.addr = addr;
+        this.residentBaseline = {
+            checkpoint: checkpointKey(this.backendOptions?.sd_model_checkpoint),
+            modules: normalizedModuleNames(this.backendOptions?.forge_additional_modules),
+        };
 
         if (!this.isForge && unet?.enable === true) {
             console.error(CAT, 'Diffusion Model is not supported by original A1111, please use Forge Neo backend to enable this feature.');
@@ -432,14 +471,18 @@ class WebUI {
         return result;
     }
 
-    create_override_settings_Forge(model, unet, vae, img_prefix = '[date]', skipLayer = null) {
+    create_override_settings_Forge(model, unet, vae, img_prefix = '[date]', skipLayer = null, forgeDtype = null) {
+        const fp16 = forgeOverrideSettings(forgeDtype);
         if (!this.isForge) {
             this.forgeSkipLayer = null;
+            if (fp16.forge_compute_fp16 || fp16.forge_sage_fp16_cast) {
+                console.warn(CAT, 'FP16 switches skipped: backend is not Forge');
+            }
             return {};
         }
         const built = buildWebUIOptionPayload(this.backendOptions, true, model, vae, unet, img_prefix, skipLayer);
         this.forgeSkipLayer = built.forgeSkipLayer;
-        return { ...built.options, ...built.forgeSkipLayer };
+        return { ...built.options, ...built.forgeSkipLayer, ...fp16 };
     }
 
     async run (generateData) {
@@ -453,7 +496,7 @@ class WebUI {
             this.auth = auth;
             this.uuid = uuid;
 
-            const override_settings = this.create_override_settings_Forge(model, generateData?.unet, generateData?.vae, img_prefix, generateData?.skip_layer);
+            const override_settings = this.create_override_settings_Forge(model, generateData?.unet, generateData?.vae, img_prefix, generateData?.skip_layer, generateData?.forge_dtype);
 
             this.startPolling();
 
@@ -592,7 +635,7 @@ class WebUI {
             this.auth = auth;
             this.uuid = uuid;
 
-            const override_settings = this.create_override_settings_Forge(model, generateData?.unet, generateData?.vae, img_prefix, generateData?.skip_layer);
+            const override_settings = this.create_override_settings_Forge(model, generateData?.unet, generateData?.vae, img_prefix, generateData?.skip_layer, generateData?.forge_dtype);
 
             // Forge Couple requires SINGLE line for each character with common prompt
             const positive = positive_left.replaceAll('\n', '').trim() + "\n" + positive_right.replaceAll('\n', '').trim();
@@ -1007,6 +1050,100 @@ class WebUI {
             }
         });
     }
+
+    jsonRequest(method, path, body = undefined, timeout = this.timeout) {
+        return new Promise((resolve) => {
+            const request = net.request({
+                method,
+                url: `http://${this.addr}${path}`,
+                headers: webuiAuthHeaders(this.auth, { 'Content-Type': 'application/json' }),
+                timeout,
+            });
+            const chunks = [];
+            const fail = (error) => resolve({ ok: false, error });
+
+            request.on('response', (response) => {
+                response.on('data', (chunk) => chunks.push(Buffer.from(chunk)));
+                response.on('end', () => {
+                    const text = Buffer.concat(chunks).toString();
+                    let json = null;
+                    if (text) {
+                        try {
+                            json = JSON.parse(text);
+                        } catch (error) {
+                            resolve({ ok: false, status: response.statusCode, error: `Decode error ${error}` });
+                            return;
+                        }
+                    }
+                    resolve({ ok: response.statusCode === 200, status: response.statusCode, json });
+                });
+            });
+            request.on('error', (error) => fail(error.message));
+            request.on('timeout', () => {
+                request.destroy();
+                fail(`timed out after ${timeout}ms`);
+            });
+            if (body !== undefined) request.write(JSON.stringify(body));
+            request.end();
+        });
+    }
+
+    async waitForForgeIdle() {
+        const deadline = Date.now() + FORGE_IDLE_TIMEOUT;
+        while (Date.now() < deadline) {
+            const progress = await this.jsonRequest('GET', '/sdapi/v1/progress');
+            if (progress.ok && Number(progress.json?.state?.job_count) === 0) return true;
+            await delay(FORGE_IDLE_POLL);
+        }
+        return false;
+    }
+
+    async releaseForgeResidentWeights(generateData) {
+        if (this.isForge !== true) return;
+
+        const fp16 = forgeOverrideSettings(generateData?.forge_dtype);
+        const next = {
+            compute: fp16.forge_compute_fp16 === true,
+            sage: fp16.forge_sage_fp16_cast === true,
+            checkpoint: residentCheckpoint(this.backendOptions, generateData?.model, generateData?.unet),
+            modules: residentModules(this.backendOptions, generateData?.unet, generateData?.vae),
+        };
+        const decision = forgeResidentUnloadDecision(
+            this.forgeResident,
+            next,
+            this.forgeResident ? null : this.residentBaseline,
+        );
+        this.forgeResident = next;
+        if (!decision.unload) return;
+
+        const reasons = decision.reasons.join('; ');
+        const idle = await this.waitForForgeIdle();
+        if (!idle) {
+            console.log(CAT, 'unload checkpoint:', reasons, 'progress still busy, skipped');
+            return;
+        }
+
+        const beforePayload = await this.jsonRequest('GET', '/sdapi/v1/memory');
+        const before = beforePayload.ok ? cudaSystemFree(beforePayload.json) : null;
+        const unloaded = await this.jsonRequest('POST', '/sdapi/v1/unload-checkpoint', {}, FORGE_UNLOAD_TIMEOUT);
+        if (!unloaded.ok) {
+            const detail = unloaded.error || (unloaded.status ? `HTTP ${unloaded.status}` : 'request failed');
+            console.log(CAT, 'unload checkpoint:', reasons, `unload-checkpoint failed: ${detail}`, `cuda.system.free ${formatCudaFree(before)} -> unavailable`);
+            return;
+        }
+
+        const afterPayload = await this.jsonRequest('GET', '/sdapi/v1/memory');
+        const after = afterPayload.ok ? cudaSystemFree(afterPayload.json) : null;
+        console.log(CAT, 'unload checkpoint:', reasons, `cuda.system.free ${formatCudaFree(before)} -> ${formatCudaFree(after)}`);
+        if (before == null || after == null || after > before) return;
+
+        await delay(FORGE_UNLOAD_RETRY_WAIT);
+        const again = await this.jsonRequest('POST', '/sdapi/v1/unload-checkpoint', {}, FORGE_UNLOAD_TIMEOUT);
+        const retryPayload = await this.jsonRequest('GET', '/sdapi/v1/memory');
+        const retryFree = retryPayload.ok ? cudaSystemFree(retryPayload.json) : null;
+        const retryDetail = again.ok ? '' : ` ${again.error || (again.status ? `HTTP ${again.status}` : 'request failed')}`;
+        console.log(CAT, `unload checkpoint again:${retryDetail}`, `cuda.system.free ${formatCudaFree(after)} -> ${formatCudaFree(retryFree)}`);
+    }
 }
 
 async function setupGenerateBackendWebUI() {
@@ -1153,6 +1290,7 @@ async function runWebUI(generateData){
 
     if(result === '200') {
         try {
+            if (backend.isForge) await backend.releaseForgeResidentWeights(generateData);
             if(backend.uuid !== 'none')
                 console.log(CAT, 'Running WebUI with uuid:', generateData.uuid);
             const imageData = await backend.run(generateData);
@@ -1203,6 +1341,7 @@ async function runWebUI_Regional(generateData){
 
     if(result === '200') {
         try {
+            if (backend.isForge) await backend.releaseForgeResidentWeights(generateData);
             if(backend.uuid !== 'none')
                 console.log(CAT, 'Running Regional WebUI with uuid:', generateData.uuid);
             const imageData = await backend.runRegional(generateData);
@@ -1373,6 +1512,8 @@ function resetModelLists() {
     for (const backend of webuiBackends.values()) {
         backend.isForge = null;
         backend.backendOptions = null;
+        backend.forgeResident = null;
+        backend.residentBaseline = null;
     }
 }
 

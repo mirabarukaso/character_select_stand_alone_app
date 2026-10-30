@@ -6,7 +6,18 @@ export const CLIP_TYPE = [
 
 export const CLIP_DEVICE = ['default', 'cpu'];
 
-export const DIFFUSION_DTYPE = ['default', 'fp8_e4m3fn', 'fp8_e4m3fn_fast', 'fp8_e5m2', 'PyTorch_FP16', 'Sage_FP16'];
+export const DIFFUSION_DTYPE = ['default', 'fp8_e4m3fn', 'fp8_e4m3fn_fast', 'fp8_e5m2'];
+
+export const FORGE_UNET_STORAGE_AUTOMATIC = 'Automatic';
+
+export const FORGE_UNET_STORAGE_DTYPE = [
+    'Automatic',
+    'Automatic (fp16 LoRA)',
+    'float8-e4m3fn',
+    'float8-e4m3fn (fp16 LoRA)',
+    'float8-e5m2',
+    'float8-e5m2 (fp16 LoRA)',
+];
 
 export const SAMPLER_COMFYUI = ["euler", "euler_cfg_pp", "euler_ancestral", "euler_ancestral_cfg_pp", "heun", "heunpp2", "exp_heun_2_x0", "exp_heun_2_x0_sde", "dpm_2", "dpm_2_ancestral",
                   "lms", "dpm_fast", "dpm_adaptive", "dpmpp_2s_ancestral", "dpmpp_2s_ancestral_cfg_pp", "dpmpp_sde", "dpmpp_sde_gpu",

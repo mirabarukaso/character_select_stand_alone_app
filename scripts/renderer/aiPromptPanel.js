@@ -352,7 +352,7 @@ async function startRun() {
     paintRunButton();
     if (outcome?.cancelled) return;
     if (!outcome?.text) {
-        notice(text.ai_prompt_failed);
+        notice(outcome?.error || text.ai_prompt_failed);
         return;
     }
     ui.result.setValue(outcome.text);

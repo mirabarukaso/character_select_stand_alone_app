@@ -5,7 +5,7 @@ function stripThink(content) {
 }
 
 function readContent(result) {
-    if (typeof result !== 'string' || result.startsWith('Error:')) {
+    if (typeof result !== 'string' || result.startsWith('Error:') || result.startsWith('[ModelAPI]')) {
         console.error('Request AI failed:', result);
         return '';
     }
@@ -40,10 +40,12 @@ export async function requestAiCompletion(aiOptions) {
         const result = await callApi(method, aiOptions);
         if (typeof result === 'string' && result.startsWith('Error: cancelled')) return { cancelled: true };
         const text = readContent(result);
-        return text ? { text } : { failed: true };
+        if (text) return { text };
+        const error = typeof result === 'string' ? result.trim() : '';
+        return { failed: true, error };
     } catch (error) {
         console.error('Request AI failed:', error.message);
-        return { failed: true };
+        return { failed: true, error: error?.message || '' };
     }
 }
 

@@ -10,6 +10,7 @@ import { setQueueAutoStart } from './callbacks.js';
 import { filterPrompts } from './tools/promptFilter.js';
 import { isAutoRetryRunning, startAutoRetry } from './tools/autoRetry.js';
 import { finalizePositivePrompt } from './bounding.js';
+import { readForgeDtypeSettings } from '../main/sageFp16Switch.js';
 
 
 export const REPLACE_AI_MARK = '_|REPLACE_AI_PROMPT|_';
@@ -1248,6 +1249,7 @@ export async function generateImage(dataPack){
             adetailer: createADetailer(apiInterface),
             vae: {vae_override: vae_override, vae: vae},
             skip_layer: readSkipLayer(),
+            forge_dtype: readForgeDtypeSettings(SETTINGS),
             ...(SETTINGS.api_model_type === 'Checkpoint' ? {
                 model: globalThis.dropdownList.model.getValue(),
                 vpred: checkVpred(),                
@@ -1257,7 +1259,9 @@ export async function generateImage(dataPack){
                 unet: {
                     enable: true,
                     model: globalThis.dropdownList.model.getValue(),
-                    dtype: globalThis.dropdownList.diffusion_model_weight_dtype.getValue(),
+                    dtype: SETTINGS.api_interface === 'WebUI'
+                        ? SETTINGS.api_model_file_diffusion_weight_dtype
+                        : globalThis.dropdownList.diffusion_model_weight_dtype.getValue(),
                     vae_model: globalThis.dropdownList.vae_unet.getValue(),
                     clip_model: globalThis.dropdownList.textencoder.getValue(),
                     clip_type: globalThis.dropdownList.textencoder_type.getValue(),

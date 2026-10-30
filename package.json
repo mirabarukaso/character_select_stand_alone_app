@@ -5,7 +5,7 @@
   "keywords": [],
   "main": "./main.js",
   "type": "module",
-  "version": "2.11.0",
+  "version": "2.11.1",
   "author": "oOkami",
   "scripts": {
     "test": "node --experimental-test-module-mocks --test",

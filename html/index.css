@@ -823,6 +823,10 @@ body.layout-is-resizing-full * {
     display: none !important;
 }
 
+.forge-fp16-switches[hidden] {
+    display: none !important;
+}
+
 .bounding-hint {
     margin-top: 6px;
     color: var(--text-muted);

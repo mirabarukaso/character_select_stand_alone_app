@@ -4,7 +4,7 @@ import { setupThumbOverlay, setupThumb } from './renderer/customThumbGallery.js'
 import { setupSuggestionSystem } from './renderer/tagAutoComplete.js';
 import { setupButtonOverlay, customCommonOverlay } from './renderer/customOverlay.js';
 import { myCharacterList, myRegionalCharacterList, myViewsList, myLanguageList, mySimpleList } from './renderer/components/myDropdown.js';
-import { callback_mySettingList, callback_api_model_select, callback_api_model_type, callback_api_interface, notifySageFp16Cast, 
+import { callback_mySettingList, callback_api_model_select, callback_api_model_type, callback_api_interface, callback_forge_fp16_switch, notifySageFp16Cast, 
     callback_generate_start, callback_generate_skip, callback_generate_skip_current, callback_generate_cancel,
     callback_regional_condition, callback_controlnet, callback_adetailer, callback_queue_autostart,
     callback_thumb_select, callback_ptompt_textbox_autoresize, callback_ptompt_textbox_fontsize
@@ -27,8 +27,8 @@ import { setupImageUploadOverlay } from './renderer/imageInfo.js';
 import { setupThemeToggle } from './renderer/theme.js';
 import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/components/myRightClickMenu.js';
 import { extractHostPort, hashHiresSubmit, rememberHiresSubmit } from './renderer/generate.js';
-import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from './types.js';
-import { normalizeDiffusionDtype } from './main/sageFp16Switch.js';
+import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE, FORGE_UNET_STORAGE_AUTOMATIC, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from './types.js';
+import { normalizeDiffusionDtype, normalizeForgeStorageDtype } from './main/sageFp16Switch.js';
 import { flushSlots } from './renderer/slots/slotsManager.js';
 import { set_prompt_textBox_Heights } from './renderer/components/componentsManager.js';
 import { hiresCalculate } from './renderer/tools/hiresCalculation.js';
@@ -85,10 +85,24 @@ export async function setupHeader(SETTINGS, FILES, LANG){
         diffusion_model_weight_dtype: mySimpleList('diffusion-model-weight-dtype', LANG.api_diffusion_model_weight_dtype,
             DIFFUSION_DTYPE,
             (index, value) => {
+                const settings = globalThis.globalSettings;
+                if (settings.api_interface === 'WebUI') {
+                    const locked = settings.api_forge_compute_fp16 || settings.api_forge_sage_fp16_cast;
+                    const picked = normalizeForgeStorageDtype(value);
+                    settings.api_forge_unet_storage_dtype = locked ? FORGE_UNET_STORAGE_AUTOMATIC : picked;
+                    if (locked && picked !== FORGE_UNET_STORAGE_AUTOMATIC) {
+                        globalThis.dropdownList.diffusion_model_weight_dtype.updateDefaults(FORGE_UNET_STORAGE_AUTOMATIC);
+                    }
+                    return;
+                }
                 const dtype = normalizeDiffusionDtype(value);
-                globalThis.globalSettings.api_model_file_diffusion_weight_dtype = dtype;
+                settings.api_model_file_diffusion_weight_dtype = dtype;
                 notifySageFp16Cast(dtype);
             }, 8, false, true),
+        forge_compute_fp16: setupCheckbox('forge-compute-fp16', LANG.api_forge_compute_fp16, SETTINGS.api_forge_compute_fp16 === true, true,
+            (value) => { callback_forge_fp16_switch('compute', value); }),
+        forge_sage_fp16_cast: setupCheckbox('forge-sage-fp16-cast', LANG.api_forge_sage_fp16_cast, SETTINGS.api_forge_sage_fp16_cast === true, true,
+            (value) => { callback_forge_fp16_switch('sage', value); }),
 
         textencoder: mySimpleList('text-encoder', LANG.api_text_encoder, FILES.textEncoderList,
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder = value; }, 20, true, true),
@@ -548,7 +562,8 @@ async function init(){
         controlnet: false,
         adetailer: false,
         regional_forge_neo: false,
-        sage_fp16: false
+        sage_fp16: false,
+        sage_fp16_webui: false
     };    
 
     try {

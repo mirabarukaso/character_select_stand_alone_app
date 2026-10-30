@@ -15,7 +15,7 @@
       "id": "natural-brief",
       "name": "Natural scene",
       "defaultSource": "brief",
-      "characterSlot": 1,
+      "characterSlot": 4,
       "model": "openai/gpt-6-luna",
       "timeout": 60,
       "temperature": 0.9,

@@ -8,8 +8,7 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(W
 > Create your own thumbList with [SAA Thumb Generator](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/thumb-generator/README.md)
 
 > [!TIP]
-> Diffusion `Weight Dtype` adds `PyTorch_FP16` and `Sage_FP16` for Turing GPUs (RTX 20 series). Newer cards can keep using bf16 or fp8.      
-> Parameter details are in the [ComfyUI_MiraSubPack README](https://github.com/mirabarukaso/ComfyUI_MiraSubPack/blob/main/README.md).
+> FP16 Compute and Sage Attention are for Turing GPUs (RTX 20 series) only. Newer cards can keep using bf16 or fp8. See [Turing FP16](#turing-fp16-rtx-20-series).
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%><img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall03.png" width=45%>
 
@@ -124,7 +123,7 @@ Each template keeps its own system prompt, model, timeout, temperature, max toke
 * `Remote` expects an OpenAI-compatible base URL and an API key. A base such as `https://nano-gpt.com/api/v1` is called at `/chat/completions`. A URL that already ends with `/chat/completions` is used as it is.     
 * `Local` expects a llama.cpp server address, for example `http://127.0.0.1:8080/chat/completions`. Build [llama.cpp](https://github.com/ggml-org/llama.cpp) or take a [release](https://github.com/ggml-org/llama.cpp/releases), then start it with your GGUF model: `llama-server.exe -c 16384 --port 8080 -m "<your GGUF model>"`.     
 
-Templates are stored in `settings/ai/templates.json`. The selected template and source are stored with the current settings file. `Inherit settings` starts off. Turn it on before loading another settings file to keep the current interface, addresses, key, template, source, and brief. The switch turns itself off after that load. Save the settings file to store the kept configuration in the file you just opened.     
+Built-in templates ship in `data/ai_prompt_templates.json`. The app copies them into `settings/ai/templates.json` on first run, and later saves stay in that file. The selected template and source are stored with the current settings file. `Inherit settings` starts off. Turn it on before loading another settings file to keep the current interface, addresses, key, template, source, and brief. The switch turns itself off after that load. Save the settings file to store the kept configuration in the file you just opened.     
 
 </details>
 
@@ -520,6 +519,17 @@ For SAAC: Drag and drop image from browser to local folder or `save as` from bro
 Right click on `Common` and `Positive` to send text form LoRA to LoRA Slot.     
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/sendLoRAtoSlot.png" width=35%>
 </details>
+
+## Turing FP16 (RTX 20 series)
+Turing cards (RTX 20 series) cannot run bf16. These two switches keep that generation on fp16. Newer cards can leave both off and use bf16 or fp8.
+
+`FP16 Compute` casts the loaded UNet compute to fp16. Weight storage stays as it is.      
+`Sage Attention` casts attention q/k/v to fp16 and casts them back. It does not turn compute fp16 on by itself. SageAttention 1.0.6 or 2.2 still has to be installed for that path.      
+
+The two switches are independent. Turning either one on keeps UNet storage at `Automatic`.      
+
+*ComfyUI* inserts the switch with [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack).      
+*Forge Neo* sends `forge_compute_fp16` and `forge_sage_fp16_cast` with [forge-turing-fp16](https://github.com/mirabarukaso/forge-turing-fp16). Before the next txt2img, SAA unloads the resident UNet, text encoder, and VAE when either switch turns off, or when the checkpoint or additional modules change. That frees the previous weights. A later float32 load can still offload part of a large UNet.      
 
 ------
 # Image API Interface

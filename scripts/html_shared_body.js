@@ -358,6 +358,10 @@ export const sharedBodyHTML = `
                 <div><p>Diffusion: Moss/Anima/Z Image/Qwen Image/Flux</p></div>
                 <div class="diffusion-model-weight-dtype"></div>
               </div>
+              <div class="system-settings-main-3 forge-fp16-switches" hidden>
+                <div class="forge-compute-fp16"></div>
+                <div class="forge-sage-fp16-cast"></div>
+              </div>
               <div class="system-settings-main-2">                
                 <div class="vae-unet"></div>
                 <div class="text-encoder"></div>

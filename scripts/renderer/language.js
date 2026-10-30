@@ -65,7 +65,13 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.dropdownList.vae_sdxl.setTitle(LANG.api_ckpt_vae_model);
     globalThis.dropdownList.vae_sdxl_override.setTitle(LANG.api_vae_sdxl_override);
 
-    globalThis.dropdownList.diffusion_model_weight_dtype.setTitle(LANG.api_diffusion_model_weight_dtype);
+    globalThis.dropdownList.diffusion_model_weight_dtype.setTitle(
+        globalThis.globalSettings.api_interface === 'WebUI'
+            ? (LANG.api_forge_unet_storage_dtype || 'UNet Storage')
+            : LANG.api_diffusion_model_weight_dtype
+    );
+    globalThis.dropdownList.forge_compute_fp16?.setTitle(LANG.api_forge_compute_fp16 || 'FP16 Compute (Turing 20)');
+    globalThis.dropdownList.forge_sage_fp16_cast?.setTitle(LANG.api_forge_sage_fp16_cast || 'Sage Attention (Turing 20)');
     globalThis.dropdownList.textencoder.setTitle(LANG.api_text_encoder);
     globalThis.dropdownList.textencoder_type.setTitle(LANG.api_text_encoder_type);
     globalThis.dropdownList.textencoder_device.setTitle(LANG.api_text_encoder_device);

@@ -1584,7 +1584,7 @@ class ComfyUI {
     };
 
     workflow = applyADetailerUnet(workflow, adetailer, workflowInfo);
-    applySageFp16Switch(workflow, '51', unet.dtype);
+    applySageFp16Switch(workflow, '51', generateData?.forge_dtype);
     return workflow;
   }
 
@@ -1944,7 +1944,7 @@ class ComfyUI {
     };
 
     workflow = applyADetailerUnet(workflow, adetailer, workflowInfo);
-    applySageFp16Switch(workflow, '59', unet.dtype);
+    applySageFp16Switch(workflow, '59', generateData?.forge_dtype);
     return workflow;
   }
 

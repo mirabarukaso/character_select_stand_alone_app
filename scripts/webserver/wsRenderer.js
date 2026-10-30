@@ -63,7 +63,8 @@ async function init() {
         controlnet: false,
         adetailer: false,
         regional_forge_neo: false,
-        sage_fp16: false
+        sage_fp16: false,
+        sage_fp16_webui: false
     };
 
     // Init Global Settings

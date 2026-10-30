@@ -1,3 +1,11 @@
+2026.10.30 v2.11.1      
+Add, `FP16 Compute` and `Sage Attention` for Turing GPUs (RTX 20 series) on ComfyUI and Forge Neo. Newer cards can keep bf16 or fp8      
+Add, ComfyUI sends the two switches through [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack). Forge Neo sends `forge_compute_fp16` and `forge_sage_fp16_cast` through [forge-turing-fp16](https://github.com/mirabarukaso/forge-turing-fp16)      
+Add, Forge Neo unloads resident UNet, text encoder, and VAE before the next txt2img when either switch turns off, or when the checkpoint or additional modules change      
+Change, WebUI storage precision stays a separate list. Either Turing switch keeps it at `Automatic`      
+Minor bugs fix      
+
+
 2026.10.29 v2.11.0      
 Add, `AI Prompt` panel. Generate inside the panel, then `Overwrite` or `Append` into `Common`, `Positive`, `Right positive`, or `Negative`. Image generation no longer calls the language model      
 Add, templates `Tag scene`, `Natural scene`, and `Character natural`. Each template keeps its system prompt, model, timeout, temperature, max tokens, source, and character slot      

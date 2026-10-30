@@ -83,6 +83,9 @@ const defaultSettings = {
 
     "api_model_file_diffusion_select": "None",
     "api_model_file_diffusion_weight_dtype": "default",
+    "api_forge_unet_storage_dtype": "Automatic",
+    "api_forge_compute_fp16": false,
+    "api_forge_sage_fp16_cast": false,
     "api_model_file_text_encoder": "None",
     "api_model_file_text_encoder_type": "stable_diffusion",
     "api_model_file_text_encoder_device": "default",
@@ -160,18 +163,23 @@ const defaultSettings = {
     "gallery_grid_size": 200,
 }
 
+function applySettingsFile(mySettings) {
+    if (!mySettings) return;
+    for (const [key, value] of Object.entries(mySettings)) {
+        if (Object.hasOwn(globalSettings, key)) {
+            globalSettings[key] = value;
+        } else {
+            console.warn(CAT, `Key "${key}" not found in globalSettings. Ignoring.`);
+        }
+    }
+}
+
 function setupGlobalSettings() { 
     globalSettings = structuredClone(defaultSettings);
     const filePath = path.join(appPath, 'settings', 'settings.json');
     const mySettings = loadJSONFile(filePath);
     if (mySettings) {
-        for (const [key, value] of Object.entries(mySettings)) {
-            if (Object.hasOwn(globalSettings, key)) {
-                globalSettings[key] = value;
-            } else {
-                console.warn(CAT, `Key "${key}" not found in globalSettings. Ignoring.`);
-            }
-        }
+        applySettingsFile(mySettings);
     } else {
         console.warn(CAT, `File settings.json not found, use default settings.`);
     }
@@ -271,13 +279,7 @@ function loadSettings(fineName) {
     console.log(CAT, `Loading ${settingsDir}`);
     const mySettings = loadJSONFile(settingsDir);
     if (mySettings) {
-        for (const [key, value] of Object.entries(mySettings)) {
-            if (Object.hasOwn(globalSettings, key)) {
-                globalSettings[key] = value;
-            } else {
-                console.warn(CAT, `Key "${key}" not found in globalSettings. Ignoring.`);
-            }
-        }
+        applySettingsFile(mySettings);
     } else {
         console.error(CAT, `Failed to load settings directory: ${settingsDir}`);
         console.log(CAT, 'Reset to default');

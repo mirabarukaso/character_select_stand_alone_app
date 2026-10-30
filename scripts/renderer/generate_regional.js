@@ -6,6 +6,7 @@ import { generateRandomSeed, resolveGenerateSeed, getTagAssist, getLoRAs, replac
 import { processRandomString } from './tools/nestedBraceParsing.js';
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { filterPrompts } from './tools/promptFilter.js';
+import { readForgeDtypeSettings } from '../main/sageFp16Switch.js';
 
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
@@ -567,6 +568,7 @@ export async function generateRegionalImage(dataPack){
             regional: regional,
             vae: {vae_override: vae_override, vae: vae},
             skip_layer: readSkipLayer(),
+            forge_dtype: readForgeDtypeSettings(SETTINGS),
             adetailer: createADetailer(apiInterface),
             ...(SETTINGS.api_model_type === 'Checkpoint' ? {                
                 controlnet: createControlNet(),                
@@ -574,7 +576,9 @@ export async function generateRegionalImage(dataPack){
                 unet: {
                     enable: true,
                     model: globalThis.dropdownList.model.getValue(),
-                    dtype: globalThis.dropdownList.diffusion_model_weight_dtype.getValue(),
+                    dtype: SETTINGS.api_interface === 'WebUI'
+                        ? SETTINGS.api_model_file_diffusion_weight_dtype
+                        : globalThis.dropdownList.diffusion_model_weight_dtype.getValue(),
                     vae_model: globalThis.dropdownList.vae_unet.getValue(),
                     clip_model: globalThis.dropdownList.textencoder.getValue(),
                     clip_type: globalThis.dropdownList.textencoder_type.getValue(),

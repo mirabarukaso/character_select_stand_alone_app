@@ -14,8 +14,8 @@ import { changeFontSize } from './components/myTextbox.js';
 import { set_prompt_textBox_Heights } from './components/componentsManager.js';
 import { applySavedLayout } from './uiLayout.js';
 import { refreshPromptViewToggles, refreshTabLabelHints } from './uiLayoutTabs.js';
-import { DIFFUSION_DTYPE, SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
-import { isFp16CastDtype, visibleDiffusionDtype } from '../main/sageFp16Switch.js';
+import { DIFFUSION_DTYPE, FORGE_UNET_STORAGE_AUTOMATIC, SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
+import { FORGE_FP16_PLUGIN_URL, isFp16CastDtype, normalizeForgeStorageDtype, visibleDiffusionDtype, visibleForgeStorageDtype } from '../main/sageFp16Switch.js';
 import { cancelAutoRetry, isAutoRetryRunning } from './tools/autoRetry.js';
 
 export async function callback_mySettingList(index, selectedValue) {    
@@ -135,16 +135,46 @@ export async function callback_api_model_select(index, selectedValue) {
     }
 }
 
+export function callback_forge_fp16_switch(which, value) {
+    const settings = globalThis.globalSettings;
+    if (!settings) return;
+    const on = value === true;
+    if (which === 'sage') settings.api_forge_sage_fp16_cast = on;
+    else settings.api_forge_compute_fp16 = on;
+
+    if (settings.api_forge_compute_fp16 || settings.api_forge_sage_fp16_cast) {
+        settings.api_forge_unet_storage_dtype = FORGE_UNET_STORAGE_AUTOMATIC;
+        if (settings.api_interface === 'WebUI') {
+            globalThis.dropdownList?.diffusion_model_weight_dtype?.updateDefaults(FORGE_UNET_STORAGE_AUTOMATIC);
+        }
+        if (on) notifySageFp16Cast(which === 'sage' ? 'Sage_FP16' : 'PyTorch_FP16');
+    }
+}
+
 export function notifySageFp16Cast(value) {
     if (!isFp16CastDtype(value)) return;
-    if (globalThis.globalSettings?.api_model_type === 'Checkpoint') return;
-    if (!globalThis.custom_message || globalThis.custom_message.sage_fp16) return;
+    const settings = globalThis.globalSettings;
+    const webui = settings?.api_interface === 'WebUI';
 
-    const lang = globalThis.cachedFiles?.language?.[globalThis.globalSettings.language];
-    if (!lang?.message_sage_fp16 || !globalThis.overlay?.custom?.createErrorOverlay) return;
+    const flag = webui ? 'sage_fp16_webui' : 'sage_fp16';
+    if (!globalThis.custom_message || globalThis.custom_message[flag]) return;
 
-    globalThis.custom_message.sage_fp16 = true;
-    globalThis.overlay.custom.createErrorOverlay(lang.message_sage_fp16, lang.message_sage_fp16_link);
+    const lang = globalThis.cachedFiles?.language?.[settings.language];
+    const applyPluginUrl = (text) => typeof text === 'string' ? text.replaceAll('{plugin}', FORGE_FP16_PLUGIN_URL) : text;
+    const message = applyPluginUrl(webui ? lang?.message_sage_fp16_webui : lang?.message_sage_fp16);
+    const link = applyPluginUrl(webui ? lang?.message_sage_fp16_webui_link : lang?.message_sage_fp16_link);
+    if (!message || !globalThis.overlay?.custom?.createErrorOverlay) return;
+
+    globalThis.custom_message[flag] = true;
+    globalThis.overlay.custom.createErrorOverlay(message, link);
+}
+
+function syncForgeFp16Switches() {
+    const host = document.querySelector('.forge-fp16-switches');
+    if (host) host.hidden = false;
+    const settings = globalThis.globalSettings;
+    globalThis.dropdownList?.forge_compute_fp16?.setValue(settings?.api_forge_compute_fp16 === true);
+    globalThis.dropdownList?.forge_sage_fp16_cast?.setValue(settings?.api_forge_sage_fp16_cast === true);
 }
 
 function syncDiffusionDtypeMenu(modelType) {
@@ -153,14 +183,24 @@ function syncDiffusionDtypeMenu(modelType) {
 
     const settings = globalThis.globalSettings;
     const lang = globalThis.cachedFiles?.language?.[settings.language];
+    const webui = settings.api_interface === 'WebUI';
+    syncForgeFp16Switches();
+
+    if (webui) {
+        if (settings.api_forge_compute_fp16 || settings.api_forge_sage_fp16_cast) {
+            settings.api_forge_unet_storage_dtype = FORGE_UNET_STORAGE_AUTOMATIC;
+        }
+        const menu = visibleForgeStorageDtype(settings.api_forge_unet_storage_dtype);
+        settings.api_forge_unet_storage_dtype = menu.visible;
+        dropdown.setOptions(menu.choices, null, lang?.api_forge_unet_storage_dtype || 'UNet Storage', menu.visible);
+        return;
+    }
+
     const menu = visibleDiffusionDtype(settings.api_model_file_diffusion_weight_dtype, modelType, DIFFUSION_DTYPE);
     if (settings.api_model_file_diffusion_weight_dtype !== menu.saved) {
         settings.api_model_file_diffusion_weight_dtype = menu.saved;
     }
     dropdown.setOptions(menu.choices, null, lang?.api_diffusion_model_weight_dtype || 'Weight Dtype', menu.visible);
-    if (modelType === 'Diffusion') {
-        notifySageFp16Cast(menu.saved);
-    }
 }
 
 export async function callback_api_model_type(index, selectedValue) {
@@ -255,6 +295,8 @@ export async function callback_api_interface(index, selectedValue){
     }
 
     globalThis.hifix.model.setValue(LANG.api_hf_upscaler_selected, globalThis.cachedFiles.upscalerList);
+
+    syncDiffusionDtypeMenu(globalThis.globalSettings.api_model_type);
 }
 
 export async function callback_myCharacterList_updateThumb(){
