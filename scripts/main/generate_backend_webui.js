@@ -169,6 +169,13 @@ function hasOption(base, key) {
     return !!base && Object.hasOwn(base, key);
 }
 
+// A fresh GET can match the frontend and still be a different loaded state.
+// First launch and a settings reset have not posted yet, so those keys are sent anyway.
+function allowOption(base, key, force) {
+    if (hasOption(base, key)) return true;
+    return force === true && Object.keys(optionBase(base)).length === 0;
+}
+
 function moduleName(value) {
     const base = moduleBasename(value);
     if (!base || base === 'None' || base === 'Automatic' || base === 'Default') return '';
@@ -196,19 +203,19 @@ function optionBase(current) {
     return current && typeof current === 'object' ? current : {};
 }
 
-function nextCheckpoint(base, model, unet) {
-    if (!hasOption(base, 'sd_model_checkpoint')) return undefined;
+function nextCheckpoint(base, model, unet, force = false) {
+    if (!allowOption(base, 'sd_model_checkpoint', force)) return undefined;
     let checkpoint;
     if (unet?.enable === true && unet.model) checkpoint = unet.model;
     else if (unet?.enable !== true && model && model !== 'Default') checkpoint = model;
-    if (checkpoint !== undefined && !sameCheckpoint(base.sd_model_checkpoint, checkpoint)) {
-        return checkpoint;
-    }
-    return undefined;
+    if (checkpoint === undefined) return undefined;
+    if (!force && sameCheckpoint(base.sd_model_checkpoint, checkpoint)) return undefined;
+    return checkpoint;
 }
 
-function nextSdVae(base, vae) {
-    if (!vae?.vae_override || !hasOption(base, 'sd_vae') || vae.vae === base.sd_vae) return undefined;
+function nextSdVae(base, vae, force = false) {
+    if (!vae?.vae_override || !allowOption(base, 'sd_vae', force)) return undefined;
+    if (!force && vae.vae === base.sd_vae) return undefined;
     return vae.vae;
 }
 
@@ -246,11 +253,11 @@ function cudaSystemFree(memory) {
     return Number.isFinite(value) ? value : null;
 }
 
-function nextFilenamePattern(base, img_prefix) {
-    if (!hasOption(base, 'directories_filename_pattern') || base.directories_filename_pattern === img_prefix) {
-        return undefined;
-    }
-    if (img_prefix !== '[date]') {
+function nextFilenamePattern(base, img_prefix, force = false) {
+    if (!allowOption(base, 'directories_filename_pattern', force)) return undefined;
+    const unchanged = hasOption(base, 'directories_filename_pattern') && base.directories_filename_pattern === img_prefix;
+    if (unchanged && !force) return undefined;
+    if (!unchanged && img_prefix !== '[date]') {
         console.error(CAT, 'Override directories_filename_pattern with:', img_prefix);
     }
     return img_prefix;
@@ -289,26 +296,26 @@ function forgeSkipLayerFor(isForge, unet, skipLayer) {
     return { slg_enable: false };
 }
 
-function buildWebUIOptionPayload(current, isForge, model, vae, unet, img_prefix, skipLayer) {
+function buildWebUIOptionPayload(current, isForge, model, vae, unet, img_prefix, skipLayer, force = false) {
     const base = optionBase(current);
     const payload = {};
-    const forge = isForge === true && hasOption(base, 'forge_additional_modules');
+    const forge = isForge === true && allowOption(base, 'forge_additional_modules', force);
     const forgeSkipLayer = forgeSkipLayerFor(isForge, unet, skipLayer);
 
-    const checkpoint = nextCheckpoint(base, model, unet);
+    const checkpoint = nextCheckpoint(base, model, unet, force);
     if (checkpoint !== undefined) payload.sd_model_checkpoint = checkpoint;
 
     if (forge) {
         const modules = forgeModuleNames(unet, vae);
-        if (!sameModuleList(modules, base.forge_additional_modules)) {
+        if (force || !sameModuleList(modules, base.forge_additional_modules)) {
             payload.forge_additional_modules = modules;
         }
     } else {
-        const sdVae = nextSdVae(base, vae);
+        const sdVae = nextSdVae(base, vae, force);
         if (sdVae !== undefined) payload.sd_vae = sdVae;
     }
 
-    const pattern = nextFilenamePattern(base, img_prefix);
+    const pattern = nextFilenamePattern(base, img_prefix, force);
     if (pattern !== undefined) payload.directories_filename_pattern = pattern;
 
     return {
@@ -339,6 +346,7 @@ class WebUI {
         this.uuid = 'none';
         this.isForge = null; // null = not detected, true = Forge, false = A1111
         this.backendOptions = null; // last GET /sdapi/v1/options body
+        this.optionsApplied = false; // false until POST /options succeeds; settings reset clears it
         this.forgeSkipLayer = null; // Forge moss SLG override, merged into override_settings only
         this.forgeResident = null; // last txt2img checkpoint, modules, and FP16 switches
         this.residentBaseline = null; // options snapshot taken before setModel
@@ -462,17 +470,22 @@ class WebUI {
             return 'Error: Diffusion Model is not supported by original A1111, please use Forge Neo backend to enable this feature.';
         }
 
-        const built = buildWebUIOptionPayload(this.backendOptions, this.isForge, model, vae, unet, img_prefix, skipLayer);
+        const forceApply = this.optionsApplied !== true;
+        const built = buildWebUIOptionPayload(this.backendOptions, this.isForge, model, vae, unet, img_prefix, skipLayer, forceApply);
         this.forgeSkipLayer = built.forgeSkipLayer;
         const optionPayload = built.options;
         if (!optionPayload) {
-            console.log(CAT, 'setModel skipped, options unchanged');
+            console.log(CAT, forceApply ? 'setModel skipped, no options to apply' : 'setModel skipped, options unchanged');
             return '200';
         }
 
+        if (forceApply) {
+            console.log(CAT, 'setModel apply options');
+        }
         const result = await this.postOptions(auth, optionPayload);
         if (result === '200') {
             this.backendOptions = { ...this.backendOptions, ...optionPayload };
+            this.optionsApplied = true;
         }
         return result;
     }
@@ -1518,6 +1531,7 @@ function resetModelLists() {
     for (const backend of webuiBackends.values()) {
         backend.isForge = null;
         backend.backendOptions = null;
+        backend.optionsApplied = false;
         backend.forgeResident = null;
         backend.residentBaseline = null;
     }
