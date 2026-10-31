@@ -410,13 +410,13 @@ function splitTagNegativePrompt(tag = '') {
     return { tag: positiveTag, neg_tags };
 }
 
-function getCustomJSON(loop = -1) {
+function getCustomJSON(loop = -1, seed = null) {
     let BeforeOfPrompts = '';
     let BeforeOfCharacter = '';
     let EndOfCharacter = '';
     let EndOfPrompts = '';
 
-    const jsonSlots = globalThis.jsonlist.getValues(loop);
+    const jsonSlots = globalThis.jsonlist.getValues(loop, seed);
 
     for (const [prompt, strength, , method] of jsonSlots) {
         if (method === 'Off') continue;
@@ -574,8 +574,8 @@ function appendPrompts(characters, views, ai, BOP, BOC, EOC, EOP) {
     return { tmpPositivePrompt: built.prompt, tmpPositivePromptColored: built.promptColored };
 }
 
-function getPrompts(characters, views, ai='', apiInterface = 'None', loop=-1) {       
-    const {BOP, BOC, EOC, EOP} = getCustomJSON(loop);
+function getPrompts(characters, views, ai='', apiInterface = 'None', loop=-1, seed=null) {       
+    const {BOP, BOC, EOC, EOP} = getCustomJSON(loop, seed);
     const {tmpPositivePrompt, tmpPositivePromptColored} = appendPrompts(characters, views, ai, BOP, BOC, EOC, EOP); 
 
     const exclude = globalThis.prompt.exclude.getValue();
@@ -584,6 +584,7 @@ function getPrompts(characters, views, ai='', apiInterface = 'None', loop=-1) {
     return {pos:positivePrompt, posc:positivePromptColored, lora:loraPromot}
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 function previewCharacterBlock(list, indexes, ocIndexes) {
     const files = globalThis.cachedFiles;
     if (!list?.getKey || !files?.characterList) return '';
@@ -649,7 +650,7 @@ export function composePositivePreview() {
         const seed = Number.isFinite(seedValue) && seedValue >= 0 ? seedValue : 0;
         const views = globalThis.viewList?.getValue ? getViewTags(seed) : '';
         const api = globalThis.generate?.api_interface?.getValue?.() || 'None';
-        const { pos, lora } = getPrompts(previewCharacterTags(), views, '', api, -1);
+        const { pos, lora } = getPrompts(previewCharacterTags(), views, '', api, -1, seed);
         return lora ? `${pos}\n${lora}` : pos;
     } catch (error) {
         console.error('[bounding] preview failed', error);
@@ -665,7 +666,7 @@ export function composePositiveForAi() {
         const seed = Number.isFinite(seedValue) && seedValue >= 0 ? seedValue : 0;
         const views = globalThis.viewList?.getValue ? getViewTags(seed) : '';
         const api = globalThis.generate?.api_interface?.getValue?.() || 'None';
-        return getPrompts(previewCharacterTags(), views, '', api, -1).pos || '';
+        return getPrompts(previewCharacterTags(), views, '', api, -1, seed).pos || '';
     } catch (error) {
         console.error('[ai-prompt] positive preview failed', error);
         return '';
@@ -722,8 +723,7 @@ export function getLoRAs(apiInterface) {
 
 export async function replaceWildcardsAsync(pos, seed) {
     const wildcardRegex = /__([a-zA-Z0-9_-]+)__/g;
-
-    let random_seed = seed;   
+    const wildcardRandom = !!globalThis.generate?.wildcard_random?.getValue?.();
 
     // collect all wildcards in the prompt
     const matches = [];
@@ -731,15 +731,15 @@ export async function replaceWildcardsAsync(pos, seed) {
     while ((match = wildcardRegex.exec(pos)) !== null) {
         matches.push(match[1]);
     }
-    // Seeds stay in match order. The file reads themselves do not depend on each other.
-    const replacements = await Promise.all(matches.map((wildcardName) => {
-        if (globalThis.generate.wildcard_random.getValue()) {
-            random_seed = generateRandomSeed();
-        }
+    // Seeds stay in match order. Derived from the shared base seed so pos/posc stay in sync.
+    const replacements = await Promise.all(matches.map((wildcardName, index) => {
+        const seedUsed = wildcardRandom
+            ? Math.floor(Number(seed) / (index + 1)) + index * 9973
+            : seed;
         if (globalThis.inBrowser) {
-            return sendWebSocketMessage({ type: 'API', method: 'loadWildcard', params: [wildcardName, random_seed] });
+            return sendWebSocketMessage({ type: 'API', method: 'loadWildcard', params: [wildcardName, seedUsed] });
         }
-        return globalThis.api.loadWildcard(wildcardName, random_seed);
+        return globalThis.api.loadWildcard(wildcardName, seedUsed);
     }));
     for (let index = 0; index < matches.length; index++) {
         pos = pos.replaceAll(new RegExp(`__${matches[index]}__`, 'g'), `${replacements[index]}`);
@@ -747,7 +747,14 @@ export async function replaceWildcardsAsync(pos, seed) {
     return pos;
 }
 
-async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverride = null){
+function resolveWildcardExpandSeed(baseSeed) {
+    if (globalThis.generate?.wildcard_random?.getValue?.()) {
+        return generateRandomSeed();
+    }
+    return baseSeed;
+}
+
+async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverride = null, hiresOneShot = false){
     let finalInfo = ''
     let randomSeed = -1;
     let positivePrompt = '';
@@ -769,17 +776,23 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverri
         img_prefix = globalThis.generate.lastImagePrefix;
     } else {            
         const {thumb, characters_tag, information, seed, characters, negative_tags, image_prefix} = await getCharacters(seedOverride);
-        randomSeed = seed;
+        if (!hiresOneShot) {
+            randomSeed = seed;
+        } else {
+            randomSeed = seedOverride;
+        }
         finalInfo = information;
 
         const views = getViewTags(seed);
-        let {pos, posc, lora} = getPrompts(characters_tag, views, aiPromot, apiInterface, loop);
-                
-        pos = await replaceWildcardsAsync(pos, randomSeed);
-        posc = await replaceWildcardsAsync(posc, randomSeed);
+        let {pos, posc, lora} = getPrompts(characters_tag, views, aiPromot, apiInterface, loop, randomSeed);
 
-        pos = processRandomString(pos);
-        posc = processRandomString(posc);
+        // One expand seed for both plain and colored prompts so gallery info matches the API payload
+        const expandSeed = resolveWildcardExpandSeed(randomSeed);
+        pos = await replaceWildcardsAsync(pos, expandSeed);
+        posc = await replaceWildcardsAsync(posc, expandSeed);
+
+        pos = processRandomString(pos, expandSeed);
+        posc = processRandomString(posc, expandSeed);
 
         if(lora === ''){
             positivePrompt = pos;
@@ -1195,7 +1208,7 @@ export async function generateImage(dataPack){
 
         // One job at a time: each pass reads the live UI, and cancel/skip must be able to stop the batch.
         // eslint-disable-next-line no-await-in-loop
-        const createPromptResult = await createPrompt(runSame, '', apiInterface, (loops > 1)?loop:-1, seedOverride); // NOSONAR
+        const createPromptResult = await createPrompt(runSame, '', apiInterface, (loops > 1)?loop:-1, seedOverride, hiresOneShot); // NOSONAR
         const landscape = globalThis.generate.landscape.getValue();
         const width = landscape?globalThis.generate.height.getValue():globalThis.generate.width.getValue();
         const height = landscape?globalThis.generate.width.getValue():globalThis.generate.height.getValue();

@@ -10,7 +10,7 @@ import { readForgeDtypeSettings } from '../main/sageFp16Switch.js';
 
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
-function getCustomJSON(loop=-1){
+function getCustomJSON(loop=-1, seed=null){
     let BeforeOfPromptsL = '';
     let BeforeOfCharacterL = '';
     let EndOfCharacterL = '';
@@ -21,9 +21,9 @@ function getCustomJSON(loop=-1){
     let EndOfCharacterR = '';
     let EndOfPromptsR = '';
     
-    const jsonSlots = globalThis.jsonlist.getValues(loop);
+    const jsonSlots = globalThis.jsonlist.getValues(loop, seed);
 
-    for(const {prompt, strength, regional, method} of jsonSlots) {
+    for(const [prompt, strength, regional, method] of jsonSlots) {
         if(method === 'Off')
             continue;
 
@@ -113,7 +113,7 @@ function appendRegionalSide(blocks, positiveColor) {
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
-function getPrompts(character_left, character_right, views, ai='', apiInterface = 'None', loop = -1){
+function getPrompts(character_left, character_right, views, ai='', apiInterface = 'None', loop = -1, seed = null){
     const commonColor = (globalThis.globalSettings.css_style==='dark')?'darkorange':'Sienna';
     const viewColor = (globalThis.globalSettings.css_style==='dark')?'BurlyWood':'Brown';
     const aiColor = (globalThis.globalSettings.css_style==='dark')?'hotpink':'Purple';
@@ -149,7 +149,7 @@ function getPrompts(character_left, character_right, views, ai='', apiInterface 
     if(aiPrompt !== '' && !aiPrompt.endsWith(','))
         aiPrompt += ', ';
 
-    const {BOPL, BOCL, EOCL, EOPL, BOPR, BOCR, EOCR, EOPR} = getCustomJSON(loop);
+    const {BOPL, BOCL, EOCL, EOPL, BOPR, BOCR, EOCR, EOPR} = getCustomJSON(loop, seed);
     const shared = { common, views, aiPrompt, commonColor, viewColor, aiColor, characterColor };
     const left = appendRegionalSide({
         ...shared,
@@ -185,7 +185,7 @@ export function composeRegionalForAi() {
         const views = getViewTags(seed);
         const { left, right } = previewRegionalCharacters();
         const api = globalThis.generate?.api_interface?.getValue?.() || 'None';
-        const { posL, posR } = getPrompts(left, right, views, '', api, -1);
+        const { posL, posR } = getPrompts(left, right, views, '', api, -1, seed);
         return { left: posL || '', right: posR || '' };
     } catch (error) {
         console.error('[ai-prompt] regional preview failed', error);
@@ -370,7 +370,7 @@ async function getCharacters(seedOverride = null){
     }
 }
 
-async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverride = null){
+async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverride = null, hiresOneShot = false){
     let finalInfo = ''
     let randomSeed = -1;
     let randomSeedr = -1;
@@ -397,24 +397,35 @@ async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverri
         img_prefix = globalThis.generate.lastImagePrefix;
     } else {            
         const {thumb, character_left, character_right, information, seed, characters, negative_tags, image_prefix} = await getCharacters(seedOverride);
-        randomSeed = seed;
+        if (!hiresOneShot) {
+            randomSeed = seed;
+        } else {
+            randomSeed = seedOverride;
+        }
         randomSeedr = Math.floor(seed / 3);
         finalInfo = information;
 
         const views = getViewTags(seed);
-        let {posL, posLc, posR, posRc, lora} = getPrompts(character_left, character_right, views, aiPromot, apiInterface, loop);
+        let {posL, posLc, posR, posRc, lora} = getPrompts(character_left, character_right, views, aiPromot, apiInterface, loop, randomSeed);
 
-        posL = await replaceWildcardsAsync(posL, randomSeed);
-        posLc = await replaceWildcardsAsync(posLc, randomSeed);
+        const expandSeedL = globalThis.generate?.wildcard_random?.getValue?.()
+            ? generateRandomSeed()
+            : randomSeed;
+        const expandSeedR = globalThis.generate?.wildcard_random?.getValue?.()
+            ? generateRandomSeed()
+            : randomSeedr;
 
-        posR = await replaceWildcardsAsync(posR, randomSeedr);
-        posRc = await replaceWildcardsAsync(posRc, randomSeedr);
+        posL = await replaceWildcardsAsync(posL, expandSeedL);
+        posLc = await replaceWildcardsAsync(posLc, expandSeedL);
 
-        posL = processRandomString(posL);
-        posLc = processRandomString(posLc);
+        posR = await replaceWildcardsAsync(posR, expandSeedR);
+        posRc = await replaceWildcardsAsync(posRc, expandSeedR);
 
-        posR = processRandomString(posR);
-        posRc = processRandomString(posRc);
+        posL = processRandomString(posL, expandSeedL);
+        posLc = processRandomString(posLc, expandSeedL);
+
+        posR = processRandomString(posR, expandSeedR);
+        posRc = processRandomString(posRc, expandSeedR);
 
         if(lora === ''){
             positivePromptLeft = posL;
@@ -505,7 +516,7 @@ export async function generateRegionalImage(dataPack){
 
         // One job at a time: each pass reads the live UI, and cancel/skip must be able to stop the batch.
         // eslint-disable-next-line no-await-in-loop
-        const createPromptResult = await createPrompt(runSame, '', apiInterface, (loops > 1)?loop:-1, seedOverride); // NOSONAR
+        const createPromptResult = await createPrompt(runSame, '', apiInterface, (loops > 1)?loop:-1, seedOverride, hiresOneShot); // NOSONAR
 
         const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor, hiresOneShot);
         const refiner = createRefiner();

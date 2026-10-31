@@ -10,7 +10,7 @@ import { callback_mySettingList, callback_api_model_select, callback_api_model_t
     callback_thumb_select, callback_ptompt_textbox_autoresize, callback_ptompt_textbox_fontsize
  } from './renderer/callbacks.js';
 import { setupSlider } from './renderer/components/mySlider.js';
-import { setupCheckbox, setupRadiobox } from './renderer/components/myCheckbox.js';
+import { setupCheckbox } from './renderer/components/myCheckbox.js';
 import { setupButtons, setupSplitButton, createSplitMenuApi, toggleButtons, showCancelButtons } from './renderer/components/myButtons.js';
 import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, setupModelReloadToggle, 
     setupFuctionKeys, setupSwapToggle, reloadFiles, doSwap, createFavoriteHotkeyControls } from './renderer/components/myCollapsed.js';
@@ -625,7 +625,7 @@ async function init(){
         await createPrompt(SETTINGS, FILES, LANG);
         await createHifixRefiner(SETTINGS, FILES, LANG);
         await createRegional(SETTINGS, FILES, LANG);
-        await createAI(SETTINGS, FILES, LANG);
+        await createAI();
         
         // LoRA
         globalThis.lora = setupLoRA('add-lora-main');

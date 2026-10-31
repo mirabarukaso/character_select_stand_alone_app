@@ -175,7 +175,29 @@ function getSecureRandomInt(max) {
     return array[0] % max;
 }
 
-export function processRandomString(input) {
+function getSeededIndex(seed, length) {
+    if (length <= 0) return 0;
+    let value = Number(seed);
+    if (!Number.isFinite(value)) value = 0;
+    if (value < 0) value = -value;
+    return Math.floor(value) % length;
+}
+
+function resolvePickIndex(seed, length) {
+    if (seed !== null && seed !== undefined && Number.isFinite(Number(seed))) {
+        return getSeededIndex(seed, length);
+    }
+    return getSecureRandomInt(length);
+}
+
+/**
+ * Expand `{ a | b | c }` braces.
+ * When seed is provided, picks are deterministic (seed % options.length), matching jsonSlot / __wildcard__ behavior.
+ * Callers should pass the same seed to plain and colored prompt strings so display matches the API payload.
+ * @param {string} input
+ * @param {number|null} [seed=null]
+ */
+export function processRandomString(input, seed = null) {
     // Check if input contains braces
     if (!String(input).includes('{')) {
         return input;
@@ -189,6 +211,7 @@ export function processRandomString(input) {
 
     let result = input;    
     let iterations = 0;
+    let pickSeed = seed;
     
     // Process from innermost to outermost braces
     while (findFirstBrace(result) !== -1 && iterations < maxIterations) {
@@ -218,9 +241,13 @@ export function processRandomString(input) {
         // Split options by top-level |
         const options = splitByTopLevelPipe(braceContent);
         
-        // Randomly select one option securely
-        const randomIndex = getSecureRandomInt(options.length);
+        const randomIndex = resolvePickIndex(pickSeed, options.length);
         const selected = options[randomIndex].trim();
+
+        // Advance derived seed for nested/subsequent braces so each group can differ while staying deterministic
+        if (pickSeed !== null && pickSeed !== undefined && Number.isFinite(Number(pickSeed))) {
+            pickSeed = Math.floor(Number(pickSeed) / 3) + iterations;
+        }
         
         // Replace brace content with selected option
         result = result.substring(0, start) + selected + result.substring(end + 1);
@@ -233,4 +260,3 @@ export function processRandomString(input) {
 
     return result;
 }
-

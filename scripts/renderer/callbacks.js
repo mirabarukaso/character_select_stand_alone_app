@@ -15,7 +15,7 @@ import { set_prompt_textBox_Heights } from './components/componentsManager.js';
 import { applySavedLayout } from './uiLayout.js';
 import { refreshPromptViewToggles, refreshTabLabelHints } from './uiLayoutTabs.js';
 import { DIFFUSION_DTYPE, FORGE_UNET_STORAGE_AUTOMATIC, SAMPLER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_COMFYUI, SCHEDULER_WEBUI } from '../types.js';
-import { FORGE_FP16_PLUGIN_URL, isFp16CastDtype, normalizeForgeStorageDtype, visibleDiffusionDtype, visibleForgeStorageDtype } from '../main/sageFp16Switch.js';
+import { FORGE_FP16_PLUGIN_URL, isFp16CastDtype, visibleDiffusionDtype, visibleForgeStorageDtype } from '../main/sageFp16Switch.js';
 import { cancelAutoRetry, isAutoRetryRunning } from './tools/autoRetry.js';
 
 export async function callback_mySettingList(index, selectedValue) {    

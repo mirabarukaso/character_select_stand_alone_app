@@ -24,6 +24,22 @@ function getSecureRandomInt(max) {
     return array[0] % max;
 }
 
+function getSeededIndex(seed, length) {
+    if (length <= 0) return 0;
+    let value = Number(seed);
+    if (!Number.isFinite(value)) value = 0;
+    if (value < 0) value = -value;
+    return Math.floor(value) % length;
+}
+
+function isWildcardRandomEnabled() {
+    try {
+        return !!globalThis.generate?.wildcard_random?.getValue?.();
+    } catch {
+        return false;
+    }
+}
+
 function createJsonSlotsFromValues(slotManager, slotValues, options = {}) {
     const { clearSlots = true } = options;
     if (clearSlots) {
@@ -355,7 +371,7 @@ class JsonSlotManager {
         return result;
     }
 
-    getValue(className, slot, loop=-1) {
+    getValue(className, slot, loop=-1, seed=null) {
         const rowValues = [];
         const { json_name, json_strength, json_regional, json_position } = slot.itemClasses;
 
@@ -364,7 +380,11 @@ class JsonSlotManager {
             const selectedName = jsonNameComponent.getValue();
             const keys = Object.keys(slot.jsonObj);
             if (selectedName === randomKey || (selectedName === enumKey && loop === -1)) {
-                const rnd = keys[getSecureRandomInt(keys.length)];
+                const wildcardRandom = isWildcardRandomEnabled();
+                const rndIdx = wildcardRandom
+                    ? getSecureRandomInt(keys.length)
+                    : getSeededIndex(seed, keys.length);
+                const rnd = keys[rndIdx];
                 rowValues.push(slot.jsonObj[rnd]);
             } else if (selectedName === enumKey) {
                 const idx = loop % keys.length;
@@ -388,7 +408,7 @@ class JsonSlotManager {
         return rowValues;
     }
 
-    getValues(loop=-1) {
+    getValues(loop=-1, seed=null) {
         const result = [];
         const contentSlots = this.getSlots();
 
@@ -396,9 +416,56 @@ class JsonSlotManager {
             const slot = this.slotIndex.get(className);
             if (!slot) continue;
 
-            result.push(this.getValue(className, slot, loop));
+            result.push(this.getValue(className, slot, loop, seed));
         }
         return result;
+    }
+
+    parseCsvToJsonObj(fileContent) {
+        const jsonObj = {};
+        const lines = fileContent.trim().split(/\r?\n/);
+        for (const line of lines) {
+            const columns = line.split(',').map(item => {
+                let trimmed = item.trim();
+                if (trimmed.includes('"')) {
+                    trimmed = trimmed.replaceAll('"', '');
+                }
+                return trimmed;
+            });
+            if (columns.length < 1) continue;
+            const key = columns[0];
+            const values = columns.slice(1).join(', ');
+            if (key) jsonObj[key] = values || '';
+        }
+        return jsonObj;
+    }
+
+    parsePlainTextToJsonObj(fileContent) {
+        // Prefer JSON, then CSV-shaped text, then one-entry-per-line lists
+        try {
+            const parsed = JSON.parse(fileContent);
+            if (parsed && typeof parsed === 'object' && !Array.isArray(parsed)) {
+                return parsed;
+            }
+        } catch {
+            // not JSON
+        }
+
+        const trimmed = fileContent.trim();
+        if (!trimmed) return null;
+
+        if (trimmed.includes(',')) {
+            const csvObj = this.parseCsvToJsonObj(trimmed);
+            if (Object.keys(csvObj).length > 0) return csvObj;
+        }
+
+        const jsonObj = {};
+        const lines = trimmed.split(/\r?\n/).map(line => line.trim()).filter(Boolean);
+        for (const [index, line] of lines.entries()) {
+            const key = Object.hasOwn(jsonObj, line) ? `${line} (${index})` : line;
+            jsonObj[key] = line;
+        }
+        return Object.keys(jsonObj).length > 0 ? jsonObj : null;
     }
 
     async addJsonSlotFromFile(file, type) {
@@ -410,24 +477,15 @@ class JsonSlotManager {
             if (type === 'application/json') {
                 jsonObj = JSON.parse(fileContent);
             } else if (type === 'text/csv') {
-                jsonObj = {};
-                const lines = fileContent.trim().split('\n');
-                for (const line of lines) {
-                    const columns = line.split(',').map(item => {
-                        let trimmed = item.trim();
-                        if (trimmed.includes('"')) {
-                            trimmed = trimmed.replaceAll('"', '');
-                        }
-                        return trimmed;
-                    });
-                    if (columns.length < 1) continue;
-                    const key = columns[0];
-                    const values = columns.slice(1).join(', ');
-
-                    if (key) jsonObj[key] = values || '';
-                }
+                jsonObj = this.parseCsvToJsonObj(fileContent);
                 if (Object.keys(jsonObj).length === 0) {
                     console.error(`No valid data found in CSV file "${file.name}"`);
+                    return;
+                }
+            } else if (type === 'text/plain') {
+                jsonObj = this.parsePlainTextToJsonObj(fileContent);
+                if (!jsonObj) {
+                    console.error(`No valid data found in text file "${file.name}"`);
                     return;
                 }
             } else {

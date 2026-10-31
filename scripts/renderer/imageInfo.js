@@ -1,6 +1,6 @@
 import { createControlNetButtons } from './components/imageInfoControlNet.js';
 import { createImageTagger } from './components/imageInfoTagger.js';
-import { handlePastedJsonOrCsvFile, handlePastedPlainTextItem } from './components/imageInfoDataFiles.js';
+import { handlePastedJsonOrCsvFile, handlePastedPlainTextItem, isJsonListDataFile, resolveJsonListFileType } from './components/imageInfoDataFiles.js';
 import { extractImageMetadata, parseGenerationParameters } from './components/imageInfoMetadata.js';
 import { createMiraITUWindow } from './components/imageInfoMiraITU.js';
 import { fileToBase64 } from './generate.js';
@@ -176,8 +176,21 @@ export function setupImageUploadOverlay() {
             try {
                 if (item.type.startsWith('image/')) {
                     if (await handlePastedImageItem(item)) break;
-                } else if (item.type === 'application/json' || item.type === 'text/csv') {
-                    if (await handlePastedJsonOrCsvFile(item, hideOverlay)) break;
+                } else if (
+                    item.type === 'application/json' ||
+                    item.type === 'text/csv' ||
+                    item.type === 'application/vnd.ms-excel' ||
+                    item.kind === 'file'
+                ) {
+                    const file = item.getAsFile?.();
+                    if (file && isJsonListDataFile(file)) {
+                        if (await handlePastedJsonOrCsvFile(item, hideOverlay)) break;
+                    } else if (item.type === 'text/plain') {
+                        await handlePastedPlainTextItem(item, hideOverlay);
+                        break;
+                    } else {
+                        console.log('Unknown pasted file type:', item.type);
+                    }
                 } else if (item.type === 'text/plain') {
                     await handlePastedPlainTextItem(item, hideOverlay);
                     break;
@@ -275,6 +288,14 @@ export function setupImageUploadOverlay() {
         bottomHint.classList.remove('active');
     });
 
+    async function addDroppedDataFile(file) {
+        const resolvedType = resolveJsonListFileType(file);
+        console.log('Dropped data file:', file.name, resolvedType || file.type);
+        await globalThis.jsonlist.addJsonSlotFromFile(file, resolvedType || file.type);
+        globalThis.collapsedTabs.jsonlist.setCollapsed(false);
+        hideOverlay();
+    }
+
     // eslint-disable-next-line sonarjs/cognitive-complexity
     uploadOverlay.addEventListener('drop', async (e) => {
         e.preventDefault();
@@ -293,6 +314,12 @@ export function setupImageUploadOverlay() {
         const threshold = rect.height / 2;
         const isTopHalf = offsetY < threshold;
         const file = files[0];
+
+        // JSON/CSV/TXT go to jsonlist from either half (Image Info split is image-only)
+        if (isJsonListDataFile(file)) {
+            await addDroppedDataFile(file);
+            return;
+        }
 
         if (isTopHalf) {            
             if(file.type.startsWith('image/')) {                
@@ -313,12 +340,6 @@ export function setupImageUploadOverlay() {
                     showImagePreview(file);                    
                     displayFormattedMetadata(fallbackMetadata);
                 }
-            } else if (file.type === `application/json` 
-                    || file.type === `text/csv`) {
-                console.log('Dropped JSON file:', file.name);
-                await globalThis.jsonlist.addJsonSlotFromFile(file, file.type);
-                globalThis.collapsedTabs.jsonlist.setCollapsed(false);
-                hideOverlay();
             } else {
                 console.warn('Dropped file ', files[0].name, ' is not support. File type: ', file.type);
                 hideOverlay();

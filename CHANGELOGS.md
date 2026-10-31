@@ -1,3 +1,12 @@
+2026.10.31 v2.11.2      
+Bugfix, Image Info drop rejected JSON/CSV when Windows MIME was empty, Excel-typed, or the file was `.txt`      
+Bugfix, JSON/CSV/TXT dropped on the Image Info overlay bottom half no longer cancels; data files go to the JSON/CSV list from either half      
+Change, `.txt` line lists can be added to JSON/CSV the same way as paste      
+Bugfix, JSON/CSV `___Random___` / `___Enumerate___` ignored the generate seed and re-rolled on Hires Fix; they now follow `wildcard random` (seed `%` length when off, full random when on)      
+Bugfix, prompt `{ a | b }` braces used independent crypto picks for the API prompt and gallery colored prompt, so Image Info and gallery could disagree, and Hires Fix could diverge      
+Bugfix, `{ a | b }` and `__wildcard__` now share one expand seed with the generate/Hires seed path, matching JSON/CSV Random behavior #106       
+
+
 2026.10.30 v2.11.1      
 Add, `FP16 Compute` and `Sage Attention` for Turing GPUs (RTX 20 series) on ComfyUI and Forge Neo. Newer cards can keep bf16 or fp8      
 Add, ComfyUI sends the two switches through [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack). Forge Neo sends `forge_compute_fp16` and `forge_sage_fp16_cast` through [forge-turing-fp16](https://github.com/mirabarukaso/forge-turing-fp16)      

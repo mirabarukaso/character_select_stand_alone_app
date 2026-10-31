@@ -296,7 +296,7 @@ function forgeSkipLayerFor(isForge, unet, skipLayer) {
     return { slg_enable: false };
 }
 
-function buildWebUIOptionPayload(current, isForge, model, vae, unet, img_prefix, skipLayer, force = false) {
+function buildWebUIOptionPayload(current, isForge, model, vae, unet, img_prefix, skipLayer, force = false) {    //NOSONAR
     const base = optionBase(current);
     const payload = {};
     const forge = isForge === true && allowOption(base, 'forge_additional_modules', force);
