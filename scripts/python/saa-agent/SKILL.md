@@ -1,26 +1,32 @@
 ---
 name: saa-agent
-description: Enables AI agents to generate images using the Character Select Stand Alone App (SAA) image generation backend via command-line interface.
+description: Enables AI agents to generate images using the Character Select Stand Alone App (SAA) image generation backend via command-line interface, and to polish prompts via the AI Prompt panel APIs.
 license: MIT
 ---
 
 # SAA CLI Tool
 
-A command-line interface for interacting with Character Select Stand Alone App (SAA) via WebSocket connections. Supports both ComfyUI and WebUI backends for AI image generation.
+A command-line interface for interacting with Character Select Stand Alone App (SAA) via WebSocket connections. Supports both ComfyUI and WebUI backends for AI image generation, and the AI Prompt panel (Remote / Local LLM) for polishing prompts.
 
 ## Prerequisites
 
 **CRITICAL:** Before invoking this tool, confirm with the user that:
-1. The SAA backend is running, and version is 2.9.0 or newer
+1. The SAA backend is running (image generation needs **2.9.0+**; AI Prompt needs **2.11.0+**)
 2. The SAAC (SAA Client) feature is enabled
 3. The WebSocket address is available
-4. Some Mac users uses `python3` instead of `python` to invoke Python 3.x
+4. For `--ai-prompt`: the host AI Prompt `Backend` is `Remote` or `Local` (not `None`), with URL/key configured — or pass `--ai-interface` / `--ai-url` / `--ai-key` explicitly
+5. Some Mac users use `python3` instead of `python` to invoke Python 3.x
 
 For SAA setup details, let your owner visit the [project repository](https://github.com/mirabarukaso/character_select_stand_alone_app).
 
-## Basic Usage
+## Architecture (read this)
 
-The tool requires minimal parameters to function. The examples below demonstrate the standard usage pattern:
+- **Image generation does not call the language model.** Matching the SAA UI since v2.11.0.
+- **Two separate steps:** polish with `--ai-prompt`, then generate with `--positive` using that text.
+- Do **not** confuse `--api-interface` (`ComfyUI` / `WebUI`) with `--ai-interface` (`Remote` / `Local`).
+- Host **Overwrite / Append** into Common / Positive / Right positive / Negative is **UI-only**. This CLI prints the LLM result; it does not write host prompt boxes.
+
+## Basic Usage
 
 ### Minimal Command With Model Selection (Recommended for Most Cases)
 
@@ -31,6 +37,7 @@ python saa-agent.py \
   --positive "your detailed prompt here" \
   --negative "low quality, blurry, bad anatomy"
 ```
+
 ### Regional Prompting (Split Composition)
 
 ```bash
@@ -42,8 +49,33 @@ python saa-agent.py \
   --positive-right "1boy, mage, blue robes"
 ```
 
+### AI Prompt — Polish a Brief (No Image)
+
+Prefer a host template. Built-ins: `tag-brief` (Tag scene), `natural-brief` (Natural scene), `character-natural` (Character natural).
+
+```bash
+python saa-agent.py \
+  --ws-address "user_provided_ws_address" \
+  --ai-prompt \
+  --ai-template "tag-brief" \
+  --brief "sunset villa, palm trees, golden hour"
+```
+
+List templates:
+
+```bash
+python saa-agent.py \
+  --ws-address "user_provided_ws_address" \
+  --list-ai-templates
+```
+
+Recommended agent workflow:
+
+1. `--ai-prompt` with `--brief` and `--ai-template`
+2. Read the text between `AI_PROMPT_RESULT_START` and `AI_PROMPT_RESULT_END`
+3. Call image generation with that text as `--positive` (and a suitable `--negative`)
+
 ### More Examples
-Get more usage examples and detailed parameter explanations:
 
 ```bash
 python saa-agent.py
@@ -54,14 +86,22 @@ python saa-agent.py --help
 
 ### Required
 - `--ws-address`: WebSocket address (obtain from user)
-- `--positive`: Main prompt OR use `--regional` mode with `--positive-left` and `--positive-right`
+- Image mode: `--positive` OR `--regional` with `--positive-left` and `--positive-right`
+- AI Prompt mode: `--ai-prompt` plus `--brief`, and either `--ai-template` or `--ai-system-prompt`
 
-### Commonly Modified
+### Commonly Modified (image)
 - `--model`: Change the checkpoint model (default: `waiIllustriousSDXL_v160.safetensors`)
 - `--negative`: Specify unwanted elements
 - `--width` / `--height`: Image dimensions (defaults: 1024x1360)
 - `--steps`: Sampling steps (default: 28)
 - `--seed`: Set specific seed or -1 for random
+
+### AI Prompt
+- `--ai-template`: Template id or name from the host
+- `--ai-interface`: `Remote` or `Local` (default: inherit from host panel)
+- `--ai-url` / `--ai-key` / `--ai-model`: Override host backend settings when needed
+- `--ai-timeout` / `--ai-temperature` / `--ai-max-tokens`: Override template values
+- `--ai-system-prompt`: Override the template system prompt
 
 ### Advanced (Use Sparingly)
 - `--cfg`: CFG scale (default: 7.0)
@@ -126,6 +166,17 @@ User: "Yes, please unlock it."
 AI: [proceeds to run command with --skeleton-key]
 ```
 
+### AI Prompt Guidelines
+
+1. Use `--ai-prompt` only when the user wants a polished / rewritten prompt, or when a short brief should become tags / a natural paragraph.
+2. Default template choice:
+   - Short scene → tags: `tag-brief`
+   - Scene → one English paragraph: `natural-brief`
+   - Character tag polish: `character-natural` (pass the character text as `--brief`; host character slots are not collected by this CLI)
+3. Do **not** invent Remote URLs or API keys. Prefer host panel settings; ask the user if the call fails for missing URL/key.
+4. After AI Prompt succeeds, generate an image in a **second** command unless the user only asked for the text.
+5. On Ctrl+C during `--ai-prompt`, the tool sends `cancelAI` with its request id.
+
 ## Parameter Defaults
 
 When in doubt, rely on these defaults - they work well for most cases:
@@ -154,17 +205,36 @@ For programmatic handling, use base64 output:
 
 This outputs base64-encoded image data(huge!!!) to stdout instead of saving a file.
 
+AI Prompt results are printed between markers:
+
+```
+AI_PROMPT_RESULT_START
+...polished prompt...
+AI_PROMPT_RESULT_END
+```
+
 ## Example Workflow
 
-1. User requests: "Generate an anime girl with long blue hair"
+1. User requests: "Generate an anime girl with long blue hair" (no polish needed)
 
-2. AI executes:
 ```bash
 python saa-agent.py \
   --ws-address "user_ws_address" \
   --positive "1girl, long hair, blue hair, anime style, detailed" \
   --negative "low quality, blurry, bad anatomy"
 ```
+
+2. User requests: "Turn this brief into tags, then generate"
+
+```bash
+python saa-agent.py \
+  --ws-address "user_ws_address" \
+  --ai-prompt \
+  --ai-template "tag-brief" \
+  --brief "rainy neon alley, cyberpunk"
+```
+
+Then generate with the returned text as `--positive`.
 
 3. If backend busy error occurs:
    - Inform user
@@ -181,13 +251,15 @@ python saa-agent.py \
 3. **Don't use `--skeleton-key`** without user permission
 4. **Don't add excessive parameters** - unless explicitly requested, the defaults are well-tuned
 5. **Don't assume backend is ready** - always confirm with user first
+6. **Don't expect image gen to call the LLM** — use `--ai-prompt` separately
+7. **Don't mix `--api-interface` and `--ai-interface`**
 
 ## Error Codes
 
 - Exit code 0: Success
 - Exit code 1: Connection error (check backend is running)
 - Exit code 2: Authentication error (check credentials)
-- Exit code 3: Generation error (check parameters)
+- Exit code 3: Generation / AI Prompt error (check parameters or LLM backend)
 - Exit code 4: Timeout (backend may be overloaded)
 - Exit code 5: Invalid parameters (check command syntax)
 
@@ -198,6 +270,7 @@ python saa-agent.py \
 3. Handle busy states gracefully - don't spam retries
 4. Use `--verbose` flag when debugging issues
 5. Respect the skeleton key - it's a powerful override tool
+6. For AI Prompt, prefer `--ai-template` over hand-written system prompts
 
 ## AI Agent Guidelines for This Skill
 
@@ -225,6 +298,7 @@ These rules help maintain appropriate transparency and user control when executi
   After completion, provide a short summary to the user by default, including:  
   - Success/failure status  
   - Positive & negative prompts (or meaningful summary)  
+  - For AI Prompt: the polished text (or a short excerpt if very long)  
   - Seed (if available)  
   - Output path  
 
@@ -244,4 +318,3 @@ These rules help maintain appropriate transparency and user control when executi
   - On failure: consider one retry with `--verbose` to capture diagnostic information  
   - Communicate the main error cause clearly  
   - Do not perform unlimited retries; defer to user after one attempt if needed
-

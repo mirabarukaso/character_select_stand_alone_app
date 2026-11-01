@@ -2,29 +2,33 @@
 """
 SAA CLI Tool
 
-A command-line interface for interacting with Character Select SAA via WebSocket connections. 
-Supports both ComfyUI and WebUI backends.
-Requires SAA 2.9.0 or newer
+A command-line interface for interacting with Character Select SAA via WebSocket connections.
+Supports both ComfyUI and WebUI backends for image generation, and the AI Prompt panel
+APIs (Remote / Local LLM) for polishing prompts.
+
+Requires SAA 2.9.0 or newer for image generation.
+Requires SAA 2.11.0 or newer for AI Prompt (`--ai-prompt`, `--list-ai-templates`).
 
 Author: mirabarukaso
 License: MIT
-Version: 1.2.0
+Version: 1.3.0
 
 https://github.com/mirabarukaso/character_select_stand_alone_app
 """
 
 import asyncio
 import json
+import re
 import ssl
 import aiohttp
 import websockets
-from typing import Dict, Callable, Optional, List
+from typing import Dict, Callable, Optional, List, Any, Tuple
 import random
 import base64
 import argparse
 import sys
 import logging
-from dataclasses import dataclass
+from dataclasses import dataclass, field
 from enum import Enum
 
 # ============ Constants ============
@@ -128,6 +132,97 @@ class GenerationConfig:
     # Output settings
     output_file: str = "generated_image.png"
     output_base64: bool = False
+
+
+@dataclass
+class AiPromptConfig:
+    """Configuration for AI Prompt (LLM) completion via SAA host"""
+    ws_address: str
+    username: str = "saac_user"
+    password: str = ""
+    # WebSocket wait timeout in seconds (must cover LLM call)
+    timeout: int = 180
+
+    # Remote | Local — empty means inherit from host getGlobalSettings
+    ai_interface: str = ""
+    ai_url: str = ""
+    ai_key: str = ""
+    ai_model: str = ""
+    brief: str = ""
+    system_prompt: str = ""
+    # Template timeout is stored in seconds on the host (same as the panel)
+    ai_timeout: int = 0
+    ai_temperature: float = -1.0
+    ai_max_tokens: int = 0
+    ai_template: str = ""
+    list_templates: bool = False
+    # Optional extras kept for future use / requestId cancel
+    request_id: str = field(default_factory=lambda: f"saa-agent-{random.randint(1000, 9999)}")
+
+
+# ============ AI Prompt Helpers ============
+
+THINK_RE = re.compile(r"<think>[\s\S]*?</think>\s*", re.IGNORECASE)
+
+
+def strip_think(content: str) -> str:
+    """Remove <think>...</think> blocks the same way the SAA panel does."""
+    return THINK_RE.sub("", str(content or "")).strip()
+
+
+def parse_ai_content(raw: Any) -> Tuple[str, str]:
+    """
+    Parse host remoteAI/localAI return value.
+
+    Returns:
+        (text, error) — text is empty on failure; error is a short reason.
+    """
+    if raw is None:
+        return "", "empty response"
+    if not isinstance(raw, str):
+        return "", f"unexpected response type: {type(raw).__name__}"
+    if raw.startswith("Error:") or raw.startswith("[ModelAPI]"):
+        return "", raw.strip()
+    try:
+        parsed = json.loads(raw)
+    except json.JSONDecodeError as exc:
+        return "", f"failed to parse AI JSON: {exc}"
+    content = (
+        parsed.get("choices", [{}])[0]
+        .get("message", {})
+        .get("content")
+        if isinstance(parsed, dict) else None
+    )
+    if not content:
+        return "", "content not found in AI response"
+    return strip_think(content), ""
+
+
+def find_template(templates: List[Dict], key: str) -> Optional[Dict]:
+    """Match a template by id or name (case-insensitive)."""
+    needle = str(key or "").strip().lower()
+    if not needle:
+        return None
+    for item in templates:
+        if not isinstance(item, dict):
+            continue
+        if str(item.get("id", "")).lower() == needle:
+            return item
+        if str(item.get("name", "")).lower() == needle:
+            return item
+    return None
+
+
+def format_template_row(item: Dict) -> str:
+    """One-line summary for --list-ai-templates."""
+    tid = item.get("id", "")
+    name = item.get("name", "")
+    source = item.get("defaultSource", "")
+    model = item.get("model", "")
+    slot = item.get("characterSlot", "")
+    slot_bit = f", slot={slot}" if slot not in ("", None) else ""
+    return f"  {tid:20}  {name:22}  source={source}{slot_bit}  model={model}"
+
 
 # ============ Logger Setup ============
 
@@ -820,30 +915,244 @@ async def generate_image(config: GenerationConfig, logger: logging.Logger) -> in
     #finally:
         #await client.close()
 
+
+async def fetch_host_ai_settings(client: SAAClient, logger: logging.Logger) -> Dict:
+    """Read AI Prompt backend settings from the running SAA host."""
+    response = await client.send_message({
+        "type": "API",
+        "method": "getGlobalSettings",
+        "params": []
+    }, allow_reconnect=False)
+    value = response.get("value") if response else None
+    if not isinstance(value, dict):
+        logger.warning("Could not read host settings; pass --ai-interface / --ai-url explicitly")
+        return {}
+    return value
+
+
+async def fetch_ai_templates(client: SAAClient, logger: logging.Logger) -> List[Dict]:
+    """Load AI Prompt templates from the host (settings/ai/templates.json)."""
+    response = await client.send_message({
+        "type": "API",
+        "method": "loadAiPromptTemplates",
+        "params": []
+    }, allow_reconnect=False)
+    value = response.get("value") if response else None
+    if not isinstance(value, dict):
+        logger.error("Failed to load AI Prompt templates")
+        return []
+    templates = value.get("templates") or []
+    if not isinstance(templates, list):
+        return []
+    return [t for t in templates if isinstance(t, dict)]
+
+
+async def list_ai_templates(config: AiPromptConfig, logger: logging.Logger) -> int:
+    """Connect and print AI Prompt templates."""
+    client = SAAClient(
+        config.ws_address,
+        config.username,
+        config.password,
+        config.timeout,
+        logger
+    )
+    try:
+        if not await client.connect():
+            logger.error("Connection failed")
+            return ExitCode.CONNECTION_ERROR.value
+        templates = await fetch_ai_templates(client, logger)
+        if not templates:
+            logger.error("No AI Prompt templates found (needs SAA 2.11.0+)")
+            return ExitCode.GENERATION_ERROR.value
+        print("AI Prompt templates:")
+        for item in templates:
+            print(format_template_row(item))
+        return ExitCode.SUCCESS.value
+    except asyncio.TimeoutError:
+        logger.error("Operation timed out")
+        return ExitCode.TIMEOUT_ERROR.value
+    except Exception as e:
+        logger.error(f"Error occurred: {e}", exc_info=True)
+        return ExitCode.UNKNOWN_ERROR.value
+    finally:
+        client.should_close = True
+        await client.close()
+
+
+async def run_ai_prompt(config: AiPromptConfig, logger: logging.Logger) -> int:
+    """
+    Call SAA host remoteAI / localAI the same way the AI Prompt panel does.
+    Does not write into host prompt boxes (Overwrite/Append stays UI-only).
+    """
+    client = SAAClient(
+        config.ws_address,
+        config.username,
+        config.password,
+        config.timeout,
+        logger
+    )
+    try:
+        if not await client.connect():
+            logger.error("Connection failed")
+            return ExitCode.CONNECTION_ERROR.value
+
+        host = await fetch_host_ai_settings(client, logger)
+        template: Optional[Dict] = None
+        if config.ai_template:
+            templates = await fetch_ai_templates(client, logger)
+            template = find_template(templates, config.ai_template)
+            if not template:
+                logger.error(f"AI template not found: {config.ai_template}")
+                return ExitCode.INVALID_PARAMS.value
+            logger.info(f"Using template: {template.get('id')} ({template.get('name')})")
+
+        iface = (config.ai_interface or host.get("ai_interface") or "").strip()
+        if iface.lower() == "none" or not iface:
+            logger.error(
+                "AI interface is None. Pass --ai-interface Remote|Local, "
+                "or set Backend in the SAA AI Prompt panel."
+            )
+            return ExitCode.INVALID_PARAMS.value
+        iface_norm = iface[:1].upper() + iface[1:].lower()
+        if iface_norm not in ("Remote", "Local"):
+            logger.error(f"Invalid --ai-interface '{iface}' (use Remote or Local)")
+            return ExitCode.INVALID_PARAMS.value
+
+        if iface_norm == "Remote":
+            api_url = config.ai_url or host.get("remote_ai_base_url") or ""
+            api_key = config.ai_key or host.get("remote_ai_api_key") or ""
+        else:
+            api_url = config.ai_url or host.get("ai_local_addr") or ""
+            api_key = config.ai_key or ""
+
+        if not api_url or str(api_url).startswith("<"):
+            logger.error("AI URL is missing. Pass --ai-url or configure it in the SAA AI Prompt panel.")
+            return ExitCode.INVALID_PARAMS.value
+        if iface_norm == "Remote" and (not api_key or str(api_key).startswith("<")):
+            logger.error("Remote AI API key is missing. Pass --ai-key or configure it in the panel.")
+            return ExitCode.INVALID_PARAMS.value
+
+        brief = config.brief.strip()
+        if not brief:
+            logger.error("--brief is required for --ai-prompt")
+            return ExitCode.INVALID_PARAMS.value
+
+        model = (
+            config.ai_model
+            or (template.get("model") if template else "")
+            or host.get("remote_ai_model")
+            or ""
+        )
+        system_prompt = (
+            config.system_prompt
+            or (template.get("systemPrompt") if template else "")
+            or ""
+        )
+        if not system_prompt:
+            logger.error(
+                "System prompt is empty. Pass --ai-system-prompt or --ai-template "
+                "(e.g. tag-brief / natural-brief / character-natural)."
+            )
+            return ExitCode.INVALID_PARAMS.value
+
+        timeout_sec = config.ai_timeout or (
+            int(template["timeout"]) if template and template.get("timeout") else 20
+        )
+        temperature = config.ai_temperature if config.ai_temperature >= 0 else (
+            float(template["temperature"]) if template and template.get("temperature") is not None else 0.7
+        )
+        max_tokens = config.ai_max_tokens or (
+            int(template["maxTokens"]) if template and template.get("maxTokens") else 256
+        )
+
+        # Host expects timeout in milliseconds; keep WS wait above that.
+        timeout_ms = int(timeout_sec) * 1000
+        client.timeout = max(client.timeout, timeout_sec + 30)
+
+        options = {
+            "requestId": config.request_id,
+            "interface": iface_norm,
+            "apiUrl": api_url,
+            "apiKey": api_key,
+            "model": model,
+            "modelSelect": model,
+            "userPrompt": brief,
+            "systemPrompt": system_prompt,
+            "timeout": timeout_ms,
+            "temperature": temperature,
+            "maxTokens": max_tokens,
+            "n_predict": max_tokens,
+        }
+        method = "remoteAI" if iface_norm == "Remote" else "localAI"
+        logger.info(f"Calling {method} (timeout={timeout_sec}s, model={model or '(default)'})...")
+
+        result = await client.send_message({
+            "type": "API",
+            "method": method,
+            "params": [options]
+        }, allow_reconnect=False)
+
+        raw = result.get("value") if result else None
+        text, err = parse_ai_content(raw)
+        if err:
+            logger.error(f"AI Prompt failed: {err}")
+            return ExitCode.GENERATION_ERROR.value
+
+        print("\n" + "=" * 50)
+        print("AI_PROMPT_RESULT_START")
+        print(text)
+        print("AI_PROMPT_RESULT_END")
+        print("=" * 50 + "\n")
+        logger.info("AI Prompt completed")
+        return ExitCode.SUCCESS.value
+
+    except asyncio.TimeoutError:
+        logger.error("Operation timed out")
+        return ExitCode.TIMEOUT_ERROR.value
+    except KeyboardInterrupt:
+        logger.info("Interrupted by user")
+        try:
+            await client.send_message({
+                "type": "API",
+                "method": "cancelAI",
+                "params": [config.request_id]
+            }, allow_reconnect=False)
+        except Exception:
+            pass
+        return ExitCode.SUCCESS.value
+    except Exception as e:
+        logger.error(f"Error occurred: {e}", exc_info=True)
+        return ExitCode.UNKNOWN_ERROR.value
+    finally:
+        client.should_close = True
+        await client.close()
+
+
 def print_usage():
     """Print usage information and examples"""
     print("""
 SAA WebSocket Client CLI Tool
 =============================
 
-A command-line interface for generating images using Stable Diffusion API Character Select SAA.
+A command-line interface for generating images using Character Select SAA,
+and for polishing prompts via the AI Prompt panel APIs (SAA 2.11.0+).
 
 Project URL:
     https://github.com/mirabarukaso/character_select_stand_alone_app
 
 BASIC USAGE:
-    python saa_websocket_cli.py --ws-address <address> --positive "<prompt>"
+    python saa-agent.py --ws-address <address> --positive "<prompt>"
 
 EXAMPLES:
     # Basic generation
-    python saa_websocket_cli.py \\
+    python saa-agent.py \\
         --ws-address ws://127.0.0.1:51028 \\
         --positive "1girl, masterpiece, best quality" \\
         --negative "low quality, blurry" \\
         --width 1024 --height 1360
 
     # Regional prompting (split composition) with authentication
-    python saa_websocket_cli.py \\
+    python saa-agent.py \\
         --ws-address wss://127.0.0.1:51028 \\
         --username saac_user --password ****** \\
         --regional \\
@@ -852,7 +1161,7 @@ EXAMPLES:
         --image-ratio 50 --overlap-ratio 20
 
     # Advanced settings with HiResFix
-    python saa_websocket_cli.py \\
+    python saa-agent.py \\
         --ws-address ws://127.0.0.1:51028 \\
         --positive "landscape, mountains, sunset" \\
         --sampler "dpmpp_2m" \\
@@ -860,21 +1169,38 @@ EXAMPLES:
         --cfg 7.5 --steps 30 \\
         --hifix --hifix-scale 2.0
 
+    # AI Prompt: polish a brief with a built-in template (no image generation)
+    python saa-agent.py \\
+        --ws-address ws://127.0.0.1:51028 \\
+        --ai-prompt \\
+        --ai-template "tag-brief" \\
+        --brief "sunset villa, palm trees, golden hour"
+
+    # List AI Prompt templates on the host
+    python saa-agent.py \\
+        --ws-address ws://127.0.0.1:51028 \\
+        --list-ai-templates
+
 SUPPORTED INTERFACES:
-    - ComfyUI (default)
-    - WebUI (Forge Neo)
+    - Image backend (--api-interface): ComfyUI (default), WebUI (Forge Neo)
+    - AI Prompt backend (--ai-interface): Remote, Local
+      (inherits from the host AI Prompt panel when omitted)
 
-OUTPUT FORMATS:
-    - PNG file (always)
-    - Base64 encoded data (when --base64 flag is used)
+NOTES:
+    - Image generation does NOT call the language model.
+    - Polish with --ai-prompt, then pass the result to --positive yourself.
+    - Overwrite / Append into host prompt boxes is UI-only (no CLI write-back).
 
-For full parameter list, use: python saa_websocket_cli.py --help
+For full parameter list, use: python saa-agent.py --help
 """)
 
 def create_parser() -> argparse.ArgumentParser:
     """Create argument parser with all options"""
     parser = argparse.ArgumentParser(
-        description="SAA WebSocket Client - Generate images via Stable Diffusion API Aggregator",
+        description=(
+            "SAA WebSocket Client - Generate images via ComfyUI/WebUI, "
+            "and polish prompts via AI Prompt (SAA 2.11.0+)"
+        ),
         formatter_class=argparse.RawDescriptionHelpFormatter,
         add_help=True
     )
@@ -1101,8 +1427,108 @@ def create_parser() -> argparse.ArgumentParser:
         action='store_true',
         help='Force unlock backend atomic lock state (default: False)'
     )
+
+    # AI Prompt (SAA 2.11.0+) — separate from image generation
+    ai_group = parser.add_argument_group('AI Prompt (SAA 2.11.0+, no image generation)')
+    ai_group.add_argument(
+        '--ai-prompt',
+        action='store_true',
+        help='Polish a brief via the host remoteAI/localAI APIs (does not generate an image)'
+    )
+    ai_group.add_argument(
+        '--list-ai-templates',
+        action='store_true',
+        help='List AI Prompt templates on the host and exit'
+    )
+    ai_group.add_argument(
+        '--brief',
+        type=str,
+        default='',
+        help='User text / brief sent to the language model (required with --ai-prompt)'
+    )
+    ai_group.add_argument(
+        '--ai-template',
+        type=str,
+        default='',
+        help='Template id or name (e.g. tag-brief, natural-brief, character-natural, "Tag scene")'
+    )
+    ai_group.add_argument(
+        '--ai-interface',
+        type=str,
+        choices=['Remote', 'Local', 'remote', 'local'],
+        default='',
+        help='AI backend: Remote or Local (default: inherit from host AI Prompt panel)'
+    )
+    ai_group.add_argument(
+        '--ai-url',
+        type=str,
+        default='',
+        help='Remote base URL or Local chat completions URL (default: inherit from host)'
+    )
+    ai_group.add_argument(
+        '--ai-key',
+        type=str,
+        default='',
+        help='Remote API key (default: inherit from host)'
+    )
+    ai_group.add_argument(
+        '--ai-model',
+        type=str,
+        default='',
+        help='Model id for Remote (default: template or host remote_ai_model)'
+    )
+    ai_group.add_argument(
+        '--ai-system-prompt',
+        type=str,
+        default='',
+        help='Override system prompt (default: from --ai-template)'
+    )
+    ai_group.add_argument(
+        '--ai-timeout',
+        type=int,
+        default=0,
+        help='LLM timeout in seconds (default: template value, usually 20–60)'
+    )
+    ai_group.add_argument(
+        '--ai-temperature',
+        type=float,
+        default=-1.0,
+        help='LLM temperature (default: template value)'
+    )
+    ai_group.add_argument(
+        '--ai-max-tokens',
+        type=int,
+        default=0,
+        help='max_tokens / n_predict (default: template value)'
+    )
     
     return parser
+
+
+def build_ai_config(args) -> AiPromptConfig:
+    """Build AiPromptConfig from argparse namespace."""
+    # For AI calls, default WS wait should cover a long natural-brief reply.
+    ws_timeout = args.timeout
+    if args.ai_prompt and ws_timeout < 180:
+        ws_timeout = 180
+    return AiPromptConfig(
+        ws_address=args.ws_address,
+        username=args.username,
+        password=args.password,
+        timeout=ws_timeout,
+        ai_interface=args.ai_interface or "",
+        ai_url=args.ai_url or "",
+        ai_key=args.ai_key or "",
+        ai_model=args.ai_model or "",
+        brief=args.brief or "",
+        system_prompt=args.ai_system_prompt or "",
+        ai_timeout=args.ai_timeout or 0,
+        ai_temperature=args.ai_temperature,
+        ai_max_tokens=args.ai_max_tokens or 0,
+        ai_template=args.ai_template or "",
+        list_templates=bool(args.list_ai_templates),
+    )
+
 
 def main():
     """Main entry point"""
@@ -1119,6 +1545,35 @@ def main():
         print("Error: --ws-address is required", file=sys.stderr)
         print("\nUse --help for usage information", file=sys.stderr)
         return ExitCode.INVALID_PARAMS.value
+
+    # Setup logger early (AI and image paths both need it)
+    logger = setup_logger(args.verbose)
+
+    # AI Prompt paths (mutually exclusive with image generation requirements)
+    if args.list_ai_templates or args.ai_prompt:
+        if args.list_ai_templates and args.ai_prompt:
+            print("Error: use either --list-ai-templates or --ai-prompt, not both", file=sys.stderr)
+            return ExitCode.INVALID_PARAMS.value
+        ai_config = build_ai_config(args)
+        try:
+            if args.list_ai_templates:
+                return asyncio.run(list_ai_templates(ai_config, logger))
+            if not args.brief:
+                print("Error: --brief is required with --ai-prompt", file=sys.stderr)
+                return ExitCode.INVALID_PARAMS.value
+            if not args.ai_template and not args.ai_system_prompt:
+                print(
+                    "Error: pass --ai-template or --ai-system-prompt with --ai-prompt",
+                    file=sys.stderr
+                )
+                return ExitCode.INVALID_PARAMS.value
+            return asyncio.run(run_ai_prompt(ai_config, logger))
+        except KeyboardInterrupt:
+            logger.info("Interrupted by user")
+            return ExitCode.SUCCESS.value
+        except Exception as e:
+            logger.error(f"Unexpected error: {e}", exc_info=args.verbose)
+            return ExitCode.UNKNOWN_ERROR.value
     
     if not args.regional and not args.positive:
         print("Error: --positive is required for non-regional generation", file=sys.stderr)
@@ -1127,9 +1582,6 @@ def main():
     if args.regional and (not args.positive_left or not args.positive_right):
         print("Error: --positive-left and --positive-right are required for regional generation", file=sys.stderr)
         return ExitCode.INVALID_PARAMS.value
-    
-    # Setup logger
-    logger = setup_logger(args.verbose)
     
     # Create configuration
     config = GenerationConfig(
