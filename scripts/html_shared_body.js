@@ -266,7 +266,10 @@ export const sharedBodyHTML = `
               <div class="bounding-options">
                 <div class="bounding-grid-snap"></div>
                 <div class="bounding-grid-size"></div>
-                <button type="button" id="bounding-clear"></button>
+                <div class="bounding-actions">
+                  <button type="button" id="bounding-add"></button>
+                  <button type="button" id="bounding-clear"></button>
+                </div>
               </div>
               <div class="bounding-plate">
                 <button type="button" id="bounding-plate"></button>
@@ -444,9 +447,10 @@ export const sharedBodyHTML = `
           </div>
 
           <div id="prompt-text-container" data-layout-id="prompt-text" data-layout-empty-drag="true">
-            <div id="prompt-textbox-settings">
-              <div class="prompt-textbox-fontsize"></div>
+            <div id="prompt-textbox-settings">              
               <div class="prompt-textbox-autoresize"></div>
+              <div class="prompt-textbox-fontsize"></div>
+              <div class="prompt-textbox-full-preview"></div>
             </div>
             <div class="prompt-common">common</div>
             <div class="prompt-positive">positive</div>

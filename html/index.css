@@ -144,8 +144,8 @@ html, body {
 
 body.layout-is-resizing-full,
 body.layout-is-resizing-full * {
-    cursor: ns-resize !important;
-    user-select: none !important;
+    cursor: ns-resize;
+    user-select: none;
 }
 
 #split {
@@ -163,7 +163,7 @@ body.layout-is-resizing-full * {
 
 .dropdown-character.layout-full-drop-target,
 .dropdown-character-regional.layout-full-drop-target {
-    border-color: #1ce088 !important;
+    border-color: #1ce088;
 }
 
 #left, #right {
@@ -193,23 +193,6 @@ body.layout-is-resizing-full * {
     padding: 0 6px 8px;
     margin-top: 6px;
     box-sizing: border-box;
-}
-
-.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id],
-.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id] > [class$="-main"],
-.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id] > [class$="-main collapsed"] {
-    border-color: transparent !important;
-    background: transparent !important;
-    box-shadow: none !important;
-    margin-top: 0;
-}
-
-.layout-tab-host.layout-tab-multi .dropdown-character,
-.layout-tab-host.layout-tab-multi .dropdown-character-regional {
-    border-color: transparent !important;
-    background: transparent !important;
-    margin-left: 0;
-    margin-right: 0;
 }
 
 .layout-tab-host.layout-tab-hint,
@@ -272,7 +255,7 @@ body.layout-is-resizing-full * {
 }
 
 .layout-tab-host.layout-tab-folded > .layout-tab-pages {
-    display: none !important;
+    display: none;
 }
 
 .layout-tab-host.layout-tab-folded.layout-tab-multi > .layout-tab-bar {
@@ -340,13 +323,8 @@ body.layout-is-resizing-full * {
     transition: none;
 }
 
-.gallery-main-main.collapsed {
-    height: 0 !important;
-    max-height: 0 !important;
-}
-
 .layout-tab-page[hidden] {
-    display: none !important;
+    display: none;
 }
 
 /* Hide per-panel collapse header when the panel lives inside a multi-tab host */
@@ -358,7 +336,7 @@ body.layout-is-resizing-full * {
 [data-layout-id].layout-tab-hide-header-span .generate-adetailer,
 [data-layout-id].layout-tab-hide-header-span .bounding-enable,
 [data-layout-id].layout-tab-hide-header-span .queue-autostart-generate {
-    display: none !important;
+    display: none;
 }
 
 .layout-tab-enable {
@@ -404,7 +382,7 @@ body.layout-is-resizing-full * {
 }
 
 .layout-tab-view-dock[hidden] {
-    display: none !important;
+    display: none;
 }
 
 .layout-tab-view-dock .dropdown-view {
@@ -416,13 +394,13 @@ body.layout-is-resizing-full * {
 }
 
 .layout-tab-host.layout-tab-folded > .layout-tab-view-dock {
-    display: none !important;
+    display: none;
 }
 
 [data-layout-id].layout-tab-hide-header-span [class$="-header-span"],
 [data-layout-id].layout-tab-hide-header-span .add-lora-header > .add-lora-span,
 [data-layout-id].layout-tab-hide-header-span .model-settings-header > .model-settings-span {
-    display: none !important;
+    display: none;
 }
 
 #left{
@@ -465,8 +443,11 @@ body.layout-is-resizing-full * {
     padding-top: 1px;
 }
 
-[data-layout-id].layout-drop-hint {
-    border-color: #1ce088 !important;
+[data-layout-id].layout-drop-hint,
+#prompt-text-container.layout-drop-hint,
+#generate-settings-static-left.layout-drop-hint,
+#generate-settings-static-right.layout-drop-hint {
+    border-color: #1ce088;
     cursor: grab;
 }
 
@@ -529,7 +510,7 @@ body.layout-is-resizing-full * {
     width: 100%;
     height: 100%;
     box-sizing: border-box;
-    display: flex !important;
+    display: flex;
     align-items: center;
     justify-content: center;
 }
@@ -673,42 +654,53 @@ body.layout-is-resizing-full * {
     margin-bottom: 6px;
 }
 
+.bounding-options {
+    display: grid;
+    grid-template-columns: auto minmax(100px, 1fr) auto;
+    align-items: center;
+}
+
 .bounding-grid-snap {
     flex: 0 0 auto;
+    min-width: 3.5em;
 }
 
 .bounding-grid-size {
-    flex: 1 1 auto;
-    min-width: 90px;
+    min-width: 0;
 }
 
+.bounding-actions {
+    display: flex;
+    align-items: center;
+    gap: 4px;
+    flex: 0 0 auto;
+}
+
+#bounding-add,
 #bounding-clear,
 #bounding-plate {
     flex: 0 0 auto;
-    border: 1px solid var(--line-control);
-    background: var(--input);
-    color: var(--text);
-    border-radius: 4px;
-    padding: 2px 8px;
-    cursor: pointer;
+}
+
+#bounding-add,
+#bounding-clear {
+    min-width: 3.5em;
 }
 
 .bounding-plate {
-    display: flex;
+    display: grid;
+    grid-template-columns: minmax(6.5em, max-content) minmax(100px, 1fr);
     align-items: center;
     gap: 8px;
     margin-bottom: 6px;
 }
 
-#bounding-plate.is-on {
-    background: var(--accent);
-    color: #111;
-    border-color: var(--accent);
+#bounding-plate {
+    min-width: 6.5em;
 }
 
 .bounding-plate-opacity {
-    flex: 1 1 auto;
-    min-width: 90px;
+    min-width: 0;
 }
 
 .bounding-plate-opacity.is-disabled {
@@ -763,23 +755,7 @@ body.layout-is-resizing-full * {
 }
 
 .bounding-mode button {
-    border: 1px solid var(--line-control);
-    background: var(--input);
-    color: var(--text);
-    border-radius: 4px;
-    padding: 2px 8px;
-    cursor: pointer;
-}
-
-.bounding-mode button.is-on {
-    background: var(--accent);
-    color: #111;
-    border-color: var(--accent);
-}
-
-.bounding-mode button:disabled {
-    opacity: 0.45;
-    cursor: default;
+    min-width: 3.5em;
 }
 
 .bounding-stage {
@@ -820,11 +796,11 @@ body.layout-is-resizing-full * {
 }
 
 .bounding-editor[hidden] {
-    display: none !important;
+    display: none;
 }
 
 .forge-fp16-switches[hidden] {
-    display: none !important;
+    display: none;
 }
 
 .bounding-hint {
@@ -853,7 +829,7 @@ body.layout-is-resizing-full * {
     max-height: 180px;
     resize: vertical;
     white-space: pre-wrap;
-    word-break: break-word;
+    overflow-wrap: break-word;
     font: 12px/1.35 Consolas, "Courier New", monospace;
     color: var(--text);
     background: var(--field);
@@ -901,12 +877,12 @@ body.layout-is-resizing-full * {
 
 body.layout-is-dragging,
 body.layout-is-dragging * {
-    cursor: grabbing !important;
+    cursor: grabbing;
 }
 
 .layout-dragging,
 .layout-dragging * {
-    pointer-events: none !important;
+    pointer-events: none;
 }
 
 [data-layout-id].layout-dragging {
@@ -1000,7 +976,7 @@ body.layout-is-dragging * {
     font-size: 1.5rem;
     color: rgba(255, 255, 255, 0.5);
     border: 2px dashed transparent;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .drag-hint-bottom {
@@ -1011,7 +987,7 @@ body.layout-is-dragging * {
     font-size: 1.5rem;
     color: rgba(255, 255, 255, 0.5);
     border: 2px dashed transparent;
-    transition: all 0.2s;
+    transition: background-color 0.2s, border-color 0.2s, color 0.2s;
 }
 
 .drag-hint-top.active {

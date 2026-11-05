@@ -136,9 +136,9 @@ Draw rectangles on a canvas that follows the current `Width` and `Height`, then 
 <summary>More about Bounding Box</summary>
 The canvas uses the current generation size, including landscape swap, and fits the panel. It stays at or below 1:1, so a smaller generation size is shown at its native pixel size.     
 
-Drag on empty space to create a box. Drag inside a box to move it, and drag an edge to resize it. A selected box is solid; the others stay semi-transparent. Boxes are numbered from `01`, up to 64. Deleting one renumbers the rest from `01` in list order, and a new box is appended at the end.     
+Drag on empty space to create a box. When the canvas is crowded, `Add` inserts a default centered rectangle (with a small nudge if that spot is already taken). Drag inside a box to move it, and drag an edge to resize it. A selected box is solid; the others stay semi-transparent. Boxes are numbered from `01`, up to 128. Deleting one renumbers the rest from `01` in list order, and a new box is appended at the end.
 
-Click selects the smallest box under the pointer. The area outside that box still selects the larger one. After the canvas has focus, `Tab` walks outward through the nested boxes under the pointer, and `Shift+Tab` walks back. If the pointer is not over two or more boxes, `Tab` uses the boxes around the selected box, then the full list in number order. `Enter` or a double-click edits the description. Inside the editor, `Enter` saves, `Shift+Enter` adds a line, and `Esc` cancels. `Delete` removes the selection.     
+Click selects the smallest box under the pointer. The area outside that box still selects the larger one. After the canvas has focus, `Tab` walks outward through the nested boxes under the pointer, and `Shift+Tab` walks back. If the pointer is not over two or more boxes, `Tab` uses the boxes around the selected box, then the full list in number order. `Enter` or a double-click edits the description. Inside the editor, `Enter` saves, `Shift+Enter` adds a line, and `Esc` cancels. `Delete` removes the selection.
 
 Each box is `object` or `text`. `object` is the default. For Moss, `object` generates the description as an item inside the box, and `text` generates the description as annotation text inside the box.     
 * An empty `object` sends its number as `caption` and has no `text` field.     
@@ -151,7 +151,7 @@ A long description wraps to the box width. Lines that do not fit stay hidden. Th
 
 `Plate` loads the image currently shown in the gallery. Image Info can also send its loaded picture with `To Bounding`, under the tagger row. In the split view that is the large image. In grid view it is the opened image, or the newest image when none is opened. Click `Plate` again to clear it. A matching aspect ratio scales to the canvas. A different ratio scales by the short side and stays centered, and the canvas clips the overflow. `Opacity` runs from 0 to 100 and stays disabled until a plate is loaded. The opacity is saved with settings. The image itself lasts for the current session. While a plate is loaded, box fills follow that slider and thin out as the image gets stronger, so the picture, the region edge, and the description stay visible together.     
 
-`Lock` keeps the selected box from being moved or resized. A locked box can still be selected, recolored, and edited, and `Delete` still removes it. `Clear` asks first. It removes unlocked boxes and leaves locked ones. When every remaining box is locked, `Clear` removes those too.     
+`Lock` keeps the selected box from being moved or resized. A locked box can still be selected, recolored, and edited, and `Delete` still removes it. `Add` sits next to `Clear`. `Clear` asks first. It removes unlocked boxes and leaves locked ones. When every remaining box is locked, `Clear` removes those too.     
 
 Coordinates use the full generation pixels. The origin is the canvas center, `x` points right, `y` points down, and each box is `[y_min, x_min, y_max, x_max]`. On a 1024×1360 canvas the packed prompt looks like this:     
 

@@ -2,7 +2,8 @@ import { decodeThumb } from './customThumbGallery.js';
 import { generateRandomSeed, resolveGenerateSeed, getTagAssist, getLoRAs, replaceWildcardsAsync, characterRandomMode, pickRandomCharacterEntry, formatCharacterInfo, formatOriginalCharacterInfo,
     getViewTags, createHiFix, formatQueueJobSeed, createRefiner, extractHostPort, checkVpred, extractAPISecure,
     createControlNet, createADetailer, toggleQueueColor, startQueue, previewRegionalCharacters,
-    updateADetailerModelList, getImageSavePrefix, readSkipLayer } from './generate.js';
+    updateADetailerModelList, getImageSavePrefix, readSkipLayer,
+    getPreviewSeed, getPreviewThemeColors, appendPreviewMetaInfo } from './generate.js';
 import { processRandomString } from './tools/nestedBraceParsing.js';
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { filterPrompts } from './tools/promptFilter.js';
@@ -193,6 +194,36 @@ export function composeRegionalForAi() {
     }
 }
 
+export function composeRegionalFullPromptPreview() {
+    try {
+        const seed = getPreviewSeed();
+        const views = getViewTags(seed);
+        const { left, right } = previewRegionalCharacters();
+        const api = globalThis.generate?.api_interface?.getValue?.() || 'None';
+        const { posLc, posRc, lora } = getPrompts(left, right, views, '', api, -1, seed);
+        const { negativeColor, brownColor, loraColor } = getPreviewThemeColors();
+        const negative = globalThis.prompt?.negative?.getValue?.() || '';
+        const regional = createRegional(api);
+        const includeRefiner = globalThis.globalSettings?.api_model_type === 'Checkpoint';
+
+        let finalInfo = '';
+        if (lora) {
+            finalInfo += `LoRA:\n[color=${loraColor}]${lora}[/color]\n\n`;
+        }
+        finalInfo += `Positive Left:\n${posLc || ''}\n`;
+        finalInfo += `Positive Right:\n${posRc || ''}\n`;
+        finalInfo += `Negative:\n[color=${negativeColor}]${negative}[/color]\n\n`;
+        finalInfo += appendPreviewMetaInfo(brownColor, seed, {
+            includeRefiner,
+            extraInfo: regional.info,
+        });
+        return finalInfo;
+    } catch (error) {
+        console.error('[full-prompt-preview] regional failed', error);
+        return '';
+    }
+}
+
 async function createCharacters(index, seeds) {
     const FILES = globalThis.cachedFiles;
     const character = globalThis.characterListRegional.getKey()[index];
@@ -370,6 +401,7 @@ async function getCharacters(seedOverride = null){
     }
 }
 
+// eslint-disable-next-line sonarjs/cognitive-complexity
 async function createPrompt(runSame, aiPromot, apiInterface, loop=-1, seedOverride = null, hiresOneShot = false){
     let finalInfo = ''
     let randomSeed = -1;

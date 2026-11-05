@@ -629,7 +629,7 @@ export async function setupAiPromptPanel() {
         maxLines: 8,
         defaultTextColor: 'hotpink'
     }, true, (value) => { globalThis.globalSettings.ai_prompt = value; });
-    ui.run = setupButtons('ai-prompt-run', text.ai_prompt_run, { width: '100%', height: '36px' }, () => { onRunClicked(); });
+    ui.run = setupButtons('ai-prompt-run', text.ai_prompt_run, { cssChrome: true }, () => { onRunClicked(); });
     ui.result = setupTextbox('ai-prompt-result', text.ai_prompt_result, {
         value: '',
         minLines: 6,
@@ -640,10 +640,10 @@ export async function setupAiPromptPanel() {
             if (suppress) return;
             applySelection = currentApplyId();
         }, 6, false, true);
-    ui.overwrite = setupButtons('ai-prompt-overwrite', text.ai_prompt_overwrite, { width: '100%', height: '34px' }, () => applyResult('overwrite'));
-    ui.append = setupButtons('ai-prompt-append', text.ai_prompt_append, { width: '100%', height: '34px' }, () => applyResult('append'));
+    ui.overwrite = setupButtons('ai-prompt-overwrite', text.ai_prompt_overwrite, { cssChrome: true }, () => applyResult('overwrite'));
+    ui.append = setupButtons('ai-prompt-append', text.ai_prompt_append, { cssChrome: true }, () => applyResult('append'));
     ui.inherit = setupCheckbox('ai-prompt-inherit', text.ai_prompt_inherit, false, false, null);
-    ui.restore = setupButtons('ai-prompt-restore', text.ai_prompt_restore, { width: '100%', height: '34px' }, () => { restoreBuiltinTemplates(); });
+    ui.restore = setupButtons('ai-prompt-restore', text.ai_prompt_restore, { cssChrome: true }, () => { restoreBuiltinTemplates(); });
     bindBackend();
 
     ui.source.updateDefaults(labelFor(SOURCE_IDS, sourceLabels(), globalThis.globalSettings.ai_prompt_source));

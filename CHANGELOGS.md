@@ -1,3 +1,9 @@
+2026.11.05 v2.11.3      
+Add, `Bounding Box` `Add` inserts a default rectangle when empty canvas space is hard to hit      
+Add, Prompt `full prompt preview` — hover the label for a colored final-prompt overlay; check to pin (session-only, resets when switching settings)      
+Change, `Bounding Box` toolbar buttons follow the AI Prompt button look; options and plate rows keep steadier widths across languages      
+
+
 2026.10.31 v2.11.2      
 Bugfix, Image Info drop rejected JSON/CSV when Windows MIME was empty, Excel-typed, or the file was `.txt`      
 Bugfix, JSON/CSV/TXT dropped on the Image Info overlay bottom half no longer cancels; data files go to the JSON/CSV list from either half      

@@ -6,23 +6,48 @@ function applyButtonChrome(button, options, getClickable) {
         width = '100px',
         height = '40px',
         hidden = false,
-        title = ''
+        title = '',
+        cssChrome = false
     } = options;
 
     const clickable = () => getClickable();
 
+    if (hidden) {
+        button.style.display = 'none';
+    }
+    button.style.cursor = clickable() ? 'pointer' : 'not-allowed';
+    button.disabled = !clickable();
+    if (title) button.title = title;
+
+    if (cssChrome) {
+        return {
+            setColors: (defaultCol, hoverCol, disabledCol) => {
+                defaultColor = defaultCol;
+                hoverColor = hoverCol;
+                disabledColor = disabledCol;
+            },
+            applyClickable: () => {
+                button.style.cursor = clickable() ? 'pointer' : 'not-allowed';
+                button.disabled = !clickable();
+            },
+            getDefaultColor: () => defaultColor,
+            getHoverColor: () => hoverColor,
+            getDisabledColor: () => disabledColor,
+            setSize: (btnWidth, btnHeight) => {
+                button.style.width = btnWidth;
+                button.style.height = btnHeight;
+            }
+        };
+    }
+
     button.style.backgroundColor = clickable() ? defaultColor : disabledColor;
     if (width) button.style.width = width;
     if (height) button.style.height = height;
-    button.style.display = hidden ? 'none' : 'inline-block';
-    button.style.cursor = clickable() ? 'pointer' : 'not-allowed';
     button.style.border = 'none';
     button.style.color = 'white';
     button.style.borderRadius = '4px';
     button.style.fontSize = '14px';
     button.style.transition = 'background-color 0.3s ease';
-    button.disabled = !clickable();
-    if (title) button.title = title;
 
     button.addEventListener('mouseover', () => {
         if (clickable()) {

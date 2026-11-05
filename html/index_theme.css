@@ -12,7 +12,7 @@ body {
 #full-body {
     box-sizing: border-box;
     background: var(--bg);
-    border-radius: none;
+    border-radius: 0;
     border: none;
     position: absolute;
     inset: 0;
@@ -84,8 +84,8 @@ body {
     padding: 10px;
     border-radius: 8px;
     max-width: 900px;
-    width: auto !important;
-    min-width: 0 !important;
+    width: auto;
+    min-width: 0;
     pointer-events: auto;
 }
 
@@ -145,7 +145,7 @@ body {
 }
 
 .dropdown-character-regional {
-    border: var(--paused) 2px solid !important;
+    border: var(--paused) 2px solid;
 }
 
 .layout-tab-host.layout-tab-multi {
@@ -823,7 +823,7 @@ body.right-to-left #cg-info-button {
     background: var(--surface);
     color: var(--text);
     border: none;
-    border-radius: none;
+    border-radius: 0;
     padding: 0;
     text-align: center;
     box-sizing: border-box;
@@ -934,7 +934,7 @@ body.right-to-left #cg-info-button {
     box-sizing: border-box;
     background: none;
     border: none;
-    border-radius: none;
+    border-radius: 0;
     position: relative;
     display: flex;
     flex-direction: column;
@@ -1070,12 +1070,69 @@ body.right-to-left #cg-info-button {
 #prompt-textbox-settings {
     align-items: center;
     display: grid;
-    grid-template-columns: 2fr 1fr 1fr 1fr;
+    grid-template-columns: 2fr 1.5fr 1.5fr;
     margin-left: 10px;
     margin-right: 10px;
     margin-top: 3px;
     margin-bottom: 3px;
     background-color: var(--surface-alt);
+}
+
+.prompt-textbox-full-preview-host {
+    display: inline-flex;
+    align-items: center;
+    justify-self: end;
+    width: auto;
+    max-width: 100%;
+    min-width: 0;
+    overflow: visible;
+}
+
+.prompt-textbox-full-preview-host [class^="myCheckbox-"][class*="-input"] {
+    flex: 0 0 28px;
+    min-width: 28px;
+    max-width: 28px;
+}
+
+.prompt-textbox-full-preview-host [class^="myCheckbox-"][class*="-span"] {
+    flex: 0 1 auto;
+    min-width: 0;
+    text-align: left;
+    white-space: nowrap;
+    overflow: hidden;
+    text-overflow: ellipsis;
+}
+
+.prompt-full-preview-layer {
+    position: fixed;
+    z-index: 10020;
+    pointer-events: none;
+    max-width: min(720px, calc(100vw - 16px));
+    max-height: min(60vh, 520px);
+    overflow: auto;
+    padding: 10px 12px;
+    border-radius: 8px;
+    border: 1px solid var(--line-track);
+    background: var(--well);
+    color: var(--text);
+    box-shadow: 0 4px 16px var(--shadow);
+}
+
+.prompt-full-preview-layer.is-pinned {
+    pointer-events: auto;
+}
+
+.prompt-full-preview-layer[hidden] {
+    display: none;
+}
+
+.prompt-full-preview-pre {
+    margin: 0;
+    white-space: pre-wrap;
+    overflow-wrap: break-word;
+    font-family: inherit;
+    font-size: 14px;
+    line-height: 1.4;
 }
 
 [class^="myTextbox-"][class*="-header"] {
@@ -1379,6 +1436,17 @@ body.right-to-left #cg-info-button {
     transform: scale(0.97);
 }
 
+@media (prefers-reduced-motion: reduce) {
+    [class^="myCheckbox-"][class*="-input"],
+    [class^="myRadiobox-"][class*="-item"] {
+        transition: none;
+    }
+    [class^="myCheckbox-"][class*="-input"]:active,
+    [class^="myRadiobox-"][class*="-item"]:active {
+        transform: none;
+    }
+}
+
 [class^="myRadiobox-"][class*="-input"] {
     position: absolute;
     width: 1px;
@@ -1679,47 +1747,112 @@ body.right-to-left #cg-info-button {
 }
 
 .ai-prompt-main button[class^="myButton-"] {
-    background: var(--accent-ring-strong) !important;
-    color: var(--text) !important;
-    border: 1px solid var(--accent) !important;
-    border-radius: 6px !important;
-    box-shadow: none !important;
-    font-size: 13px !important;
-    height: 34px !important;
-    width: 100% !important;
+    background: var(--accent-ring-strong);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    box-shadow: none;
+    font-size: 13px;
+    height: 34px;
+    width: 100%;
     min-width: 0;
-    padding: 0 10px !important;
+    padding: 0 10px;
 }
 
 .ai-prompt-main button[class^="myButton-"]:hover:not(:disabled) {
-    background: var(--accent) !important;
-    color: var(--ai-run-text) !important;
-    border-color: var(--accent) !important;
+    background: var(--accent);
+    color: var(--ai-run-text);
+    border-color: var(--accent);
 }
 
 .ai-prompt-main button[class^="myButton-"]:disabled {
     opacity: 0.45;
 }
 
+.bounding-main #bounding-add,
+.bounding-main #bounding-clear,
+.bounding-main #bounding-plate,
+.bounding-main .bounding-mode button {
+    background: var(--accent-ring-strong);
+    color: var(--text);
+    border: 1px solid var(--accent);
+    border-radius: 6px;
+    box-shadow: none;
+    font-size: 13px;
+    height: auto;
+    line-height: 1.2;
+    padding: 2px 10px;
+    cursor: pointer;
+}
+
+.bounding-main #bounding-add:hover:not(:disabled),
+.bounding-main #bounding-clear:hover:not(:disabled),
+.bounding-main #bounding-plate:hover:not(:disabled),
+.bounding-main .bounding-mode button:hover:not(:disabled) {
+    background: var(--accent);
+    color: var(--ai-run-text);
+    border-color: var(--accent);
+}
+
+.bounding-main #bounding-plate.is-on,
+.bounding-main .bounding-mode button.is-on {
+    background: var(--accent);
+    color: var(--ai-run-text);
+    border-color: transparent;
+}
+
+.bounding-main #bounding-plate.is-on:hover:not(:disabled),
+.bounding-main .bounding-mode button.is-on:hover:not(:disabled) {
+    background: var(--accent-deep);
+    color: var(--ai-run-text);
+    border-color: transparent;
+    filter: brightness(0.94);
+}
+
+.bounding-main .bounding-mode button:disabled {
+    opacity: 0.45;
+    cursor: default;
+}
+
 .ai-prompt-main .myButton-ai-prompt-run {
-    background: var(--accent) !important;
-    color: var(--ai-run-text) !important;
-    border-color: transparent !important;
-    height: 36px !important;
-    font-size: 14px !important;
+    background: var(--accent);
+    color: var(--ai-run-text);
+    border-color: transparent;
+    height: 36px;
+    font-size: 14px;
 }
 
 .ai-prompt-main .myButton-ai-prompt-run:hover:not(:disabled) {
-    background: var(--accent-deep) !important;
-    color: var(--ai-run-text) !important;
-    border-color: transparent !important;
+    background: var(--accent-deep);
+    color: var(--ai-run-text);
+    border-color: transparent;
     filter: brightness(0.94);
 }
 
 .ai-prompt-main .myButton-ai-prompt-run.is-cancel,
 .ai-prompt-main .myButton-ai-prompt-run.is-cancel:hover:not(:disabled) {
-    background: var(--ai-cancel) !important;
-    color: var(--ai-cancel-text) !important;
-    border-color: transparent !important;
+    background: var(--ai-cancel);
+    color: var(--ai-cancel-text);
+    border-color: transparent;
     filter: none;
+}
+
+.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id],
+.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id] > [class$="-main"],
+.layout-tab-host.layout-tab-multi .layout-tab-page > [data-layout-id] > [class$="-main"].collapsed,
+.layout-tab-host.layout-tab-multi .layout-tab-page > #prompt-text-container,
+.layout-tab-host.layout-tab-multi .layout-tab-page > #generate-settings-static-left,
+.layout-tab-host.layout-tab-multi .layout-tab-page > #generate-settings-static-right {
+    border-color: transparent;
+    background: transparent;
+    box-shadow: none;
+    margin-top: 0;
+}
+
+.layout-tab-host.layout-tab-multi .dropdown-character,
+.layout-tab-host.layout-tab-multi .dropdown-character-regional {
+    border-color: transparent;
+    background: transparent;
+    margin-left: 0;
+    margin-right: 0;
 }

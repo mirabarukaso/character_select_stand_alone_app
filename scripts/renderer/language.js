@@ -193,6 +193,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.prompt.exclude.setTitle(LANG.prompt_ban);
     globalThis.prompt.autoResize.setTitle(LANG.ptompt_textbox_autoresize);
     globalThis.prompt.fontSize.setTitle(LANG.ptompt_textbox_fontsize);
+    globalThis.prompt.fullPreview?.setTitle?.(LANG.ptompt_textbox_full_preview);
 
     globalThis.hifix.model.setTitle(LANG.api_hf_upscaler_selected);
     globalThis.hifix.colorTransfer.setTitle(LANG.api_hf_colortransfer);
@@ -357,6 +358,8 @@ export function updateSettings() {
     globalThis.prompt.exclude.setValue(SETTINGS.prompt_ban);
     globalThis.prompt.autoResize.setValue(SETTINGS.ptompt_textbox_autoresize);
     globalThis.prompt.fontSize.setValue(SETTINGS.ptompt_textbox_fontsize);
+    // Session-only pin; never persisted — always reset when settings load/switch.
+    globalThis.prompt.fullPreview?.setValue?.(false);
     globalThis.aiPrompt?.syncFromSettings?.();
 
     globalThis.generate.api_interface.updateDefaults(SETTINGS.api_interface);

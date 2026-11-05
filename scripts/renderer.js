@@ -15,6 +15,7 @@ import { setupButtons, setupSplitButton, createSplitMenuApi, toggleButtons, show
 import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, setupModelReloadToggle, 
     setupFuctionKeys, setupSwapToggle, reloadFiles, doSwap, createFavoriteHotkeyControls } from './renderer/components/myCollapsed.js';
 import { setupTextbox, setupInfoBox } from './renderer/components/myTextbox.js';
+import { setupFullPromptPreview } from './renderer/fullPromptPreview.js';
 import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from './renderer/generate_backend.js';
 import { setupLoRA } from './renderer/slots/myLoRASlot.js';
 import { setupControlNet } from './renderer/slots/myControlNetSlot.js';
@@ -492,6 +493,7 @@ export async function createPrompt(SETTINGS, FILES, LANG) {
         autoResize: setupCheckbox('prompt-textbox-autoresize', LANG.ptompt_textbox_autoresize,
             true, true, callback_ptompt_textbox_autoresize
         ),
+        fullPreview: setupFullPromptPreview('prompt-textbox-full-preview', LANG.ptompt_textbox_full_preview),
         fontSize: setupSlider('prompt-textbox-fontsize', LANG.ptompt_textbox_fontsize,
             {min:6, max:22, step:1, defaultValue:14, tooltipValue: true}, callback_ptompt_textbox_fontsize, true
         )

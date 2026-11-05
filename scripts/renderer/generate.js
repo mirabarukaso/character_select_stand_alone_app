@@ -1,6 +1,6 @@
 import { decodeThumb } from './customThumbGallery.js';
 import { from_renderer_generate_updatePreview } from './generate_backend.js';
-import { seartGenerateRegional } from './generate_regional.js';
+import { seartGenerateRegional, composeRegionalFullPromptPreview } from './generate_regional.js';
 import { startGenerateMiraITU } from './generate_miraITU.js';
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { setADetailerModelList } from './slots/myADetailerSlot.js';
@@ -9,7 +9,7 @@ import { convertToMultipleOfNFloor, checkNumberInRange } from './tools/numbers.j
 import { setQueueAutoStart } from './callbacks.js';
 import { filterPrompts } from './tools/promptFilter.js';
 import { isAutoRetryRunning, startAutoRetry } from './tools/autoRetry.js';
-import { finalizePositivePrompt } from './bounding.js';
+import { formatBoundingPreview, finalizePositivePrompt } from './bounding.js';
 import { readForgeDtypeSettings } from '../main/sageFp16Switch.js';
 
 
@@ -673,6 +673,91 @@ export function composePositiveForAi() {
     }
 }
 
+export function getPreviewSeed() {
+    const seedValue = Number(globalThis.generate?.seed?.getValue?.());
+    return Number.isFinite(seedValue) && seedValue >= 0 ? seedValue : 0;
+}
+
+export function getPreviewThemeColors() {
+    const dark = globalThis.globalSettings?.css_style === 'dark';
+    return {
+        negativeColor: dark ? 'red' : 'Crimson',
+        brownColor: dark ? 'BurlyWood' : 'Brown',
+        loraColor: dark ? 'AliceBlue' : 'DarkBlue',
+    };
+}
+
+export function appendPreviewMetaInfo(brownColor, seed, { includeRefiner = true, extraInfo = '' } = {}) {
+    const landscape = Boolean(globalThis.generate?.landscape?.getValue?.());
+    const width = landscape
+        ? globalThis.generate.height.getValue()
+        : globalThis.generate.width.getValue();
+    const height = landscape
+        ? globalThis.generate.width.getValue()
+        : globalThis.generate.height.getValue();
+    const apiInterface = globalThis.generate?.api_interface?.getValue?.() || 'None';
+    const hifix = createHiFix(seed, apiInterface, brownColor);
+    const refiner = createRefiner();
+
+    let info = '';
+    info += `Layout: [[color=${brownColor}]${width} x ${height}[/color]]\t`;
+    info += `CFG: [[color=${brownColor}]${globalThis.generate.cfg.getFloat()}[/color]]\t`;
+    info += `Setp: [[color=${brownColor}]${globalThis.generate.step.getValue()}[/color]]\n`;
+    info += `Sampler: [[color=${brownColor}]${globalThis.generate.sampler.getValue()}[/color]]\n`;
+    info += `Scheduler: [[color=${brownColor}]${globalThis.generate.scheduler.getValue()}[/color]]\n`;
+    info += hifix.info;
+    if (includeRefiner) {
+        info += refiner.info;
+    }
+    info += extraInfo;
+    info += `\n`;
+    return info;
+}
+
+function appendBoundingPreviewSection(plainPositive) {
+    if (!globalThis.globalSettings?.bounding_enable || globalThis.globalSettings?.regional_condition) {
+        return '';
+    }
+    const landscape = Boolean(globalThis.generate?.landscape?.getValue?.());
+    const width = landscape
+        ? globalThis.generate.height.getValue()
+        : globalThis.generate.width.getValue();
+    const height = landscape
+        ? globalThis.generate.width.getValue()
+        : globalThis.generate.height.getValue();
+    return formatBoundingPreview(plainPositive, width, height);
+}
+
+// Sync dry-run of generate finalInfo colors. Random slots / wildcards / AI stay unresolved.
+export function composeFullPromptPreview() {
+    try {
+        if (globalThis.globalSettings?.regional_condition) {
+            return composeRegionalFullPromptPreview();
+        }
+
+        const seed = getPreviewSeed();
+        const views = globalThis.viewList?.getValue ? getViewTags(seed) : '';
+        const api = globalThis.generate?.api_interface?.getValue?.() || 'None';
+        const { pos, posc, lora } = getPrompts(previewCharacterTags(), views, '', api, -1, seed);
+        const { negativeColor, brownColor, loraColor } = getPreviewThemeColors();
+        const negative = globalThis.prompt?.negative?.getValue?.() || '';
+        const plainPositive = lora ? `${pos || ''}\n${lora}` : (pos || '');
+
+        let finalInfo = '';
+        if (lora) {
+            finalInfo += `LoRA:\n[color=${loraColor}]${lora}[/color]\n\n`;
+        }
+        finalInfo += `Positive:\n${posc || ''}\n`;
+        finalInfo += `Negative:\n[color=${negativeColor}]${negative}[/color]\n\n`;
+        finalInfo += appendPreviewMetaInfo(brownColor, seed);
+        finalInfo += appendBoundingPreviewSection(plainPositive);
+        return finalInfo;
+    } catch (error) {
+        console.error('[full-prompt-preview] failed', error);
+        return '';
+    }
+}
+
 export function getLoRAs(apiInterface) {
     const loraData = globalThis.lora.getValues();
     if (!Array.isArray(loraData) || loraData.length === 0 || apiInterface === 'None') {
@@ -821,6 +906,22 @@ function appendBoundingInfo(text) {
         .replaceAll('>', '&gt;')
         .replaceAll('[', '&#91;');
     globalThis.infoBox.image.appendValue(`Bounding:\n${safe}`);
+}
+
+// Colored box lines go to Info + gallery finalInfo; packed JSON stays Info-only.
+function appendBoundingOutputs(generateData, plainPositive) {
+    const colored = formatBoundingPreview(
+        plainPositive,
+        generateData.width,
+        generateData.height
+    );
+    if (colored) {
+        globalThis.infoBox?.image?.appendValue?.(colored);
+        if (generateData.queueManager) {
+            generateData.queueManager.finalInfo = `${generateData.queueManager.finalInfo || ''}${colored}`;
+        }
+    }
+    appendBoundingInfo(`${generateData.positive}\n`);
 }
 
 export function formatQueueJobSeed(seed, hifixEnabled, lang) {
@@ -1372,7 +1473,7 @@ export async function startQueue(){
                 if (!generateData.boundingApplied) {
                     finalizePositivePrompt(generateData);
                     if (generateData.positive !== beforePack) {
-                        appendBoundingInfo(`${generateData.positive}\n`);
+                        appendBoundingOutputs(generateData, beforePack);
                     }
                 }
                 globalThis.bounding?.setPreview?.(generateData.positive);

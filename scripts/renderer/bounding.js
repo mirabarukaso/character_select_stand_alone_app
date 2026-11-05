@@ -287,6 +287,10 @@ export function nextBoxId(boxes) {
     return count + 1;
 }
 
+function sameRect(a, b) {
+    return a.nx === b.nx && a.ny === b.ny && a.nw === b.nw && a.nh === b.nh;
+}
+
 // Pixel edges are top-left origin. The model wants [y_min, x_min, y_max, x_max]
 // with the canvas center as origin, x right and y down.
 export function toCentralYxyx(box, width, height) {
@@ -337,6 +341,36 @@ export function applyBoundingPrompt(prompt, width, height) {
     }
     const boxes = globalThis.bounding?.getBoxes?.() ?? settings.bounding_boxes ?? [];
     return packBoundingPrompt(prompt, width, height, boxes);
+}
+
+function formatBoundingItemLine(box, width, height) {
+    const item = buildItem(box, width, height);
+    const hex = rgbToHex(boxColor(box));
+    const number = String(box.id).padStart(2, '0');
+    const bbox = `[${item.bbox.join(',')}]`;
+    let body;
+    if (item.label === 'text') {
+        const text = String(item.text ?? '').replaceAll('\n', ' ');
+        body = `[${number}][text] "${text}"  bbox=${bbox}`;
+    } else {
+        body = `[${number}][object] ${item.caption}  bbox=${bbox}`;
+    }
+    return `[color=${hex}]${body}[/color]`;
+}
+
+// Preview-only: colored per-box lines from draw content/colors.
+export function formatBoundingPreview(_caption, width, height) {
+    const settings = globalThis.globalSettings;
+    if (!settings?.bounding_enable || settings.regional_condition) {
+        return '';
+    }
+    const rawBoxes = globalThis.bounding?.getBoxes?.() ?? settings.bounding_boxes ?? [];
+    const boxes = normalizeBoundingBoxes(rawBoxes);
+    if (boxes.length === 0) {
+        return '';
+    }
+    const lines = boxes.map((box) => formatBoundingItemLine(box, width, height));
+    return `Bounding:\n${lines.join('\n')}\n`;
 }
 
 // The queue item is sent again on a busy retry, so packing happens once.
@@ -569,6 +603,7 @@ export function setupBounding() {
         if (hintEl) hintEl.textContent = lang.bounding_hint || 'Drag to draw a box. Click to select. Double-click to edit. Delete removes the selection.';
         if (objectButton) objectButton.textContent = lang.bounding_mode_object || 'object';
         if (textButton) textButton.textContent = lang.bounding_mode_text || 'text';
+        if (addButton) addButton.textContent = lang.bounding_add || 'Add';
         if (clearButton) clearButton.textContent = lang.bounding_clear || 'Clear';
         if (lockButton) lockButton.textContent = lang.bounding_lock || 'Lock';
         snapBox?.setTitle(lang.bounding_grid_snap || 'Snap');
@@ -1275,11 +1310,53 @@ export function setupBounding() {
         attributeFilter: ['data-theme']
     });
 
+    const addButton = document.getElementById('bounding-add');
     const clearButton = document.getElementById('bounding-clear');
     const plateButton = document.getElementById('bounding-plate');
     const lockButton = document.getElementById('bounding-lock');
     const colorInput = document.getElementById('bounding-color');
     const swatchHost = document.getElementById('bounding-swatches');
+
+    function defaultAddRect() {
+        const size = 0.25;
+        let nx = 0.375;
+        let ny = 0.375;
+        const start = snappedPoint({ x: nx, y: ny });
+        const end = snappedPoint({ x: nx + size, y: ny + size });
+        let left = clamp01(Math.min(start.x, end.x));
+        let top = clamp01(Math.min(start.y, end.y));
+        let right = clamp01(Math.max(start.x, end.x));
+        let bottom = clamp01(Math.max(start.y, end.y));
+        let nw = Math.max(right - left, minNorm().minX);
+        let nh = Math.max(bottom - top, minNorm().minY);
+        if (left + nw > 1) left = Math.max(0, 1 - nw);
+        if (top + nh > 1) top = Math.max(0, 1 - nh);
+        const nudge = 0.04;
+        for (let step = 0; step < 16; step += 1) {
+            const candidate = { nx: left, ny: top, nw, nh };
+            if (!boxes.some((box) => sameRect(box, candidate))) return candidate;
+            left = clamp01(left + nudge);
+            top = clamp01(top + nudge);
+            if (left + nw > 1) left = 0;
+            if (top + nh > 1) top = 0;
+        }
+        return { nx: left, ny: top, nw, nh };
+    }
+
+    addButton?.addEventListener('click', () => {
+        const id = nextBoxId(boxes);
+        if (id == null) {
+            flashFull();
+            return;
+        }
+        const rect = defaultAddRect();
+        boxes.push({ id, ...rect, mode: 'object', text: '' });
+        selectedId = id;
+        persist();
+        syncModeButtons();
+        updateCount();
+        draw();
+    });
 
     function syncColorControl() {
         const box = selectedBox();

@@ -428,7 +428,8 @@ export function changeFontSize(fontSize, lineHeight = '1.4') {
     const selectors = [
         '[class*="myTextbox-"][class*="-textarea"]',
         '[class*="myInfoBox-"][class*="-content"]',
-        '[class*="myInfoBox-"][class*="-content"] pre'
+        '[class*="myInfoBox-"][class*="-content"] pre',
+        '.prompt-full-preview-pre'
     ];
 
     const elements = document.querySelectorAll(selectors.join(', '));
