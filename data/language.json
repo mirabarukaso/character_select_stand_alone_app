@@ -696,7 +696,7 @@
         "image_tagger_run_tagged": "已反推",
         "image_tagger_run_processing": "反推中……",
         "right_menu_copy_image": "复制图像",
-        "right_menu_copy_image_metadata": "复制图像元数据",
+        "right_menu_copy_image_metadata": "复制元数据",
         "right_menu_remove_current_image": "移除当前图像",
         "right_menu_clear_gallery": "清空画廊",
         "right_menu_test_ai_generate": "测试AI题词",

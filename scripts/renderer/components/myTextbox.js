@@ -30,29 +30,42 @@ function escapeHtml(text) {
 }
 
 export function parseTaggedContent(content) {
+    if (content == null || content === '') return '';
+
+    // Stash trusted HTML fragments so plain text can be escaped in one pass.
+    const parts = [];
+    const stash = (html) => {
+        const key = `\uE000${parts.length}\uE001`;
+        parts.push(html);
+        return key;
+    };
+
+    let text = String(content);
+
     const colorRegex = /\[color=([^\]]*?)\]([\s\S]*?)\[\/color\]/g;
-    content = content.replaceAll(colorRegex, (match, color, text) => {
+    text = text.replaceAll(colorRegex, (match, color, inner) => {
         const isValidColor = /^#[0-9A-Fa-f]{6}$|^rgb\(\d{1,3},\s*\d{1,3},\s*\d{1,3}\)$|^[a-zA-Z]+$/.test(color);
         if (isValidColor) {
-            const colorClass = addDynamicColorClass(color); 
-            return `<span class="${colorClass}">${escapeHtml(text)}</span>`;
+            const colorClass = addDynamicColorClass(color);
+            return stash(`<span class="${colorClass}">${escapeHtml(inner)}</span>`);
         }
-        return escapeHtml(text);
+        return stash(escapeHtml(inner));
     });
 
     const urlRegex = /\[url=([^\]]*?)\]([\s\S]*?)\[\/url\]/g;
-    content = content.replaceAll(urlRegex, (match, url, text) => {
+    text = text.replaceAll(urlRegex, (match, url, inner) => {
         const isValidUrl = /^(https?:\/\/[^\s<>"']+)$/.test(url);
         if (isValidUrl) {
-            return `<a href="${url}" target="_blank" class="myInfoBox-link">${escapeHtml(text)}</a>`;
+            return stash(`<a href="${url}" target="_blank" class="myInfoBox-link">${escapeHtml(inner)}</a>`);
         }
-        return escapeHtml(text);
+        return stash(escapeHtml(inner));
     });
 
-    const loraRegex = /<lora:[^>]+>/g;
-    content = content.replaceAll(loraRegex, match => escapeHtml(match));
-    content = content.replaceAll('\n', '<br>');
-    return content;
+    // Escape remaining plain text (raw HTML, <lora:...>, labels, etc.)
+    text = escapeHtml(text);
+    text = text.replaceAll(/\uE000(\d+)\uE001/g, (_, index) => parts[Number(index)] ?? '');
+    text = text.replaceAll('\n', '<br>');
+    return text;
 }
 
 export function setupTextbox(containerId, placeholder = 'Enter text...', options = {}, showTitle = false, onInputCallback = null, passwordMode = false, numberOnly = false) {
