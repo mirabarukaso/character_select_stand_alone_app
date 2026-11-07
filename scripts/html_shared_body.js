@@ -69,14 +69,15 @@ export const sharedBodyHTML = `
       <div id="split">
         <div id="left">
           <div id="generate-settings-static-left" data-layout-id="generate-settings-static-left" data-layout-empty-drag="true">                                                
-            <div id="generate-settings-slider">
+            <div class="generate-settings-slider generate-settings-size-row">
               <div class="generate-width"></div>
+              <div class="generate-aspect-lock"></div>
               <div class="generate-height"></div>
               <div class="generate-cfg"></div>
               <div class="generate-step"></div>
             </div>
             <div class="dropdown-view"></div>
-            <div id="generate-settings-slider">
+            <div class="generate-settings-slider generate-settings-check-row">
               <div class="generate-tag-assist"></div>
               <div class="generate-refiner-dummy"></div>
               <div class="generate-hires-fix-dummy"></div>

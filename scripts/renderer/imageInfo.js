@@ -4,6 +4,7 @@ import { handlePastedJsonOrCsvFile, handlePastedPlainTextItem, isJsonListDataFil
 import { extractImageMetadata, parseGenerationParameters } from './components/imageInfoMetadata.js';
 import { createMiraITUWindow } from './components/imageInfoMiraITU.js';
 import { fileToBase64 } from './generate.js';
+import { hiresCalculate } from './tools/hiresCalculation.js';
 
 let cachedImage = '';
 
@@ -483,6 +484,8 @@ export function setupImageUploadOverlay() {
             
             sendPrompt(parsedMetadata);
             globalThis.generate.landscape.setValue(false);
+            globalThis.generate.aspectLock?.unlock?.();
+            hiresCalculate();
             
             sendButton.textContent = LANG.image_info_send_tags_sent;
             setTimeout(() => {
@@ -563,6 +566,7 @@ export function setupImageUploadOverlay() {
         globalThis.generate.seed.setValue(extractedData.seed);
         globalThis.generate.cfg.setValue(extractedData.cfgScale);
         globalThis.generate.step.setValue(extractedData.steps);
+        globalThis.generate.aspectLock?.unlock?.();
         globalThis.generate.width.setValue(extractedData.width);
         globalThis.generate.height.setValue(extractedData.height);    
     }    

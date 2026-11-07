@@ -101,6 +101,8 @@ const defaultSettings = {
     "height": 1360,
     "batch": 3,
     "api_image_landscape": false,
+    "api_image_aspect_lock": false,
+    "api_image_aspect_ratio": "",
     "scroll_to_last": false,
     
     "custom_prompt": "",

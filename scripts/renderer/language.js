@@ -125,6 +125,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.step.setTitle(LANG.step);
     globalThis.generate.width.setTitle(LANG.width);
     globalThis.generate.height.setTitle(LANG.height);
+    globalThis.generate.aspectLock?.setTitle?.(LANG.api_image_aspect_lock);
     globalThis.generate.batch.setTitle(LANG.batch);
 
     globalThis.generate.hifix.setTitle(LANG.api_hf_enable);
@@ -340,10 +341,13 @@ export function updateSettings() {
     globalThis.generate.seed.setValue(SETTINGS.random_seed);
     globalThis.generate.cfg.setValue(SETTINGS.cfg);
     globalThis.generate.step.setValue(SETTINGS.step);
+    globalThis.generate.aspectLock?.unlock?.({ persistState: false, refreshLayer: false });
     globalThis.generate.width.setValue(SETTINGS.width);
     globalThis.generate.height.setValue(SETTINGS.height);
+    globalThis.generate.aspectLock?.restoreFromSettings?.(SETTINGS);
     globalThis.generate.batch.setValue(SETTINGS.batch);    
     globalThis.generate.landscape.setValue(SETTINGS.api_image_landscape);
+    hiresCalculate();
     globalThis.generate.boundingEnable?.setValue(Boolean(SETTINGS.bounding_enable));
     globalThis.bounding?.setBoxes(SETTINGS.bounding_boxes);
     globalThis.bounding?.applyToolSettings?.();

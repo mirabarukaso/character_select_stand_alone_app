@@ -16,6 +16,7 @@ import { setupCollapsed, setupSaveSettingsToggle, setupDeleteSettingsToggle, set
     setupFuctionKeys, setupSwapToggle, reloadFiles, doSwap, createFavoriteHotkeyControls } from './renderer/components/myCollapsed.js';
 import { setupTextbox, setupInfoBox } from './renderer/components/myTextbox.js';
 import { setupFullPromptPreview } from './renderer/fullPromptPreview.js';
+import { setupAspectRatioLock } from './renderer/aspectRatioLock.js';
 import { from_main_updateGallery, from_main_updatePreview, from_main_customOverlayProgress } from './renderer/generate_backend.js';
 import { setupLoRA } from './renderer/slots/myLoRASlot.js';
 import { setupControlNet } from './renderer/slots/myControlNetSlot.js';
@@ -216,8 +217,9 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         seed: setupSlider('generate-random-seed', LANG.random_seed, {min:-1, max:4294967295, step:1, defaultValue:SETTINGS.random_seed, fullGradient: true}, (value) =>{globalThis.globalSettings.random_seed = value;}),
         cfg: setupSlider('generate-cfg', LANG.cfg, {min:0, max:20, step:0.01, defaultValue:SETTINGS.cfg}, (value) =>{globalThis.globalSettings.cfg = value;}),
         step: setupSlider('generate-step', LANG.step, {min:1, max:100, step:1, defaultValue:SETTINGS.step}, (value) =>{globalThis.globalSettings.step = value;}),
-        width: setupSlider('generate-width', LANG.width, {min:512, max:4096, step:8, defaultValue:SETTINGS.width}, (value) =>{globalThis.globalSettings.width = value; hiresCalculate(); globalThis.bounding?.syncCanvas(); globalThis.bounding?.invalidatePreview?.(); }),
-        height: setupSlider('generate-height', LANG.height, {min:512, max:4096, step:8, defaultValue:SETTINGS.height}, (value) =>{globalThis.globalSettings.height = value; hiresCalculate(); globalThis.bounding?.syncCanvas(); globalThis.bounding?.invalidatePreview?.(); }),
+        aspectLock: setupAspectRatioLock('generate-aspect-lock', LANG.api_image_aspect_lock),
+        width: setupSlider('generate-width', LANG.width, {min:512, max:4096, step:8, defaultValue:SETTINGS.width}, (value) =>{ globalThis.generate.aspectLock.onWidthChange(value); }),
+        height: setupSlider('generate-height', LANG.height, {min:512, max:4096, step:8, defaultValue:SETTINGS.height}, (value) =>{ globalThis.generate.aspectLock.onHeightChange(value); }),
         batch: setupSlider('generate-batch', LANG.batch, {min:1, max:2038, step:1, defaultValue:SETTINGS.batch}, (value) =>{globalThis.globalSettings.batch = value;}),
         hifix: setupCheckbox('generate-hires-fix', LANG.api_hf_enable, SETTINGS.api_hf_enable, true, (value) => { globalThis.globalSettings.api_hf_enable = value; globalThis.generate.hifix_dummy.setValue(value);}),
         hifix_dummy: setupCheckbox('generate-hires-fix-dummy', LANG.api_hf_enable, SETTINGS.api_hf_enable, true, (value) => { globalThis.globalSettings.api_hf_enable = value; globalThis.generate.hifix.setValue(value);}),
@@ -230,7 +232,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
             globalThis.bounding?.invalidatePreview?.();
         }),
 
-        landscape: setupCheckbox('generate-landscape', LANG.api_image_landscape, SETTINGS.api_image_landscape, true, (value) =>{globalThis.globalSettings.api_image_landscape = value; globalThis.bounding?.syncCanvas(); globalThis.bounding?.invalidatePreview?.(); }),
+        landscape: setupCheckbox('generate-landscape', LANG.api_image_landscape, SETTINGS.api_image_landscape, true, (value) =>{globalThis.globalSettings.api_image_landscape = value; globalThis.generate.aspectLock?.onLandscapeChange?.(); hiresCalculate(); globalThis.bounding?.syncCanvas(); globalThis.bounding?.invalidatePreview?.(); }),
         tag_assist: setupCheckbox('generate-tag-assist', LANG.tag_assist, SETTINGS.tag_assist, true, (value) =>{ globalThis.globalSettings.tag_assist = value; }),
         wildcard_random: setupCheckbox('generate-wildcard-random', LANG.wildcard_random, SETTINGS.wildcard_random, true, (value) =>{ globalThis.globalSettings.wildcard_random = value; }),
         sampler: mySimpleList('generate-sampler', LANG.api_model_sampler, ['Auto'], (index, value) =>{ globalThis.globalSettings.api_model_sampler = value; }, 20, false, false),
@@ -450,6 +452,8 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
         applyWsServiceSettings();
         applySaacReadonlyUi();
     }
+
+    globalThis.generate.aspectLock?.restoreFromSettings?.(SETTINGS);
 }
 
 export async function createPrompt(SETTINGS, FILES, LANG) {

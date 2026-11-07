@@ -1,3 +1,8 @@
+2026.11.08 v2.11.4      
+Add, Image panel `Aspect Lock` between Width and Height       
+Add, ratio/size previews in the picker; display follows `Landscape` while the same values are written to Width/Height      
+Minor bugs fix      
+
 2026.11.05 v2.11.3      
 Add, `Bounding Box` `Add` inserts a default rectangle when empty canvas space is hard to hit      
 Add, Prompt `full prompt preview` — hover the label for a colored final-prompt overlay; check to pin (session-only, resets when switching settings)      
