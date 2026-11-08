@@ -72,6 +72,8 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     );
     globalThis.dropdownList.forge_compute_fp16?.setTitle(LANG.api_forge_compute_fp16 || 'FP16 Compute (Turing 20)');
     globalThis.dropdownList.forge_sage_fp16_cast?.setTitle(LANG.api_forge_sage_fp16_cast || 'Sage Attention (Turing 20)');
+    globalThis.dropdownList.forge_override_vae?.setTitle(LANG.api_forge_override_vae || 'Override VAE (ComfyUI Flux2 / Turing·Pascal)');
+    globalThis.dropdownList.forge_override_vae_mode?.setTitle(LANG.api_forge_override_vae_mode || 'VAE Mode');
     globalThis.dropdownList.textencoder.setTitle(LANG.api_text_encoder);
     globalThis.dropdownList.textencoder_type.setTitle(LANG.api_text_encoder_type);
     globalThis.dropdownList.textencoder_device.setTitle(LANG.api_text_encoder_device);
@@ -327,6 +329,18 @@ export function updateSettings() {
     globalThis.dropdownList.vae_unet.updateDefaults(SETTINGS.api_vae_unet_model);
     globalThis.dropdownList.vae_sdxl.updateDefaults(SETTINGS.api_vae_sdxl_model);
     globalThis.dropdownList.vae_sdxl_override.setValue(SETTINGS.api_vae_sdxl_override);
+    globalThis.dropdownList.forge_override_vae?.setValue(SETTINGS.api_forge_override_vae === true);
+    globalThis.dropdownList.forge_compute_fp16?.setValue(SETTINGS.api_forge_compute_fp16 === true);
+    globalThis.dropdownList.forge_sage_fp16_cast?.setValue(SETTINGS.api_forge_sage_fp16_cast === true);
+    {
+        const mode = ['auto', 'direct', 'tiled'].includes(SETTINGS.api_forge_override_vae_mode)
+            ? SETTINGS.api_forge_override_vae_mode
+            : 'auto';
+        SETTINGS.api_forge_override_vae_mode = mode;
+        globalThis.dropdownList.forge_override_vae_mode?.updateDefaults(mode);
+        const modeHost = document.querySelector('.forge-override-vae-mode');
+        if (modeHost) modeHost.hidden = SETTINGS.api_forge_override_vae !== true;
+    }
     globalThis.dropdownList.diffusion_model_weight_dtype.updateDefaults(SETTINGS.api_model_file_diffusion_weight_dtype);
     globalThis.dropdownList.textencoder.updateDefaults(SETTINGS.api_model_file_text_encoder);
     globalThis.dropdownList.textencoder_type.updateDefaults(SETTINGS.api_model_file_text_encoder_type);

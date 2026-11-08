@@ -366,6 +366,10 @@ export const sharedBodyHTML = `
                 <div class="forge-compute-fp16"></div>
                 <div class="forge-sage-fp16-cast"></div>
               </div>
+              <div class="system-settings-main-2 forge-override-vae-row">
+                <div class="forge-override-vae"></div>
+                <div class="forge-override-vae-mode" hidden></div>
+              </div>
               <div class="system-settings-main-2">                
                 <div class="vae-unet"></div>
                 <div class="text-encoder"></div>

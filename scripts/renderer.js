@@ -30,7 +30,7 @@ import { setupThemeToggle } from './renderer/theme.js';
 import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/components/myRightClickMenu.js';
 import { extractHostPort, hashHiresSubmit, rememberHiresSubmit } from './renderer/generate.js';
 import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE, FORGE_UNET_STORAGE_AUTOMATIC, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from './types.js';
-import { normalizeDiffusionDtype, normalizeForgeStorageDtype } from './main/sageFp16Switch.js';
+import { normalizeDiffusionDtype, normalizeForgeStorageDtype, normalizeOverrideVaeMode, OVERRIDE_VAE_MODES } from './main/sageFp16Switch.js';
 import { flushSlots } from './renderer/slots/slotsManager.js';
 import { set_prompt_textBox_Heights } from './renderer/components/componentsManager.js';
 import { hiresCalculate } from './renderer/tools/hiresCalculation.js';
@@ -105,6 +105,13 @@ export async function setupHeader(SETTINGS, FILES, LANG){
             (value) => { callback_forge_fp16_switch('compute', value); }),
         forge_sage_fp16_cast: setupCheckbox('forge-sage-fp16-cast', LANG.api_forge_sage_fp16_cast, SETTINGS.api_forge_sage_fp16_cast === true, true,
             (value) => { callback_forge_fp16_switch('sage', value); }),
+        forge_override_vae: setupCheckbox('forge-override-vae', LANG.api_forge_override_vae, SETTINGS.api_forge_override_vae === true, true,
+            (value) => { callback_forge_fp16_switch('override_vae', value); }),
+        forge_override_vae_mode: mySimpleList('forge-override-vae-mode', LANG.api_forge_override_vae_mode || 'VAE Mode',
+            OVERRIDE_VAE_MODES.slice(),
+            (index, value) => {
+                globalThis.globalSettings.api_forge_override_vae_mode = normalizeOverrideVaeMode(value);
+            }, 5, false, true),
 
         textencoder: mySimpleList('text-encoder', LANG.api_text_encoder, FILES.textEncoderList,
             (index, value) => { globalThis.globalSettings.api_model_file_text_encoder = value; }, 20, true, true),
@@ -124,6 +131,11 @@ export async function setupHeader(SETTINGS, FILES, LANG){
     }
     globalThis.dropdownList.languageList.updateDefaults(LANG.language);
     globalThis.dropdownList.vpred.updateDefaults(SETTINGS.api_model_file_vpred);
+    const overrideVaeMode = normalizeOverrideVaeMode(SETTINGS.api_forge_override_vae_mode);
+    SETTINGS.api_forge_override_vae_mode = overrideVaeMode;
+    globalThis.dropdownList.forge_override_vae_mode.updateDefaults(overrideVaeMode);
+    const overrideVaeModeHost = document.querySelector('.forge-override-vae-mode');
+    if (overrideVaeModeHost) overrideVaeModeHost.hidden = SETTINGS.api_forge_override_vae !== true;
 
     globalThis.skipLayer = {
         double_layers: setupTextbox('skip-double-layers', LANG.skip_double_layers, {
@@ -569,7 +581,8 @@ async function init(){
         adetailer: false,
         regional_forge_neo: false,
         sage_fp16: false,
-        sage_fp16_webui: false
+        sage_fp16_webui: false,
+        override_vae: false
     };    
 
     try {

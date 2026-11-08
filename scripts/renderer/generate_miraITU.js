@@ -1,5 +1,6 @@
 import { sendWebSocketMessage } from '../webserver/front/wsRequest.js';
 import { extractHostPort, extractAPISecure, toggleQueueColor, generateRandomSeed, startQueue, checkVpred } from './generate.js';
+import { readForgeDtypeSettings } from '../main/sageFp16Switch.js';
 
 import { resizeImageToControlNetResolution } from './components/imageInfoUtils.js';
 
@@ -51,6 +52,7 @@ export async function generateMiraITU(dataPack){
         exclude:globalThis.prompt.exclude.getValue(),
 
         refresh:globalThis.generate.api_preview_refresh_time.getValue(),
+        forge_dtype: readForgeDtypeSettings(SETTINGS),
 
         imageData: imageGzipped,
         taggerOptions: taggerOptions,

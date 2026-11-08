@@ -8,13 +8,13 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(W
 > Create your own thumbList with [SAA Thumb Generator](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/thumb-generator/README.md)
 
 > [!TIP]
-> FP16 Compute and Sage Attention are for Turing GPUs (RTX 20 series) only. Newer cards can keep using bf16 or fp8. See [Turing FP16](#turing-fp16-rtx-20-series).
+> FP16 Compute, Sage Attention, and [Override VAE are for Turing/Pascal GPUs](https://github.com/Comfy-Org/ComfyUI/issues/17612). Newer cards can leave them off. See [Turing FP16](#turing-fp16-rtx-20-series).       
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%><img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall03.png" width=45%>
 
 | Verified | [ComfyUI](https://github.com/comfyanonymous/ComfyUI)  | [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) |
 | --- | --- | --- | 
-| Release | 0.42.3 | 2.31.0 |
+| Release | 0.44.0 | 2.31.0 |
 | Refiner (SDXL) | Yes | Yes |
 | Image Color Transfer (ALL) | Yes | No |
 | Regional Condition / Couple (SDXL/Anima) | Yes | Yes |
@@ -521,14 +521,15 @@ Right click on `Common` and `Positive` to send text form LoRA to LoRA Slot.
 </details>
 
 ## Turing FP16 (RTX 20 series)
-Turing cards (RTX 20 series) cannot run bf16. These two switches keep that generation on fp16. Newer cards can leave both off and use bf16 or fp8.
+Turing cards (RTX 20 series) cannot run bf16. `FP16 Compute` / `Sage Attention` keep that generation on fp16. Newer cards can leave them off and use bf16 or fp8. `Override VAE` is separate and only needed on ComfyUI when Flux2 VAEDecode crashes on Turing/Pascal.
 
 `FP16 Compute` casts the loaded UNet compute to fp16. Weight storage stays as it is.      
 `Sage Attention` casts attention q/k/v to fp16 and casts them back. It does not turn compute fp16 on by itself. SageAttention 1.0.6 or 2.2 still has to be installed for that path.      
+`Override VAE` (ComfyUI, under FP16 switches) swaps stock VAEEncode/VAEDecode for MiraSubPack so the fused Flux2 VAE path is avoided. Turn it on for Moss / Flux2 Klein (or other Flux2-VAE models) that die at VAEDecode with CUTLASS / CUDA 719. SDXL / Anima / Qwen Image usually do not need it.
 
-The two switches are independent. Turning either one on keeps UNet storage at `Automatic`.      
+The FP16 Compute / Sage Attention switches are independent. Turning either one on keeps UNet storage at `Automatic`.      
 
-*ComfyUI* inserts the switch with [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack).      
+*ComfyUI* inserts the FP16 switch with [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack). Override VAE also needs that pack.      
 *Forge Neo* sends `forge_compute_fp16` and `forge_sage_fp16_cast` with [forge-turing-fp16](https://github.com/mirabarukaso/forge-turing-fp16). Before the next txt2img, SAA unloads the resident UNet, text encoder, and VAE when either switch turns off, or when the checkpoint or additional modules change. That frees the previous weights. A later float32 load can still offload part of a large UNet.      
 
 ------
@@ -659,4 +660,10 @@ Upscale Model list is `None` (ComfyUI)
 
 ComfyUI/WebUI is busy, cannot run new generation, please try again later.       
 Refer to 5, 6 in [README_SAAC.md](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/README_SAAC.md)     
+
+VAEDecode crashes on Moss / Flux2 Klein (CUTLASS `Mma<16,8,16>` / CUDA 719)      
+1. Turing (RTX 20) / Pascal (GTX 10) only. Newer cards are fine.      
+2. ComfyUI 0.43+ fused Flux2 VAE path is the trigger. SDXL / Anima / Qwen Image 2.1 are usually unaffected.      
+3. Enable `Override VAE` under the FP16 switches in the Model panel (needs latest [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack)).      
+4. See [Turing FP16](#turing-fp16-rtx-20-series).     
 

@@ -1402,7 +1402,12 @@ export const WORKFLOW_MIRA_ITU = {
       "vae": [
         "6",
         2
-      ]
+      ],
+      "mode": "direct",
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8
     },
     "class_type": "VAEEncode_MiraSubPack",
     "_meta": {
@@ -1418,7 +1423,12 @@ export const WORKFLOW_MIRA_ITU = {
       "vae": [
         "6",
         2
-      ]
+      ],
+      "mode": "direct",
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8
     },
     "class_type": "VAEDecode_MiraSubPack",
     "_meta": {
@@ -2419,7 +2429,12 @@ export const WORKFLOW_MIRA_ITU_UNET = {
       "vae": [
         "26",
         0
-      ]
+      ],
+      "mode": "direct",
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8
     },
     "class_type": "VAEEncode_MiraSubPack",
     "_meta": {
@@ -2435,7 +2450,12 @@ export const WORKFLOW_MIRA_ITU_UNET = {
       "vae": [
         "26",
         0
-      ]
+      ],
+      "mode": "direct",
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8
     },
     "class_type": "VAEDecode_MiraSubPack",
     "_meta": {
@@ -2566,7 +2586,12 @@ export const WORKFLOW_MIRA_ITU_UNET_PREBAKE = {
       "vae": [
         "26",
         0
-      ]
+      ],
+      "mode": "direct",
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8
     },
     "class_type": "VAEEncode_MiraSubPack",
     "_meta": {
@@ -2582,7 +2607,12 @@ export const WORKFLOW_MIRA_ITU_UNET_PREBAKE = {
       "vae": [
         "26",
         0
-      ]
+      ],
+      "mode": "direct",
+      "tile_size": 512,
+      "overlap": 64,
+      "temporal_size": 64,
+      "temporal_overlap": 8
     },
     "class_type": "VAEDecode_MiraSubPack",
     "_meta": {

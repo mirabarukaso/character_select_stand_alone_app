@@ -5,7 +5,7 @@ import { makeBackendLockKey, tryAcquireBackendBusy, releaseBackendBusy, forceRel
 import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, 
   WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_REIONAL_UNET, 
   WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, VAE_LOADER} from './comfyui_workflow.js';
-import { applySageFp16Switch, diffusionLoaderDtype } from './sageFp16Switch.js';
+import { applySageFp16Switch, applyOverrideVae, diffusionLoaderDtype } from './sageFp16Switch.js';
 
 const CAT = '[ComfyUI]';
 const TIMEOUT = 5000; // 5 seconds timeout for backend response
@@ -121,6 +121,16 @@ function toPreviewBuffer(data) {
         return Buffer.from(data, 'latin1');
     }
     return null;
+}
+
+function pruneWorkflowNodes(workflow, ids) {
+  for (const id of ids) {
+    delete workflow[String(id)];
+  }
+}
+
+function hasActiveADetailer(adetailers) {
+  return Array.isArray(adetailers) && adetailers.some((item) => item?.mask_filter_method !== 'Off');
 }
 
 function extractPreviewImage(buf) {
@@ -1289,6 +1299,8 @@ class ComfyUI {
 
     let workflow = structuredClone(WORKFLOW);
     let refiner_start_step = 1000;
+    const refinerActive = refiner.enable && model !== refiner.model;
+    const skipColorTransfer = hifix.enable && hifix.colorTransfer === 'None';
 
     if (model !== 'Default') {
       // Set model name
@@ -1309,7 +1321,7 @@ class ComfyUI {
       }
     }
 
-    if (refiner.enable && model !== refiner.model) {
+    if (refinerActive) {
       // Set refiner model name
       workflow["43"].inputs.ckpt_name = refiner.model;
       if((refiner.vpred === 0 && (refiner.model.includes('vPred') || refiner.model.includes('VPR'))) || refiner.vpred === 1 || refiner.vpred === 2) {
@@ -1342,6 +1354,12 @@ class ComfyUI {
       workflow["18"].inputs.vae = ["45", 2];
       // Model Loader to Hires fix Vae Encode Tiled
       workflow["19"].inputs.vae = ["45", 2];
+      if (hifix.enable) {
+        // Hires must use base stack once refiner nodes are pruned
+        workflow["20"].inputs.model = ["34", 0];
+        workflow["20"].inputs.positive = ["2", 0];
+        workflow["20"].inputs.negative = ["3", 0];
+      }
     }
 
     // Set Sampler and Scheduler
@@ -1391,7 +1409,7 @@ class ComfyUI {
         workflow["46"].inputs.scale_by = hifix.scale;
 
         // Check if refiner enabled
-        if (refiner.enable){
+        if (refinerActive){
           workflow["46"].inputs.samples = ["37", 0];
         }
 
@@ -1405,7 +1423,7 @@ class ComfyUI {
         workflow["27"].inputs.model_name = `${hifix.model}`;
       }
 
-      if(hifix.colorTransfer === 'None'){
+      if(skipColorTransfer){
         // Image Save set to 2nd VAE Decode (Tiled)
         workflow["29"].inputs.images = ["18", 0];
       } else {
@@ -1424,8 +1442,8 @@ class ComfyUI {
       // Override VAE settings
       workflow["47"].inputs.vae_name = vae.vae;
       workflow["6"].inputs.vae = ["47", 0];
-      workflow["18"].inputs.vae = ["47", 0];      
-      workflow["19"].inputs.vae = ["47", 0];
+      if (workflow["18"]) workflow["18"].inputs.vae = ["47", 0];
+      if (workflow["19"]) workflow["19"].inputs.vae = ["47", 0];
     }
 
     // default pos and neg to ksampler
@@ -1433,19 +1451,30 @@ class ComfyUI {
       startIndex: (vae.vae_override && vae.vae !== 'None')?47:46,
       now_pos:    2,
       now_neg:    3,
-      refiner:    refiner.enable,
+      refiner:    refinerActive,
       ref_pos:    41,
       ref_neg:    40,
-      hiresfix:   hifix.enable
+      hiresFix:   hifix.enable
     };
     const { workflowCN, indexCN } = applyControlnet(workflow, controlnet, workflowInfo);
 
     workflowInfo = {
       startIndex: indexCN,
-      refiner:    refiner.enable,
-      hiresfix:   hifix.enable
+      refiner:    refinerActive,
+      hiresFix:   hifix.enable
     };
     workflow = applyADetailer(workflowCN, adetailer, workflowInfo);
+
+    if (!hifix.enable) {
+      pruneWorkflowNodes(workflow, [25, 27, 19, 20, 18, 28, 46]);
+    } else if (skipColorTransfer && !hasActiveADetailer(adetailer)) {
+      pruneWorkflowNodes(workflow, [28]);
+    }
+
+    if (!refinerActive) {
+      pruneWorkflowNodes(workflow, [37, 39, 40, 41, 43, 44]);
+    }
+
     return workflow;
   }
 
@@ -1548,29 +1577,23 @@ class ComfyUI {
       workflow["61"].inputs.sampler_name = sampler;
       workflow["61"].inputs.scheduler = scheduler;
 
-      // Coloe Transfer method
-      workflow["62"].inputs.method = hifix.colorTransfer;
-
       // Image Save set new width and height
       workflow["29"].inputs.width = ["17", 3];
       workflow["29"].inputs.height = ["17", 4];
+
+      if (hifix.colorTransfer === 'None') {
+        workflow["29"].inputs.images = ["58", 0];
+        pruneWorkflowNodes(workflow, [62]);
+      } else {
+        // Color Transfer method
+        workflow["62"].inputs.method = hifix.colorTransfer;
+      }
     } else {
       // Image Save set to First VAE Decode
       workflow["29"].inputs.images = ["6", 0];
 
       // Remove Hires fix nodes
-      // Upscale Image By Model Then Resize
-      delete workflow["54"];
-      // Load Upscale Model
-      delete workflow["55"];
-      // Vae Encode
-      delete workflow["56"];
-      // Vae Decode
-      delete workflow["58"];
-      // Ksampler HiFix
-      delete workflow["61"];
-      // Color Transfer
-      delete workflow["62"];
+      pruneWorkflowNodes(workflow, [54, 55, 56, 58, 61, 62]);
     }
 
     // default pos and neg to ksampler
@@ -1601,6 +1624,8 @@ class ComfyUI {
     
     let workflow = structuredClone(WORKFLOW_REGIONAL);
     let refiner_start_step = 1000;
+    const refinerActive = refiner.enable && model !== refiner.model;
+    const skipColorTransfer = hifix.enable && hifix.colorTransfer === 'None';
 
     if (model !== 'Default') {
         // Set model name
@@ -1621,7 +1646,7 @@ class ComfyUI {
         }
     }
 
-    if (refiner.enable && model !== refiner.model) {
+    if (refinerActive) {
         // Set refiner model name
         workflow["43"].inputs.ckpt_name = refiner.model;
         if((refiner.vpred === 0 && (refiner.model.includes('vPred') || refiner.model.includes('VPR'))) || refiner.vpred === 1 || refiner.vpred === 2) {
@@ -1654,6 +1679,12 @@ class ComfyUI {
         workflow["18"].inputs.vae = ["45", 2];
         // Model Loader to Hires fix Vae Encode Tiled
         workflow["19"].inputs.vae = ["45", 2];
+        if (hifix.enable) {
+          // Hires must use base regional stack once refiner nodes are pruned
+          workflow["20"].inputs.model = ["34", 0];
+          workflow["20"].inputs.positive = ["53", 0];
+          workflow["20"].inputs.negative = ["3", 0];
+        }
     }
 
     // Set Sampler and Scheduler
@@ -1702,13 +1733,17 @@ class ComfyUI {
     // Set Left Mask Strength and Area
     workflow["50"].inputs.strength = regional.str_left;
     workflow["50"].inputs.set_cond_area = regional.option_left;
-    workflow["55"].inputs.strength = regional.str_left;
-    workflow["55"].inputs.set_cond_area = regional.option_left;
+    if (refinerActive) {
+      workflow["55"].inputs.strength = regional.str_left;
+      workflow["55"].inputs.set_cond_area = regional.option_left;
+    }
     // Set Right Mask Strength and Area
     workflow["52"].inputs.strength = regional.str_right;
     workflow["52"].inputs.set_cond_area = regional.option_right;
-    workflow["56"].inputs.strength = regional.str_right;
-    workflow["56"].inputs.set_cond_area = regional.option_right;
+    if (refinerActive) {
+      workflow["56"].inputs.strength = regional.str_right;
+      workflow["56"].inputs.set_cond_area = regional.option_right;
+    }
 
     if (hifix.enable) {
       // Set Hires fix seed and denoise
@@ -1725,7 +1760,7 @@ class ComfyUI {
           workflow["58"].inputs.scale_by = hifix.scale;
 
           // Check if refiner enabled
-          if (refiner.enable){
+          if (refinerActive){
             workflow["58"].inputs.samples = ["37", 0];
           }
 
@@ -1739,7 +1774,7 @@ class ComfyUI {
         workflow["27"].inputs.model_name = `${hifix.model}`;
       }
 
-      if(hifix.colorTransfer === 'None'){
+      if(skipColorTransfer){
           // Image Save set to 2nd VAE Decode (Tiled)
           workflow["29"].inputs.images = ["18", 0];
       } else {
@@ -1758,8 +1793,8 @@ class ComfyUI {
       // Override VAE settings
       workflow["59"].inputs.vae_name = vae.vae;
       workflow["6"].inputs.vae = ["59", 0];
-      workflow["18"].inputs.vae = ["59", 0];      
-      workflow["19"].inputs.vae = ["59", 0];
+      if (workflow["18"]) workflow["18"].inputs.vae = ["59", 0];
+      if (workflow["19"]) workflow["19"].inputs.vae = ["59", 0];
     }
 
     // default pos and neg to ksampler
@@ -1767,19 +1802,30 @@ class ComfyUI {
       startIndex: (vae.vae_override && vae.vae !== 'None')?59:58,
       now_pos:    53,
       now_neg:    3,
-      refiner:    refiner.enable,
+      refiner:    refinerActive,
       ref_pos:    57,
       ref_neg:    40,
-      hiresfix:   hifix.enable
+      hiresFix:   hifix.enable
     };
     const { workflowCN, indexCN } = applyControlnet(workflow, controlnet, workflowInfo);
 
     workflowInfo = {
       startIndex: indexCN,
-      refiner:    refiner.enable,
-      hiresfix:   hifix.enable
+      refiner:    refinerActive,
+      hiresFix:   hifix.enable
     };
     workflow = applyADetailer(workflowCN, adetailer, workflowInfo);
+
+    if (!hifix.enable) {
+      pruneWorkflowNodes(workflow, [25, 27, 19, 20, 18, 28, 58]);
+    } else if (skipColorTransfer && !hasActiveADetailer(adetailer)) {
+      pruneWorkflowNodes(workflow, [28]);
+    }
+
+    if (!refinerActive) {
+      pruneWorkflowNodes(workflow, [37, 39, 40, 41, 43, 44, 54, 55, 56, 57]);
+    }
+
     return workflow;
   }
 
@@ -1886,6 +1932,8 @@ class ComfyUI {
     workflow["52"].inputs.strength = regional.str_right;
     workflow["52"].inputs.set_cond_area = regional.option_right;
 
+    const skipColorTransfer = hifix.enable && hifix.colorTransfer === 'None';
+
     if (hifix.enable) {
       // Set Hires fix seed and denoise
       workflow["20"].inputs.seed = hifix.seed;
@@ -1921,9 +1969,9 @@ class ComfyUI {
         workflow["27"].inputs.model_name = `${hifix.model}`;
       }
 
-      if(hifix.colorTransfer === 'None'){
-          // Image Save set to 2nd VAE Decode (Tiled)
-          workflow["29"].inputs.images = ["18", 0];
+      if(skipColorTransfer){
+          // Image Save set to hires VAE Decode
+          workflow["29"].inputs.images = ["63", 0];
       } else {
           // Default to Image Color Transfer
           workflow["28"].inputs.method = hifix.colorTransfer;
@@ -1940,11 +1988,18 @@ class ComfyUI {
       clip:       60,
       vae:        61,
       colorTransfer: 28,
-      hiresfix:   hifix.enable
+      hiresFix:   hifix.enable
     };
 
     workflow = applyADetailerUnet(workflow, adetailer, workflowInfo);
     applySageFp16Switch(workflow, '59', generateData?.forge_dtype);
+
+    if (!hifix.enable) {
+      pruneWorkflowNodes(workflow, [25, 27, 62, 20, 63, 28]);
+    } else if (skipColorTransfer && !hasActiveADetailer(adetailer)) {
+      pruneWorkflowNodes(workflow, [28]);
+    }
+
     return workflow;
   }
 
@@ -2514,8 +2569,8 @@ class ComfyUI {
         workflow["14"].inputs.width = taggerOptions.imageWidth;
         workflow["14"].inputs.height = taggerOptions.imageHeight;
 
-        // Disconnect upscale and delete nodes
-        delete workflow["2"];
+        // Disconnect upscale and delete unused main ITU path
+        pruneWorkflowNodes(workflow, [2, 20, 21, 18, 22, 23, 19]);
       } else {
         // Connect pre-bake to Upscale
         workflow["2"].inputs.image = ["31", 0];
@@ -2666,6 +2721,7 @@ async function runComfyUI(generateData) {
     workflow = backend.createWorkflow(generateData);
     backend.timeout = TIMEOUT;
   }
+  workflow = applyOverrideVae(workflow, generateData?.forge_dtype);
   
   if(backend.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI with uuid:', backend.uuid);
@@ -2690,6 +2746,7 @@ async function runComfyUI_Regional(generateData) {
     workflow = backend.createWorkflowRegional(generateData);
     backend.timeout = TIMEOUT;
   }
+  workflow = applyOverrideVae(workflow, generateData?.forge_dtype);
   
   if(backend.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI Regional with uuid:', backend.uuid);
@@ -2715,6 +2772,7 @@ async function runComfyUI_MiraITU(generateData){
     workflow = backend.createWorkflowMiraITU_Unet(generateData);    
     backend.timeout = 15000;
   }
+  workflow = applyOverrideVae(workflow, generateData?.forge_dtype);
 
   if(backend.uuid !== 'none')
     console.log(CAT, 'Running ComfyUI MiraITU with uuid:', backend.uuid);
@@ -2729,7 +2787,8 @@ async function runComfyUI_ControlNet(generateData){
   }
   const backend = started.backend;
 
-  const workflow = backend.createWorkflowControlnet(generateData)
+  let workflow = backend.createWorkflowControlnet(generateData);
+  workflow = applyOverrideVae(workflow, generateData?.forge_dtype);
   backend.timeout = TIMEOUT;
   console.log(CAT, 'Running ComfyUI ControlNet with uuid:', backend.uuid);
   const result = await backend.run(workflow);
@@ -2780,7 +2839,8 @@ async function python_runComfyUI(generateData, isRegional=false, skeletonKey=fal
     generateData.vae = { vae_override: false, vae: 'None' };
   }
 
-  const workflow = isRegional ? backend.createWorkflowRegional(generateData) : backend.createWorkflow(generateData);
+  let workflow = isRegional ? backend.createWorkflowRegional(generateData) : backend.createWorkflow(generateData);
+  workflow = applyOverrideVae(workflow, generateData?.forge_dtype);
   backend.timeout = TIMEOUT;
   const result = await backend.run(workflow, true);
 

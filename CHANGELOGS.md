@@ -1,3 +1,9 @@
+2026.11.08 v2.12.0      
+Add, ComfyUI `Override VAE` (Model panel) for Turing/Pascal Flux2 VAEDecode crashes (Moss / Flux2 Klein); uses MiraSubPack encode/decode      
+Change, prune unused hires/refiner dead-path nodes from ComfyUI workflows      
+Docs, Turing FP16 / Override VAE notes in README and switch help text      
+
+
 2026.11.08 v2.11.4      
 Add, Image panel `Aspect Lock` between Width and Height       
 Add, ratio/size previews in the picker; display follows `Landscape` while the same values are written to Width/Height      

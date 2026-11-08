@@ -86,6 +86,8 @@ const defaultSettings = {
     "api_forge_unet_storage_dtype": "Automatic",
     "api_forge_compute_fp16": false,
     "api_forge_sage_fp16_cast": false,
+    "api_forge_override_vae": false,
+    "api_forge_override_vae_mode": "auto",
     "api_model_file_text_encoder": "None",
     "api_model_file_text_encoder_type": "stable_diffusion",
     "api_model_file_text_encoder_device": "default",

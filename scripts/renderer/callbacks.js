@@ -139,6 +139,14 @@ export function callback_forge_fp16_switch(which, value) {
     const settings = globalThis.globalSettings;
     if (!settings) return;
     const on = value === true;
+
+    if (which === 'override_vae') {
+        settings.api_forge_override_vae = on;
+        syncOverrideVaeModeVisibility(on);
+        if (on) notifyOverrideVae();
+        return;
+    }
+
     if (which === 'sage') settings.api_forge_sage_fp16_cast = on;
     else settings.api_forge_compute_fp16 = on;
 
@@ -149,6 +157,26 @@ export function callback_forge_fp16_switch(which, value) {
         }
         if (on) notifySageFp16Cast(which === 'sage' ? 'Sage_FP16' : 'PyTorch_FP16');
     }
+}
+
+function syncOverrideVaeModeVisibility(enabled) {
+    const host = document.querySelector('.forge-override-vae-mode');
+    if (host) host.hidden = !enabled;
+}
+
+export function notifyOverrideVae() {
+    const settings = globalThis.globalSettings;
+    if (settings?.api_interface === 'WebUI') return;
+    const flag = 'override_vae';
+    if (!globalThis.custom_message || globalThis.custom_message[flag]) return;
+
+    const lang = globalThis.cachedFiles?.language?.[settings?.language];
+    const message = lang?.message_override_vae;
+    const link = lang?.message_override_vae_link;
+    if (!message || !globalThis.overlay?.custom?.createErrorOverlay) return;
+
+    globalThis.custom_message[flag] = true;
+    globalThis.overlay.custom.createErrorOverlay(message, link);
 }
 
 export function notifySageFp16Cast(value) {
@@ -175,6 +203,11 @@ function syncForgeFp16Switches() {
     const settings = globalThis.globalSettings;
     globalThis.dropdownList?.forge_compute_fp16?.setValue(settings?.api_forge_compute_fp16 === true);
     globalThis.dropdownList?.forge_sage_fp16_cast?.setValue(settings?.api_forge_sage_fp16_cast === true);
+    const overrideOn = settings?.api_forge_override_vae === true;
+    globalThis.dropdownList?.forge_override_vae?.setValue(overrideOn);
+    const mode = settings?.api_forge_override_vae_mode || 'auto';
+    globalThis.dropdownList?.forge_override_vae_mode?.updateDefaults?.(mode);
+    syncOverrideVaeModeVisibility(overrideOn);
 }
 
 function syncDiffusionDtypeMenu(modelType) {
