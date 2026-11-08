@@ -337,6 +337,52 @@ body {
     background: var(--action);
 }
 
+#cg-compare-button {
+    left: 10px;
+    top: 90px;
+    background: var(--mark);
+    color: var(--text-on-fill, #fff);
+}
+
+#cg-compare-button.is-slot-a {
+    background: #e67e22;
+}
+
+#cg-compare-button.is-slot-b {
+    background: #2980b9;
+}
+
+#cg-compare-button.is-exit-compare {
+    background: var(--danger-hot, #c0392b);
+}
+
+#cg-seed-button-a,
+#cg-tag-button-a,
+#cg-info-button-a {
+    left: 10px;
+}
+
+#cg-seed-button-b,
+#cg-tag-button-b,
+#cg-info-button-b {
+    right: 10px;
+}
+
+#cg-seed-button-a,
+#cg-seed-button-b {
+    background: var(--seed);
+}
+
+#cg-tag-button-a,
+#cg-tag-button-b {
+    background: var(--danger);
+}
+
+#cg-info-button-a,
+#cg-info-button-b {
+    background: var(--info);
+}
+
 /* Seed Button for Gallery */
 
 #cg-seed-button {
@@ -363,7 +409,8 @@ body {
 /* RTL normal mode: seed/tags/info left; <> / privacy right. */
 
 body.right-to-left #cg-switch-mode-button,
-body.right-to-left #cg-privacy-button {
+body.right-to-left #cg-privacy-button,
+body.right-to-left #cg-compare-button {
     left: auto;
     right: 10px;
 }

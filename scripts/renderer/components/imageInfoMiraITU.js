@@ -2,7 +2,7 @@ import { createHtmlOptions } from './imageInfoTagger.js';
 import { toBlob, getImageSizeFromBlob } from './imageInfoUtils.js'
 import { TileHelper, CropImageHelper } from './helper.js';
 import { callback_generate_start } from '../callbacks.js';
-import { fileToBase64 } from '../generate.js';
+import { fileToBase64, taggerPreferGpu } from '../generate.js';
 import { sendWebSocketMessage, isSaacReadonlyClient } from '../../webserver/front/wsRequest.js';
 import { setBlur, setNormal, showDialog } from './myDialog.js';
 import { CLIP_TYPE, SAMPLER_COMFYUI, SCHEDULER_COMFYUI } from '../../types.js';
@@ -1404,18 +1404,20 @@ async function runLocalTagger() {
             imageBase64 = imageBase64.split(',')[1];
         }
 
+        const preferGpu = taggerPreferGpu();
         let result = '';
         if (globalThis.inBrowser) {
-            result = await sendWebSocketMessage({ 
-                type: 'API', 
-                method: 'runImageTagger', 
+            result = await sendWebSocketMessage({
+                type: 'API',
+                method: 'runImageTagger',
                 params: [
                     imageBase64,
                     lastTaggerOptions.localTaggerModels,
                     Number(lastTaggerOptions.localTaggerGenThreshold),
                     1,
                     "General",
-                    true
+                    true,
+                    preferGpu,
                 ]});
         } else {
             result = await globalThis.api.runImageTagger({
@@ -1424,7 +1426,8 @@ async function runLocalTagger() {
                 gen_threshold: Number(lastTaggerOptions.localTaggerGenThreshold),
                 char_threshold: 1,
                 model_options:"General",
-                wait:true
+                wait:true,
+                preferGpu,
             });
         }
         result = result.join(', ');

@@ -3,7 +3,7 @@ import { createImageTagger } from './components/imageInfoTagger.js';
 import { handlePastedJsonOrCsvFile, handlePastedPlainTextItem, isJsonListDataFile, resolveJsonListFileType } from './components/imageInfoDataFiles.js';
 import { extractImageMetadata, parseGenerationParameters } from './components/imageInfoMetadata.js';
 import { createMiraITUWindow } from './components/imageInfoMiraITU.js';
-import { fileToBase64 } from './generate.js';
+import { fileToBase64, requestTaggerOffload } from './generate.js';
 import { hiresCalculate } from './tools/hiresCalculation.js';
 
 let cachedImage = '';
@@ -224,6 +224,7 @@ export function setupImageUploadOverlay() {
         clearImageAndMetadata();
         isShowing = false;
         document.removeEventListener('paste', handlePaste);
+        void requestTaggerOffload();
     }
 
     function clearImageAndMetadata() {

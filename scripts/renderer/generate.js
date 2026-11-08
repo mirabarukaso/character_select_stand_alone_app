@@ -15,6 +15,24 @@ import { readForgeDtypeSettings } from '../main/sageFp16Switch.js';
 
 export const REPLACE_AI_MARK = '_|REPLACE_AI_PROMPT|_';
 
+/** Idle → prefer GPU; generating / gallery loading → prefer CPU. */
+export function taggerPreferGpu() {
+    return !(globalThis.inGenerating || globalThis.mainGallery?.isLoading);
+}
+
+/** Release DirectML tagger VRAM (CPU cache if rebuild allows). Safe to call often. */
+export async function requestTaggerOffload() {
+    try {
+        if (globalThis.inBrowser) {
+            await sendWebSocketMessage({ type: 'API', method: 'taggerOffload', params: [] });
+        } else if (globalThis.api?.taggerOffload) {
+            await globalThis.api.taggerOffload();
+        }
+    } catch (err) {
+        console.warn('[taggerOffload]', err?.message || err);
+    }
+}
+
 export function toggleQueueColor() {
     globalThis.generate.queueColor1st = !globalThis.generate.queueColor1st;
 }
@@ -1129,6 +1147,8 @@ export function createADetailer(apiInterface) {
 }
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export async function generateControlnetImage(imageData, controlNetSelect, controlNetResolution, skipGzip=false){
+    await requestTaggerOffload();
+
     let ret = 'success';
     let retCopy = '';
     const SETTINGS = globalThis.globalSettings;
@@ -1272,6 +1292,8 @@ export function getImageSavePrefix(apiInterface, character_prefix) {
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
 export async function generateImage(dataPack){
+    await requestTaggerOffload();
+
     const {loops, runSame, hiresOneShot = false, seedOverride = null} = dataPack;
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;

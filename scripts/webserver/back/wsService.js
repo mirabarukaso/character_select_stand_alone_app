@@ -29,7 +29,7 @@ import { runWebUI, runWebUI_Regional, cancelWebUI, startPollingWebUI, stopPollin
 import { remoteAI, localAI, cancelAiRequest } from '../../main/remoteAI_backend.js';
 import { loadAiPromptTemplates, saveAiPromptTemplates, builtinTemplates } from '../../main/aiPromptTemplates.js';
 import { loadFile, readImage, readSafetensors, readBase64Image } from '../../main/fileHandlers.js';
-import { runImageTagger } from '../../main/imageTagger.js';
+import { runImageTagger, offloadImageTaggerCache } from '../../main/imageTagger.js';
 import { getAppVersion, compressGzipThenBase64, getBackendLogText, setSaacClientCount } from '../../../main-common.js';
 import { loadUiLayout, saveUiLayout, setUiLayoutMode, setUiLayoutIndependent, deleteUiLayout } from '../../main/uiLayout_backend.js';
 
@@ -826,10 +826,12 @@ const methodHandlers = {
         gen_threshold: params[2], 
         char_threshold: params[3],
         model_options: params[4],
-        wait: params[5]?params[5]:false
+        wait: params[5]?params[5]:false,
+        preferGpu: params[6] !== false,
     }
     return runImageTagger(packedArgs);
   },
+  'taggerOffload': () => offloadImageTaggerCache(),
 
   // Python Tools Requests
   'python_runComfyUI': (params) => python_runComfyUI(...params),

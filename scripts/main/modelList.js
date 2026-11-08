@@ -913,7 +913,9 @@ function updateModelAndLoRAList(args, unlockMutex = false) {
     // Loading a settings file must not steal an in-flight SAA/SAAC generation.
     if (unlockMutex) {
         console.warn(CAT, 'The Skeleton Key triggerd, Mutex Lock set to false');
-        forceReleaseAllBackendBusy();
+        forceReleaseAllBackendBusy().catch((err) => {
+            console.error(CAT, 'Failed to force-release backend busy locks:', err);
+        });
     }
 }
 

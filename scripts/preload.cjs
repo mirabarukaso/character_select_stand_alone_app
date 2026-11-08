@@ -184,6 +184,7 @@ contextBridge.exposeInMainWorld('api', {
 
   // Image Tagger
   runImageTagger: async (args) => ipcRenderer.invoke('run-image-tagger', args),
+  taggerOffload: async () => ipcRenderer.invoke('tagger-offload'),
 
   // SAAC web service
   getWsServiceStatus: async () => ipcRenderer.invoke('ws-service-status'),

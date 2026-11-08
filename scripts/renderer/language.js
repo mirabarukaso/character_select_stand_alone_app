@@ -226,6 +226,8 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
         globalThis.rightClick.updateLanguage();
     }
 
+    globalThis.mainGallery?.updateCompareLanguage?.();
+
     globalThis.imageInfo.updateHintText(LANG.image_info_drag_hint_top, LANG.image_info_drag_hint_bottom);
 
     hiresCalculate();

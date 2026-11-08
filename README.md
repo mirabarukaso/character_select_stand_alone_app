@@ -96,10 +96,15 @@ npm install
 ```
 ------
 # Highlights
+## Gallery A|B Compare
+Compare two gallery images (or up to two from Image Info) with a slider wipe (left/right or top/bottom via `↔` / `↕`), same-spot A/B toggle, shared pan/zoom, and optional in-app fullscreen. Pin with the side `+A` / `+B` button, right-click, or Image Info; exit with `✕A|B`. `<>` switches slider wipe vs toggle while comparing. While comparing, Hires Fix stays off and new generations still join the queue without jumping the view.     
+
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/galleryCompare.png" width=45%>
+
 ## AI Prompt
 Write or polish a prompt in the AI Prompt panel, then put the result into a prompt box yourself. Image generation does not call the language model.     
 
-<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/aiPrompt.png" width=45%>
+<img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/aiPrompt.png" width=30%>
 
 <details>
 <summary>More about AI Prompt</summary>
@@ -298,18 +303,24 @@ Options:
 Model Name  >>>  General Threshold(CL/WD/Camie)  >>>  Character Threshold(CL/WD)  >>> Categories(CL/Camie) or mCut(WD)      
 ```
 
-The Image Tagger running on Node.JS with `onnxruntime-node`. *It DOES NOT require any backend support* But, GPU acceleration seems not working      
-The `Generate Speed` is about 3 times slower than `Python` with `onnxruntime` in CPU mode, and 12 times slower than `onnxruntime-gpu`         
+The Image Tagger runs on Node.JS with `onnxruntime-node`. *It DOES NOT require any backend support.*      
+**Idle:** prefers **DirectML** / CUDA for the **currently selected** tagger only (one GPU-resident model). Falls back to CPU if GPU init fails; promoting a model to GPU drops its CPU copy.      
+**Generating:** prefers CPU so diffusion keeps VRAM. Closing Image Info, or starting **Generate** / **ControlNet**, releases any GPU tagger session into the CPU cache when possible. GPU-resident models unused for **~2 minutes** are released (into CPU cache when possible) even without Generate. CPU keeps up to the **last 3** used ONNX models; unused CPU entries expire after **~5 minutes**.      
+
+
+DirectML is still slower than Python `onnxruntime-gpu` (CUDA), but steady GPU runs are much closer to usable speed than the old per-request CPU path.      
 
 In other words with my i9-9960x with Titan RTX    
-The good news is, you can run `Image tagger` during gegenerate       
+The good news is, you can run `Image tagger` during generate (uses CPU while generating, then can return to GPU when idle)       
+
+
 | Device | Avg Tagging Time | Model | Platform | Resolution | Recommend Value |
 | --- | --- | --- | --- | --- | --- | 
 | onnxruntime | 1.053s | cl_tagger_1_02 | Python | 448 | 0.55/0.60 |
 | onnxruntime-gpu | 0.297s | cl_tagger_1_02 | Python | 448 | 0.55/0.60 |
-| onnxruntime-node | 3.185s | cl_tagger_1_02 | Electron(NodeJS@CPU) | 448 | 0.55/0.60 |
-| onnxruntime-node | 2.917s | wd-eva02-large-tagger-v3 | Electron(NodeJS@CPU) | 448 | 0.35/0.85 |
-| onnxruntime-node | 2.113s | camie-tagger-v2 | Electron(NodeJS@CPU) | 512 |  0.50/(NOT USE) |
+| onnxruntime-node | ~0.12s (steady) | cl_tagger_1_02 | Electron(NodeJS@DirectML) | 448 | 0.55/0.60 |
+| onnxruntime-node | ~1.0s (steady) | cl_tagger_1_02 | Electron(NodeJS@CPU) | 448 | 0.55/0.60 |
+| onnxruntime-node | (first load slower) | wd / camie | Electron(NodeJS@DirectML) | 448 / 512 | 0.35/0.85 / 0.50 |
 </details>
 
 ## ControlNet / IP Adapter

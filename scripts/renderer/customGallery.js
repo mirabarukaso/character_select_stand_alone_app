@@ -1,5 +1,6 @@
 import { customCommonOverlay, addDragFunctionality } from './customOverlay.js';
 import { resetGalleryPreviewProgress } from './generate_backend.js';
+import { createGalleryCompare } from './galleryCompare.js';
 
 export const GRID_SIZE_MIN = 40;
 export const GRID_SIZE_MAX = 420;
@@ -54,16 +55,17 @@ function createModeSwitchOverlay(container) {
     return overlay;
 }
 
-function ensureSwitchModeButton(container, toggleFunction, id, images_length) {
+function ensureSwitchModeButton(container, toggleFunction, id, images_length, labelOverride = null) {
     let button = document.getElementById(id);
+    const label = labelOverride ?? (images_length > 0 ? `<${images_length}>` : '<>');
     if (button) {
-        button.textContent = images_length > 0 ? `<${images_length}>` : '<>';
+        button.textContent = label;
         button.style.display = '';
     } else {
         button = document.createElement('button');
         button.id = id;
         button.className = 'cg-button';
-        button.textContent = images_length > 0 ? `<${images_length}>` : '<>';
+        button.textContent = label;
         button.addEventListener('click', () => handleSwitchModeClick(container, toggleFunction));
         container.appendChild(button);
     }
@@ -74,6 +76,10 @@ async function delay(ms) {
 }
 
 async function handleSwitchModeClick(container, toggleFunction) {
+    if (globalThis.mainGallery?.isCompareMode) {
+        toggleFunction();
+        return;
+    }
     const overlay = createModeSwitchOverlay(container);
     overlay.classList.add('visible');
 
@@ -174,7 +180,255 @@ export function setupGallery(containerId) {
         return Number.isFinite(parsed) && parsed >= 0 ? parsed : null;
     }
 
+    function getDisplayedIndex() {
+        if (!images.length) return -1;
+        const inFrame = !isGridMode || isGalleryFocus;
+        let index = inFrame ? currentIndex : images.length - 1;
+        if (index < 0 || index >= images.length) index = images.length - 1;
+        return index;
+    }
+
+    function copySeedToClipboard(seedRaw, button) {
+        return (async () => {
+            if (!seedRaw && seedRaw !== 0) return;
+            const seedToCopy = String(seedRaw).trim();
+            try {
+                await navigator.clipboard.writeText(seedToCopy);
+                button.textContent = 'Copied!';
+            } catch (err) {
+                button.textContent = 'Copy failed!';
+                console.warn('Failed to copy seed:', err);
+                const SETTINGS = globalThis.globalSettings;
+                const FILES = globalThis.cachedFiles;
+                const LANG = FILES.language[SETTINGS.language];
+                globalThis.overlay.custom.createCustomOverlay(
+                    'none', LANG.saac_macos_clipboard.replace('{0}', seedToCopy),
+                    384, 'center', 'left', null, 'Clipboard');
+            } finally {
+                setTimeout(() => {
+                    button.textContent = button.dataset.label || 'Seed';
+                }, 2000);
+                updateSeedInputs(seedToCopy);
+            }
+        })();
+    }
+
+    function copyTagsToClipboard(tagRaw, button) {
+        return (async () => {
+            if (!tagRaw) return;
+            const tagToCopy = String(tagRaw).trim();
+            try {
+                await navigator.clipboard.writeText(tagToCopy);
+                button.textContent = 'Copied!';
+            } catch (err) {
+                button.textContent = 'Copy failed!';
+                console.warn('Failed to copy tag:', err);
+                const SETTINGS = globalThis.globalSettings;
+                const FILES = globalThis.cachedFiles;
+                const LANG = FILES.language[SETTINGS.language];
+                globalThis.overlay.custom.createCustomOverlay(
+                    'none', LANG.saac_macos_clipboard.replace('{0}', tagToCopy),
+                    384, 'center', 'left', null, 'Clipboard');
+            } finally {
+                setTimeout(() => {
+                    button.textContent = button.dataset.label || 'Tags';
+                }, 2000);
+            }
+        })();
+    }
+
+    const compare = createGalleryCompare({
+        container,
+        getImages: () => images,
+        getSeeds: () => seeds,
+        getTags: () => tags,
+        getInfos: () => infos,
+        getDisplayedIndex,
+        notifyHiresButton,
+        updateMetaButtonsLayout: () => updateMetaButtonsLayout(),
+        setCompareMetaVisible: (visible) => setCompareMetaButtonsVisible(visible),
+        refreshCompareMetaButtons: () => { /* meta buttons read pins live */ },
+        updateCompareChromeButton: (state, inCompare) => updateCompareChromeButton(state, inCompare),
+        updateSwitchModeButtonLabel: () => updateSwitchModeButtonLabel(),
+        onCompareModeChanged: (active) => {
+            ensureSwitchModeButton(container, toggleGalleryMode, 'cg-switch-mode-button', images.length,
+                active ? (compare.compareInteraction === 'slider' ? '<|>' : '<A/B>') : null);
+            ensurePrivacyButton();
+            ensureCompareChromeButton();
+            if (active) {
+                ensureCompareMetaButtons();
+                setCompareMetaButtonsVisible(true);
+                setSingleMetaButtonsVisible(false);
+                for (const id of ['cg-privacy-button', 'cg-switch-mode-button', 'cg-compare-button']) {
+                    const btn = document.getElementById(id);
+                    if (btn) btn.style.display = '';
+                }
+            } else {
+                setCompareMetaButtonsVisible(false);
+                if (!isGridMode || isGalleryFocus) setSingleMetaButtonsVisible(true);
+                else setSingleMetaButtonsVisible(false);
+                updateSwitchModeButtonLabel();
+                // Restore absolute positioning after fullscreen compare
+                for (const id of [
+                    'cg-switch-mode-button', 'cg-privacy-button', 'cg-compare-button',
+                    'cg-seed-button-a', 'cg-tag-button-a', 'cg-info-button-a',
+                    'cg-seed-button-b', 'cg-tag-button-b', 'cg-info-button-b'
+                ]) {
+                    const btn = document.getElementById(id);
+                    if (!btn) continue;
+                    btn.style.position = 'absolute';
+                    btn.style.zIndex = '';
+                }
+                // Empty gallery after external-only compare: hide chrome like a cleared gallery.
+                if (images.length === 0) {
+                    setGalleryOverlayButtonsVisible(false);
+                }
+            }
+            updateMetaButtonsLayout();
+        },
+        onCompareFullscreenChanged: () => {
+            updateMetaButtonsLayout();
+        }
+    });
+
+    function updateSwitchModeButtonLabel() {
+        const btn = document.getElementById('cg-switch-mode-button');
+        if (!btn) return;
+        if (compare.isCompareMode) {
+            btn.textContent = compare.compareInteraction === 'slider' ? '<|>' : '<A/B>';
+            return;
+        }
+        btn.textContent = images.length > 0 ? `<${images.length}>` : '<>';
+    }
+
+    function updateCompareChromeButton(state, inCompare) {
+        const btn = document.getElementById('cg-compare-button');
+        if (!btn) return;
+        const LANG = globalThis.cachedFiles?.language?.[globalThis.globalSettings?.language] || {};
+        btn.classList.remove('is-exit-compare', 'is-slot-a', 'is-slot-b');
+        if (inCompare) {
+            btn.classList.add('is-exit-compare');
+            btn.textContent = LANG.gallery_compare_btn_exit || '✕A|B';
+            btn.title = LANG.gallery_compare_btn_exit_tip || 'Exit A|B compare';
+        } else if (state === 'hasA' || state === 'ready') {
+            btn.classList.add('is-slot-b');
+            btn.textContent = LANG.gallery_compare_btn_add_b || '+B';
+            btn.title = LANG.gallery_compare_btn_add_b_tip || 'Set current image as B and compare';
+        } else {
+            btn.classList.add('is-slot-a');
+            btn.textContent = LANG.gallery_compare_btn_add_a || '+A';
+            btn.title = LANG.gallery_compare_btn_add_a_tip || 'Set current image as A';
+        }
+        const show = inCompare || images.length > 0 || state === 'hasA' || state === 'hasB' || state === 'ready';
+        btn.style.display = show ? '' : 'none';
+    }
+
+    function ensureCompareChromeButton() {
+        let btn = document.getElementById('cg-compare-button');
+        if (!btn) {
+            btn = document.createElement('button');
+            btn.id = 'cg-compare-button';
+            btn.className = 'cg-button';
+            btn.addEventListener('click', () => {
+                compare.cycleCompareChromeButton();
+                updateCompareChromeButton(compare.getStagingState(), compare.isCompareMode);
+            });
+            container.appendChild(btn);
+        }
+        updateCompareChromeButton(compare.getStagingState(), compare.isCompareMode);
+    }
+
+    function ensureCompareMetaButton(id, label, side, kind) {
+        let button = document.getElementById(id);
+        if (!button) {
+            button = document.createElement('button');
+            button.id = id;
+            button.className = `cg-button cg-compare-meta cg-compare-meta-${side}`;
+            button.dataset.label = label;
+            button.textContent = label;
+            button.addEventListener('click', async () => {
+                const pin = side === 'a' ? compare.getPinA() : compare.getPinB();
+                const meta = compare.resolveMeta(pin);
+                if (kind === 'seed') await copySeedToClipboard(meta.seed, button);
+                else if (kind === 'tags') await copyTagsToClipboard(meta.tags, button);
+                else {
+                    globalThis.overlay.custom.createCustomOverlay(
+                        meta.image || 'none',
+                        meta.info || '',
+                        512, 'center', 'left', null, 'Info');
+                }
+            });
+            container.appendChild(button);
+        }
+        return button;
+    }
+
+    function ensureCompareMetaButtons() {
+        ensureCompareMetaButton('cg-seed-button-a', 'Seed', 'a', 'seed');
+        ensureCompareMetaButton('cg-tag-button-a', 'Tags', 'a', 'tags');
+        ensureCompareMetaButton('cg-info-button-a', 'Info', 'a', 'info');
+        ensureCompareMetaButton('cg-seed-button-b', 'Seed', 'b', 'seed');
+        ensureCompareMetaButton('cg-tag-button-b', 'Tags', 'b', 'tags');
+        ensureCompareMetaButton('cg-info-button-b', 'Info', 'b', 'info');
+    }
+
+    function setCompareMetaButtonsVisible(visible) {
+        for (const id of [
+            'cg-seed-button-a', 'cg-tag-button-a', 'cg-info-button-a',
+            'cg-seed-button-b', 'cg-tag-button-b', 'cg-info-button-b'
+        ]) {
+            const btn = document.getElementById(id);
+            if (btn) btn.style.display = visible ? '' : 'none';
+        }
+    }
+
+    function setSingleMetaButtonsVisible(visible) {
+        for (const id of ['cg-seed-button', 'cg-tag-button', 'cg-info-button']) {
+            const btn = document.getElementById(id);
+            if (btn) btn.style.display = visible ? '' : 'none';
+        }
+    }
+
+    function applyCompareMetaButtonsLayout() {
+        // A left / B right, stacked from the bottom edge.
+        const leftIds = ['cg-seed-button-a', 'cg-tag-button-a', 'cg-info-button-a'];
+        const rightIds = ['cg-seed-button-b', 'cg-tag-button-b', 'cg-info-button-b'];
+        const bottoms = ['90px', '50px', '10px'];
+        const fullscreen = compare.isCompareFullscreen;
+        const position = fullscreen ? 'fixed' : 'absolute';
+        const z = fullscreen ? '10002' : '';
+
+        for (const [i, id] of leftIds.entries()) {
+            const btn = document.getElementById(id);
+            if (!btn) continue;
+            btn.style.position = position;
+            btn.style.zIndex = z;
+            btn.style.left = '10px';
+            btn.style.right = 'auto';
+            btn.style.top = 'auto';
+            btn.style.bottom = bottoms[i];
+            btn.style.transform = 'none';
+            btn.style.display = '';
+        }
+        for (const [i, id] of rightIds.entries()) {
+            const btn = document.getElementById(id);
+            if (!btn) continue;
+            btn.style.position = position;
+            btn.style.zIndex = z;
+            btn.style.right = '10px';
+            btn.style.left = 'auto';
+            btn.style.top = 'auto';
+            btn.style.bottom = bottoms[i];
+            btn.style.transform = 'none';
+            btn.style.display = '';
+        }
+        // Match normal gallery chrome side (same !rtl convention as updateMetaButtonsLayout).
+        applyChromeButtonsSideLayout(!document.body.classList.contains('right-to-left'));
+        container.classList.remove('cg-meta-buttons-centered');
+    }
+
     globalThis.mainGallery.getHiresTargetSeed = function () {
+        if (compare.isCompareMode) return null;
         if (!seeds.length) return null;
         const inFrameFull = !isGridMode || isGalleryFocus;
         let index = inFrameFull ? currentIndex : seeds.length - 1;
@@ -185,14 +439,50 @@ export function setupGallery(containerId) {
     };
 
     globalThis.mainGallery.getDisplayedImage = function () {
+        if (compare.isCompareMode) {
+            return compare.getEmphasizedImage() || '';
+        }
         if (!images.length) return '';
-        const inFrame = !isGridMode || isGalleryFocus;
-        let index = inFrame ? currentIndex : images.length - 1;
-        if (index < 0 || index >= images.length) index = images.length - 1;
+        const index = getDisplayedIndex();
         return images[index] || '';
     };
 
+    Object.defineProperty(globalThis.mainGallery, 'isCompareMode', {
+        get: () => compare.isCompareMode,
+        configurable: true
+    });
+    globalThis.mainGallery.setCompareImage = (slot, index) => compare.setCompareImage(slot, index);
+    globalThis.mainGallery.setCompareExternal = (slot, payload) => compare.setCompareExternal(slot, payload);
+    globalThis.mainGallery.fillNextCompareExternal = (payload) => compare.fillNextExternal(payload);
+    globalThis.mainGallery.enterCompareMode = () => compare.enterCompareMode();
+    globalThis.mainGallery.exitCompareMode = () => compare.exitCompareMode();
+    globalThis.mainGallery.getCompareStagingState = () => compare.getStagingState();
+    globalThis.mainGallery.resolveCompareIndexFromElement = resolveCompareIndexFromElement;
+    globalThis.mainGallery.updateCompareLanguage = function () {
+        compare.updateLanguage();
+        updateCompareChromeButton(compare.getStagingState(), compare.isCompareMode);
+        updateSwitchModeButtonLabel();
+    };
+
+    function resolveCompareIndexFromElement(element) {
+        if (!element) return getDisplayedIndex();
+        const item = element.closest?.('.cg-gallery-item');
+        if (item) {
+            const img = item.querySelector('img');
+            if (img?.src) {
+                const idx = images.indexOf(img.src);
+                if (idx >= 0) return idx;
+            }
+        }
+        const focus = element.closest?.('.cg-gallery-focus-overlay');
+        const main = element.closest?.('.cg-main-image-container');
+        const full = element.closest?.('.cg-fullscreen-overlay');
+        if (focus || main || full) return currentIndex;
+        return getDisplayedIndex();
+    }
+
     globalThis.mainGallery.clearGallery = function () {
+        compare.onGalleryCleared();
         images = [];
         seeds = [];
         tags = [];
@@ -210,14 +500,18 @@ export function setupGallery(containerId) {
         if (overlay) overlay.classList.remove('visible');
         clearGalleryView();
         setGalleryOverlayButtonsVisible(false);
+        setCompareMetaButtonsVisible(false);
         syncHiresFrame();
         notifyHiresButton();
+        ensureCompareChromeButton();
     };
 
     globalThis.mainGallery.removeCurrentImage = function (element = null) {
+        let removedIndex = -1;
         if(isGridMode) {
             const index = images.indexOf(element);
             if (index !== -1) {
+                removedIndex = index;
                 images.splice(index, 1);
                 seeds.splice(index, 1);
                 tags.splice(index, 1);
@@ -239,6 +533,7 @@ export function setupGallery(containerId) {
                 gallery_renderGridMode(false);
             }
         } else {
+            removedIndex = currentIndex;
             images.splice(currentIndex, 1);
             seeds.splice(currentIndex, 1);
             tags.splice(currentIndex, 1);
@@ -250,7 +545,9 @@ export function setupGallery(containerId) {
                 currentIndex = 0;
             gallery_renderSplitMode(false);
         }
+        if (removedIndex >= 0) compare.onImageRemoved(removedIndex);
         notifyHiresButton();
+        ensureCompareChromeButton();
     };
 
     globalThis.mainGallery.appendImageData = function (base64, seed, tagsString, switchToLatest = false, info = '') {
@@ -265,15 +562,17 @@ export function setupGallery(containerId) {
             console.warn('[appendImageData] Mismatch: images:', images.length, 'seeds:', seeds.length, 'tags:', tags.length, 'infos:', infos.length);
         }
 
+        const followLatest = switchToLatest && !compare.isCompareMode;
+
         let incremental = true;
-        if (switchToLatest && !isGridMode) {
+        if (followLatest && !isGridMode) {
             currentIndex = images.length - 1;
             incremental = false;
         }
 
         if (isGridMode) {
             gallery_renderGridMode(true);
-            if (switchToLatest) {
+            if (followLatest) {
                 const gallery = container.querySelector('.cg-gallery-grid-container');
                 if (gallery) gallery.scrollTop = 0;
                 if (isGalleryFocus) enterGalleryFocus(images.length - 1);
@@ -283,6 +582,7 @@ export function setupGallery(containerId) {
         }
         notifyHiresButton();
         resumeGalleryWaitForNext();
+        ensureCompareChromeButton();
     };
 
     function resumeGalleryWaitForNext() {
@@ -575,6 +875,7 @@ export function setupGallery(containerId) {
             if (child.classList.contains('cg-minimized-generation-preview-container')) continue;
             if (child.classList.contains('cg-gallery-focus-overlay')) continue;
             if (child.classList.contains('cg-mode-switch-overlay')) continue;
+            if (child.classList.contains('cg-compare-overlay')) continue;
             if (child.classList.contains('cg-button')) continue;
             child.remove();
         }
@@ -775,16 +1076,34 @@ export function setupGallery(containerId) {
     }
 
     function setGridMetaButtonsVisible(visible) {
-        for (const id of ['cg-seed-button', 'cg-tag-button', 'cg-info-button']) {
-            const btn = document.getElementById(id);
-            if (btn) btn.style.display = visible ? '' : 'none';
+        if (compare.isCompareMode) {
+            setSingleMetaButtonsVisible(false);
+            setCompareMetaButtonsVisible(true);
+            return;
         }
+        setSingleMetaButtonsVisible(visible);
     }
 
     function setGalleryOverlayButtonsVisible(visible) {
-        for (const id of ['cg-seed-button', 'cg-tag-button', 'cg-info-button', 'cg-privacy-button', 'cg-switch-mode-button']) {
+        for (const id of [
+            'cg-seed-button', 'cg-tag-button', 'cg-info-button',
+            'cg-privacy-button', 'cg-switch-mode-button', 'cg-compare-button',
+            'cg-seed-button-a', 'cg-tag-button-a', 'cg-info-button-a',
+            'cg-seed-button-b', 'cg-tag-button-b', 'cg-info-button-b'
+        ]) {
             const button = document.getElementById(id);
-            if (button) button.style.display = visible ? '' : 'none';
+            if (!button) continue;
+            if (!visible) {
+                button.style.display = 'none';
+                continue;
+            }
+            if (id.startsWith('cg-seed-button-') || id.startsWith('cg-tag-button-') || id.startsWith('cg-info-button-')) {
+                button.style.display = compare.isCompareMode ? '' : 'none';
+            } else if (id === 'cg-seed-button' || id === 'cg-tag-button' || id === 'cg-info-button') {
+                button.style.display = compare.isCompareMode ? 'none' : '';
+            } else {
+                button.style.display = '';
+            }
         }
     }
 
@@ -807,7 +1126,7 @@ export function setupGallery(containerId) {
     }
 
     function handleGalleryFocusKeyDown(e) {
-        if (document.querySelector('.cg-fullscreen-overlay')) return;
+        if (document.querySelector('.cg-fullscreen-overlay') || document.querySelector('.cg-compare-overlay')) return;
         if (e.target instanceof HTMLInputElement || e.target instanceof HTMLTextAreaElement) return;
         if (e.key === 'Escape') {
             e.preventDefault();
@@ -900,6 +1219,11 @@ export function setupGallery(containerId) {
     }
 
     function toggleGalleryMode() {
+        if (compare.isCompareMode) {
+            compare.toggleCompareInteraction();
+            updateSwitchModeButtonLabel();
+            return;
+        }
         isGridMode = !isGridMode;
         isGalleryFocus = false;
         document.removeEventListener('keydown', handleGalleryFocusKeyDown);
@@ -915,6 +1239,8 @@ export function setupGallery(containerId) {
             gallery_renderSplitMode();
         }
         notifyHiresButton();
+        ensureCompareChromeButton();
+        updateSwitchModeButtonLabel();
     }
 
     function ensurePrivacyButton() {
@@ -1156,8 +1482,10 @@ export function setupGallery(containerId) {
         applyMasonryAndSync(true);
         renderedImageCount = images.length;
 
-        ensureSwitchModeButton(container, toggleGalleryMode, 'cg-switch-mode-button', images.length);
+        ensureSwitchModeButton(container, toggleGalleryMode, 'cg-switch-mode-button', images.length,
+            compare.isCompareMode ? (compare.compareInteraction === 'slider' ? '<|>' : '<A/B>') : null);
         ensurePrivacyButton();
+        ensureCompareChromeButton();
         if (!isGalleryFocus) setGridMetaButtonsVisible(false);
         updateMetaButtonsLayout();
 
@@ -1275,11 +1603,13 @@ export function setupGallery(containerId) {
             currentPreview.scrollIntoView({ behavior: 'smooth', inline: 'center', block: 'nearest' });
         }
 
-        ensureSwitchModeButton(container, toggleGalleryMode, 'cg-switch-mode-button', images.length);
+        ensureSwitchModeButton(container, toggleGalleryMode, 'cg-switch-mode-button', images.length,
+            compare.isCompareMode ? (compare.compareInteraction === 'slider' ? '<|>' : '<A/B>') : null);
         ensureSeedButton();
         ensureTagButton();
         ensureInfoButton();
         ensurePrivacyButton();
+        ensureCompareChromeButton();
         setGridMetaButtonsVisible(true);
         adjustPreviewContainer(previewContainer);
         updateMetaButtonsLayout();
@@ -1322,14 +1652,18 @@ export function setupGallery(containerId) {
     }
 
     function applyChromeButtonsSideLayout(rtl) {
-        const chromeIds = ['cg-switch-mode-button', 'cg-privacy-button'];
+        const chromeIds = ['cg-switch-mode-button', 'cg-privacy-button', 'cg-compare-button'];
         const chromeTops = {
             'cg-switch-mode-button': '10px',
-            'cg-privacy-button': '50px'
+            'cg-privacy-button': '50px',
+            'cg-compare-button': '90px'
         };
+        const fullscreen = compare.isCompareFullscreen;
         for (const id of chromeIds) {
             const button = document.getElementById(id);
             if (!button) continue;
+            button.style.position = fullscreen ? 'fixed' : 'absolute';
+            button.style.zIndex = fullscreen ? '10002' : '';
             button.style.top = chromeTops[id];
             button.style.bottom = 'auto';
             button.style.transform = 'none';
@@ -1372,6 +1706,16 @@ export function setupGallery(containerId) {
 
     function updateMetaButtonsLayout() {
         const rtl = document.body.classList.contains('right-to-left');
+
+        if (compare.isCompareMode) {
+            ensureCompareMetaButtons();
+            setSingleMetaButtonsVisible(false);
+            applyCompareMetaButtonsLayout();
+            return;
+        }
+
+        setCompareMetaButtonsVisible(false);
+
         // Default row seed-tags-info. RTL mirrors to info-tags-seed.
         // (Previously seed-tags-info matched <> on-right; after side flip RTL mirrors the row.)
         const metaIds = rtl

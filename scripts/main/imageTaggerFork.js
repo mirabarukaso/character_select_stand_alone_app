@@ -5,10 +5,14 @@ import path from 'node:path';
 import { preprocessImageWD, runWd14Tagger } from './tagger/wdTagger.js';
 import { preprocessImageCL, runClTagger } from './tagger/clTagger.js';
 import { preprocessCamieImage, runCamieTagger } from './tagger/camieTagger.js';
+import { offloadTaggerSessions, releaseTaggerSessions } from './tagger/taggerSession.js';
 
 const CAT = '[imageTaggerChild]';
 const __filename = fileURLToPath(import.meta.url);
 const __dirname = path.dirname(__filename);
+
+// Serialize jobs: DirectML forbids concurrent Run on the same session.
+let jobChain = Promise.resolve();
 
 function getClCategories(model_options) {
   if (model_options === 'All') {
@@ -42,28 +46,28 @@ function getCamieCategories(model_options) {
   }
 }
 
-async function runModel({ image_input, model_choice, gen_threshold, char_threshold, model_options }) {
+async function runModel({ image_input, model_choice, gen_threshold, char_threshold, model_options, preferGpu }) {
   try {
     const modelsDir = path.join(__dirname, "..", "..", "models", "tagger");
     const modelPath = path.join(modelsDir, model_choice);
     if (!fs.existsSync(modelPath)) throw new Error(`${CAT}Model not found: ${modelPath}`);
 
-    const runStart = Date.now();
+    const useGpu = preferGpu !== false;
     let result = "";
-    console.log(CAT, `Loading model: ${model_choice}`);
+    console.log(CAT, `Running model: ${model_choice} (preferGpu=${useGpu})`);
 
     if (model_choice.startsWith('cl_')) {
       const cat = getClCategories(model_options);
       const spatialSize = 448;
       const imgArray = await preprocessImageCL(image_input, spatialSize);
       const inputTensorCl = new ort.Tensor("float32", imgArray, [1, 3, spatialSize, spatialSize]);
-      result = await runClTagger(modelPath, inputTensorCl, gen_threshold, char_threshold, cat);
+      result = await runClTagger(modelPath, inputTensorCl, gen_threshold, char_threshold, cat, useGpu);
     } else if (model_choice.startsWith('wd-')) {
       const { mCutGeneral, mCutCharacter, categories } = getWd14Flags(model_options);
       const spatialSize = 448;
       const imgArray = await preprocessImageWD(image_input, spatialSize);
       const inputTensor = new ort.Tensor("float32", imgArray, [1, spatialSize, spatialSize, 3]);
-      result = await runWd14Tagger(modelPath, inputTensor, gen_threshold, char_threshold, mCutGeneral, mCutCharacter, categories);
+      result = await runWd14Tagger(modelPath, inputTensor, gen_threshold, char_threshold, mCutGeneral, mCutCharacter, categories, useGpu);
     } else if (model_choice.startsWith("camie-")) {
       const cat = getCamieCategories(model_options);
       const spatialSize = 512;
@@ -73,13 +77,11 @@ async function runModel({ image_input, model_choice, gen_threshold, char_thresho
         overall: gen_threshold,
         min_confidence: 0.1,
         categories: cat    
-      });
+      }, useGpu);
     } else {
       result = `${CAT}Unsupported model choice: ${model_choice}`;
     }
 
-    const runMs = Date.now() - runStart;
-    console.log(CAT, `Inference run time: ${runMs} ms`);
     return result;
   } catch (err) {
     console.error(CAT, "Error in runModel:", err);
@@ -87,20 +89,35 @@ async function runModel({ image_input, model_choice, gen_threshold, char_thresho
   }
 }
 
-process.on('message', async (args) => {
-  try {
-    let result = '';
-    result = await runModel(args);   
-    process.send({ type: 'result', data: result });    
-  } catch (err) {
-    process.send({ type: 'error', data: err.message });
-  } finally {
-    // exit after one task
-    process.exit(0);
-  }
+process.on('message', (msg) => {
+  jobChain = jobChain.then(async () => {
+    if (msg?.type === 'offload') {
+      try {
+        const data = await offloadTaggerSessions();
+        process.send({ type: 'offload_done', data, id: msg.id });
+      } catch (err) {
+        process.send({ type: 'error', data: err.message, id: msg.id });
+      }
+      return;
+    }
+
+    try {
+      const result = await runModel(msg);
+      process.send({ type: 'result', data: result, id: msg.id });
+    } catch (err) {
+      process.send({ type: 'error', data: err.message, id: msg.id });
+    }
+  }).catch((err) => {
+    console.error(CAT, 'Unhandled job chain error:', err);
+  });
 });
 
-process.on('SIGTERM', () => {
+process.on('SIGTERM', async () => {
   console.log(CAT, 'Subprocess terminating');
+  try {
+    await releaseTaggerSessions();
+  } catch {
+    // ignore
+  }
   process.exit(0);
 });

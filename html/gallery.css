@@ -214,6 +214,224 @@
     transform: translate(0px, 0px) scale(1);
 }
 
+/* A|B Compare */
+
+.cg-compare-overlay {
+    display: flex;
+    flex-direction: column;
+    justify-content: center;
+    align-items: center;
+    background: var(--scrim-gallery);
+    overflow: hidden;
+    user-select: none;
+    overscroll-behavior: none;
+    touch-action: none;
+}
+
+.cg-compare-overlay.is-embedded {
+    position: absolute;
+    inset: 0;
+    z-index: 55;
+}
+
+.cg-compare-overlay.is-fullscreen {
+    position: fixed;
+    inset: 0;
+    z-index: 10001;
+    background: var(--scrim);
+}
+
+.gallery-main-main.cg-compare-active {
+    overscroll-behavior: none;
+}
+
+.cg-compare-stage {
+    position: relative;
+    width: 100%;
+    height: 100%;
+    overflow: hidden;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overscroll-behavior: none;
+}
+
+/* Screen-space panes: clip stays aligned with divider while worlds pan/zoom. */
+.cg-compare-pane {
+    position: absolute;
+    inset: 0;
+    overflow: hidden;
+    pointer-events: none;
+}
+
+.cg-compare-pane-b {
+    z-index: 1;
+}
+
+.cg-compare-world {
+    position: absolute;
+    top: 0;
+    left: 0;
+    transform-origin: center center;
+    will-change: transform;
+}
+
+.cg-compare-layer {
+    position: absolute;
+    inset: 0;
+    display: flex;
+    justify-content: center;
+    align-items: center;
+    overflow: hidden;
+    pointer-events: none;
+    /* Opaque letterbox so mismatched aspect ratios do not leak the other image. */
+    background: var(--scrim-gallery);
+}
+
+.cg-compare-overlay.is-fullscreen .cg-compare-layer {
+    background: var(--scrim);
+}
+
+.cg-compare-layer img {
+    display: block;
+    pointer-events: none;
+}
+
+.cg-compare-divider {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 0;
+    width: 28px;
+    margin-left: -14px;
+    background: transparent;
+    z-index: 2;
+    cursor: ew-resize;
+    pointer-events: auto;
+}
+
+.cg-compare-divider.is-vertical-split {
+    left: 0;
+    right: 0;
+    top: 0;
+    bottom: auto;
+    width: auto;
+    height: 28px;
+    margin-left: 0;
+    margin-top: -14px;
+    cursor: ns-resize;
+}
+
+.cg-compare-divider-line {
+    position: absolute;
+    top: 0;
+    bottom: 0;
+    left: 50%;
+    width: 2px;
+    margin-left: -1px;
+    background: var(--text-on-fill);
+    box-shadow: 0 0 0 1px rgba(0, 0, 0, 0.35);
+    pointer-events: none;
+}
+
+.cg-compare-divider.is-vertical-split .cg-compare-divider-line {
+    top: 50%;
+    bottom: auto;
+    left: 0;
+    right: 0;
+    width: auto;
+    height: 2px;
+    margin-left: 0;
+    margin-top: -1px;
+}
+
+.cg-compare-divider-handle {
+    position: absolute;
+    top: 50%;
+    left: 50%;
+    width: 18px;
+    height: 36px;
+    transform: translate(-50%, -50%);
+    border-radius: 9px;
+    background: var(--action);
+    border: 2px solid var(--text-on-fill);
+    pointer-events: none;
+    opacity: 0;
+    transition: opacity 0.15s ease;
+}
+
+.cg-compare-divider.is-vertical-split .cg-compare-divider-handle {
+    width: 36px;
+    height: 18px;
+}
+
+.cg-compare-divider:hover .cg-compare-divider-handle {
+    opacity: 0.55;
+}
+
+.cg-compare-overlay.is-dragging-split .cg-compare-divider-handle {
+    opacity: 0;
+}
+
+.cg-compare-toolbar {
+    position: absolute;
+    top: 10px;
+    left: 50%;
+    transform: translateX(-50%);
+    display: flex;
+    gap: 8px;
+    z-index: 3;
+    pointer-events: auto;
+}
+
+.cg-compare-tool-btn {
+    position: static;
+    padding: 6px 12px;
+    border: none;
+    border-radius: 5px;
+    cursor: pointer;
+    opacity: 0.2;
+    color: var(--text-on-fill);
+    font-size: 13px;
+    font-weight: 600;
+    line-height: 1.2;
+    box-shadow: 0 1px 4px rgba(0, 0, 0, 0.35);
+    transition: opacity 0.5s ease;
+}
+
+.cg-compare-tool-btn:hover {
+    opacity: 1;
+}
+
+.cg-compare-fullscreen-btn {
+    background: var(--action);
+}
+
+.cg-compare-axis {
+    background: var(--mark, #8e44ad);
+    min-width: 42px;
+}
+
+.cg-compare-swap {
+    background: var(--seed, #16a085);
+}
+
+.cg-compare-swap.is-side-indicator {
+    min-width: 42px;
+}
+
+.cg-compare-swap.is-side-a {
+    background: #e67e22;
+}
+
+.cg-compare-swap.is-side-b {
+    background: #2980b9;
+}
+
+.cg-compare-reset {
+    background: var(--info, #2980b9);
+}
+
 /* Error Message */
 
 .cg-error-message {
@@ -929,10 +1147,12 @@
 .image-tagger-plate {
     display: flex;
     justify-content: flex-end;
+    gap: 10px;
     margin: 0 8px 12px;
 }
 
-.image-tagger-plate-send {
+.image-tagger-plate-send,
+.image-tagger-compare-send {
     padding: 8px 12px;
     cursor: pointer;
     border-radius: 4px;
@@ -941,10 +1161,32 @@
     background-color: var(--link);
     color: var(--ink);
     border: none;
+    box-sizing: border-box;
+}
+
+.image-tagger-compare-send.is-slot-a {
+    background-color: #e67e22;
+    color: #fff;
+}
+
+.image-tagger-compare-send.is-slot-b {
+    background-color: #2980b9;
+    color: #fff;
+}
+
+.image-tagger-compare-send.is-disabled-compare {
+    background-color: #c0392b;
+    color: #fff;
+    cursor: not-allowed;
+    opacity: 0.85;
 }
 
 .image-tagger-plate-send:hover {
     background-color: var(--link-hover);
+}
+
+.image-tagger-compare-send:hover {
+    filter: brightness(1.08);
 }
 
 .metadata-buttons,

@@ -17,6 +17,7 @@ import * as ort from 'onnxruntime-node';
 import { preprocessImageWD, runWd14Tagger } from './tagger/wdTagger.js';
 import { preprocessImageCL, runClTagger } from './tagger/clTagger.js';
 import { preprocessCamieImage, runCamieTagger } from './tagger/camieTagger.js';
+import { offloadTaggerSessions, releaseTaggerSessions } from './tagger/taggerSession.js';
 
 const CAT = '[imageTaggerMain]';
 const __filename = fileURLToPath(import.meta.url);
@@ -28,10 +29,6 @@ function getOrCreateSubprocess() {
     const subprocessPath = path.join(__dirname, 'imageTaggerFork.js');
 
     taggerSubprocess = fork(subprocessPath, [], { silent: false });  // false to see subprocess debug output
-
-    taggerSubprocess.on('message', (msg) => {
-      // Handle messages from subprocess if needed
-    });
 
     taggerSubprocess.on('error', (err) => {
       console.error(CAT, 'Subprocess error:', err);
@@ -46,63 +43,88 @@ function getOrCreateSubprocess() {
   return taggerSubprocess;
 }
 
-async function runModelInSubprocess(args) {
+function sendToSubprocess(payload, { acceptTypes, timeoutMs = 120000 } = {}) {
   return new Promise((resolve, reject) => {
     const subprocess = getOrCreateSubprocess();
     if (!subprocess) {
-      reject(new Error(CAT, 'Failed to create subprocess'));
+      reject(new Error(`${CAT} Failed to create subprocess`));
       return;
     }
 
-    const messageId = Date.now();
+    const messageId = `${Date.now()}-${Math.random().toString(36).slice(2, 10)}`;
+    let settled = false;
+
+    const cleanup = () => {
+      subprocess.removeListener('message', handler);
+      clearTimeout(timeout);
+    };
+
     const handler = (msg) => {
-      if (msg.type === 'result') {
-        subprocess.removeListener('message', handler);
-        resolve(msg.data);
-      } else if (msg.type === 'error') {
-        subprocess.removeListener('message', handler);
-        reject(new Error(msg.data));
+      if (msg.id !== messageId) {
+        return;
       }
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      if (msg.type === 'error') {
+        reject(new Error(msg.data));
+        return;
+      }
+      if (acceptTypes.includes(msg.type)) {
+        resolve(msg.data);
+        return;
+      }
+      reject(new Error(`${CAT} Unexpected subprocess message type: ${msg.type}`));
     };
     subprocess.addListener('message', handler);
 
-    // Send args to subprocess
-    subprocess.send({ ...args, id: messageId });
-
     const timeout = setTimeout(() => {
-      subprocess.removeListener('message', handler);
-      subprocess.kill();
-      reject(new Error(CAT, 'Subprocess timeout'));
-    }, 10000);
+      if (settled) {
+        return;
+      }
+      settled = true;
+      cleanup();
+      reject(new Error(`${CAT} Subprocess timeout`));
+    }, timeoutMs);
 
-    const originalResolve = resolve;
-    resolve = (value) => {
-      clearTimeout(timeout);
-      originalResolve(value);
-    };
+    subprocess.send({ ...payload, id: messageId });
   });
 }
 
+async function runModelInSubprocess(args) {
+  return sendToSubprocess(args, { acceptTypes: ['result'] });
+}
+
+async function offloadInSubprocess() {
+  if (!taggerSubprocess) {
+    return { released: 0, keptCpu: 0, skipped: true };
+  }
+  return sendToSubprocess({ type: 'offload' }, { acceptTypes: ['offload_done'], timeoutMs: 180000 });
+}
+
 async function runModel(Args) {
-  const {image_input, model_choice, gen_threshold, char_threshold, model_options} = Args;
+  const {image_input, model_choice, gen_threshold, char_threshold, model_options, preferGpu} = Args;
   const modelsDir = path.join(__dirname, "..", "..", "models", "tagger");
   const modelPath = path.join(modelsDir, model_choice);
+  const useGpu = preferGpu !== false;
   
   if (String(model_choice).toLocaleLowerCase().startsWith('cl')) {
     const spatialSize = 448;
     const imgArray = await preprocessImageCL(image_input, spatialSize);
     const inputTensorCl = new ort.Tensor("float32", imgArray, [1, 3, spatialSize, spatialSize]);
-    return runClTagger(modelPath, inputTensorCl, gen_threshold, char_threshold, [model_options]);
+    return runClTagger(modelPath, inputTensorCl, gen_threshold, char_threshold, [model_options], useGpu);
   } else if (String(model_choice).toLocaleLowerCase().startsWith('wd')) {
     const spatialSize = 448;
     const imgArray = await preprocessImageWD(image_input, spatialSize);
     const inputTensor = new ort.Tensor("float32", imgArray, [1, spatialSize, spatialSize, 3]);
-    return runWd14Tagger(modelPath, inputTensor, gen_threshold, char_threshold, false, false, [model_options]);
+    return runWd14Tagger(modelPath, inputTensor, gen_threshold, char_threshold, false, false, [model_options], useGpu);
   } else if (String(model_choice).toLocaleLowerCase().startsWith('camie')) {
     const spatialSize = 512;
     const imgArray = await preprocessCamieImage(image_input, spatialSize);
     const inputTensor = new ort.Tensor("float32", imgArray, [1, 3, spatialSize, spatialSize]);
-    return runCamieTagger(modelPath, inputTensor, {overall:gen_threshold, categories:[model_options], min_confidence: 0.1});
+    return runCamieTagger(modelPath, inputTensor, {overall:gen_threshold, categories:[model_options], min_confidence: 0.1}, useGpu);
   }
 
   return 'Unsupported model choice: ${model_choice}';
@@ -128,13 +150,32 @@ async function runImageTagger(args) {
   }
 }
 
+/**
+ * Release GPU-resident tagger sessions (fork + in-process wait:true cache).
+ * Rebuilds CPU cache when free RAM allows.
+ */
+async function offloadImageTaggerCache() {
+  const mainResult = await offloadTaggerSessions();
+  let forkResult = { released: 0, keptCpu: 0, skipped: true };
+  try {
+    forkResult = await offloadInSubprocess();
+  } catch (err) {
+    console.warn(CAT, 'Fork offload failed:', err?.message || err);
+  }
+  return { main: mainResult, fork: forkResult };
+}
 
 function setupTagger() {
   ipcMain.handle("run-image-tagger", async (event, args) => {
     return await runImageTagger(args);
   });
 
+  ipcMain.handle("tagger-offload", async () => {
+    return await offloadImageTaggerCache();
+  });
+
   app.on('before-quit', () => {
+    releaseTaggerSessions().catch(() => {});
     if (taggerSubprocess) {
       taggerSubprocess.kill('SIGTERM');
     }
@@ -143,5 +184,6 @@ function setupTagger() {
 
 export {
   setupTagger,
-  runImageTagger  
+  runImageTagger,
+  offloadImageTaggerCache,
 };

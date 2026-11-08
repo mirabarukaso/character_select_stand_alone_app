@@ -129,7 +129,9 @@ function startRetryTimer() {
         clearInterval(autoRetryState.timer);
         autoRetryState.timer = null;
         autoRetryState.current_count += 1;
-        retryQueue();
+        retryQueue().catch((error) => {
+            console.error('Auto-retry failed:', error);
+        });
     }, 1000);
 }
 

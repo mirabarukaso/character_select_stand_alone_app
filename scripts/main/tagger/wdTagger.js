@@ -1,7 +1,6 @@
-import * as ort from 'onnxruntime-node';
 import * as fs from 'node:fs';
 import sharp from 'sharp';
-import * as os from 'node:os';
+import { createTaggerSession } from './taggerSession.js';
 
 const CAT = "[wdTagger] ";
 
@@ -110,28 +109,23 @@ function mcutThreshold(probs) {
 // eslint-disable-next-line sonarjs/cognitive-complexity
 async function runWd14Tagger(modelPath, inputTensor, gen_threshold=0.35, char_threshold=0.85, 
   general_mcut_enabled=false, character_mcut_enabled=false,
-cat = ['General', 'Character', 'Rating']) {
-    const session = await ort.InferenceSession.create(modelPath, { 
-      executionProviders: ['dml', 'cpu'],
-      
-      intraOpNumThreads: Math.max(1, os.cpus().length - 1),
-      interOpNumThreads: 1,
-      
-      graphOptimizationLevel: 'all',  // 'disabled' | 'basic' | 'extended' | 'all'
-      enableCpuMemArena: true,
-      enableMemPattern: true,
-      executionMode: 'sequential',      // 'sequential' | 'parallel'
-    });  
+cat = ['General', 'Character', 'Rating'], preferGpu = true) {
+  const session = await createTaggerSession(modelPath, {
+    preferGpu,
+    freeDimensionOverrides: { batch_size: 1 },
+  });
 
   const inputName = session.inputNames[0];
   const outputName = session.outputNames[0];
 
+  const inferStart = Date.now();
   const results = await session.run({ [inputName]: inputTensor });
+  const inferMs = Date.now() - inferStart;
   const logits = results[outputName].data;
 
   const probs = logits; // WD14 models output probabilities directly
 
-  console.log(CAT, 'Model run complete. Mapping tags...');
+  console.log(CAT, `Model run complete in ${inferMs} ms. Mapping tags...`);
   
   // Load tag mapping (from CSV file)
   const mappingPath = modelPath.replace(/\.onnx$/, "_selected_tags.csv");

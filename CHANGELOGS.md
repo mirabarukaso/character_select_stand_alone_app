@@ -1,3 +1,13 @@
+2026.11.09 v2.12.1      
+Add, Gallery `A|B Compare` — pin two images (gallery or Image Info externals), slider wipe (left/right or top/bottom), same-spot toggle, shared pan/zoom, embedded or in-app fullscreen      
+Add, gallery chrome `+A` / `+B` / `✕A|B`, dual Seed/Tags/Info, `<>` switches wipe vs toggle, toolbar `↔`/`↕` switches wipe axis; Hires Fix disabled in compare; new gens still enqueue without stealing the view      
+Add, Image Info `Add A` / `Add B` for external compare (metadata seed/tags/info); exit compare releases externals; right-click set A/B; compare overlay skips copy/remove      
+Add, release GPU tagger sessions (best-effort CPU cache) when closing Image Info or starting Generate / ControlNet      
+Fix, Image Tagger GPU path on Windows via DirectML (`enableMemPattern` off, fixed free dims, session reuse + warmup in a persistent worker); GPU first with CPU fallback      
+Fix, idle tagger promotes the selected model to GPU (single GPU slot); generating prefers CPU; CPU caches up to 3 recent ONNX models (~5 min idle expiry); unused GPU models release after ~2 min       
+Docs, Gallery A|B Compare note in README Highlights; update Image Tagger ONNX / offload notes      
+
+
 2026.11.08 v2.12.0      
 Add, ComfyUI `Override VAE` (Model panel) for Turing/Pascal Flux2 VAEDecode crashes (Moss / Flux2 Klein); uses MiraSubPack encode/decode      
 Change, prune unused hires/refiner dead-path nodes from ComfyUI workflows      

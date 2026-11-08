@@ -1586,6 +1586,10 @@ function onFullWidthWheel(event) {
     if (!isGalleryCompressMode()) {
         return;
     }
+    // A|B compare owns wheel for pan/zoom; do not compress gallery or scroll siblings.
+    if (globalThis.mainGallery?.isCompareMode) {
+        return;
+    }
     // Ctrl/Meta+wheel is owned by gallery grid resize (customGallery handleGridWheel).
     if (event.ctrlKey || event.metaKey) {
         return;

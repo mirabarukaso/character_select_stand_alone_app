@@ -1,8 +1,7 @@
-import * as ort from 'onnxruntime-node';
 import * as fs from 'node:fs';
 import * as path from 'node:path';
 import sharp from 'sharp';
-import * as os from 'node:os';
+import { createTaggerSession } from './taggerSession.js';
 
 const CAT = "[camieTagger]";
 
@@ -66,7 +65,7 @@ async function preprocessCamieImage(base64Str, targetSize = 512) {
   return chwArray;
 }
 
-async function runCamieTagger(modelPath, inputTensor, thresholds) {
+async function runCamieTagger(modelPath, inputTensor, thresholds, preferGpu = true) {
   const modelDir = path.dirname(modelPath);
   const metadataPath = path.join(modelDir, path.basename(modelPath).replace(/\.onnx$/, "-metadata.json"));
   if (!fs.existsSync(metadataPath)) throw new Error(`${CAT} Missing metadata file: ${metadataPath}`);
@@ -77,20 +76,15 @@ async function runCamieTagger(modelPath, inputTensor, thresholds) {
     throw new Error(`${CAT} Invalid tag mapping structure in metadata`);
   }
 
-  const session = await ort.InferenceSession.create(modelPath, { 
-    executionProviders: ['dml', 'cpu'],
-    
-    intraOpNumThreads: Math.max(1, os.cpus().length - 1),
-    interOpNumThreads: 1,
-    
-    graphOptimizationLevel: 'all',  // 'disabled' | 'basic' | 'extended' | 'all'
-    enableCpuMemArena: true,
-    enableMemPattern: true,
-    executionMode: 'sequential',      // 'sequential' | 'parallel'
+  const session = await createTaggerSession(modelPath, {
+    preferGpu,
+    freeDimensionOverrides: { batch_size: 1 },
   });
 
   const inputName = session.inputNames[0];
+  const inferStart = Date.now();
   const outputs = await session.run({ [inputName]: inputTensor });
+  console.log(CAT, `Model run complete in ${Date.now() - inferStart} ms. Mapping tags...`);
   
   const outputKeys = Object.keys(outputs);
   let logits;

@@ -1,5 +1,5 @@
 import { sendWebSocketMessage } from '../../webserver/front/wsRequest.js';
-import { fileToBase64 } from '../generate.js';
+import { fileToBase64, taggerPreferGpu } from '../generate.js';
 
 let lastTaggerOptions = null;
 
@@ -93,6 +93,7 @@ export function createImageTagger(metadataContainer, cachedImage) {
                     imageBase64 = imageBase64.split(',')[1];
                 }
 
+                const preferGpu = taggerPreferGpu();
                 let result = '';
                 if (globalThis.inBrowser) {
                     result = await sendWebSocketMessage({ 
@@ -103,7 +104,9 @@ export function createImageTagger(metadataContainer, cachedImage) {
                             imageTaggerModels.value,
                             genThreshold.value,
                             charThreshold.value,
-                            modelOptions.value
+                            modelOptions.value,
+                            false,
+                            preferGpu,
                         ]});
                 } else {
                     result = await globalThis.api.runImageTagger({
@@ -111,7 +114,8 @@ export function createImageTagger(metadataContainer, cachedImage) {
                         model_choice: imageTaggerModels.value,
                         gen_threshold: genThreshold.value,
                         char_threshold: charThreshold.value,
-                        model_options: modelOptions.value
+                        model_options: modelOptions.value,
+                        preferGpu,
                     });
                 }
 
@@ -170,7 +174,120 @@ export function createImageTagger(metadataContainer, cachedImage) {
             plateButton.disabled = false;
         }, 2000);
     });
+
+    const compareButton = document.createElement('button');
+    compareButton.type = 'button';
+    compareButton.className = 'image-tagger-compare-send';
+
+    function nextCompareSlot(lockSlot = null) {
+        if (lockSlot === 'A' || lockSlot === 'B') return lockSlot;
+        const state = globalThis.mainGallery?.getCompareStagingState?.() || 'empty';
+        return (state === 'hasA' || state === 'ready') ? 'B' : 'A';
+    }
+
+    function compareIdleLabel(slot) {
+        if (slot === 'B') return LANG.image_tagger_compare_add_b || 'Add B';
+        return LANG.image_tagger_compare_add_a || 'Add A';
+    }
+
+    function syncCompareSlotStyle(lockSlot = null) {
+        compareButton.classList.remove('is-slot-a', 'is-slot-b', 'is-disabled-compare');
+        if (globalThis.mainGallery?.isCompareMode) {
+            compareButton.classList.add('is-disabled-compare');
+            compareButton.textContent = LANG.image_tagger_compare_full || 'Exit compare first';
+            compareButton.disabled = true;
+            compareButton.style.cursor = 'not-allowed';
+            return;
+        }
+        compareButton.disabled = false;
+        compareButton.style.cursor = 'pointer';
+        const slot = nextCompareSlot(lockSlot);
+        compareButton.classList.toggle('is-slot-a', slot === 'A');
+        compareButton.classList.toggle('is-slot-b', slot === 'B');
+        if (!lockSlot) {
+            compareButton.textContent = compareIdleLabel(slot);
+        }
+    }
+    syncCompareSlotStyle();
+
+    compareButton.addEventListener('click', async () => {
+        if (compareButton.disabled || globalThis.mainGallery?.isCompareMode) return;
+        compareButton.disabled = true;
+        compareButton.style.cursor = 'not-allowed';
+        try {
+            const payload = await buildComparePayloadFromImageInfo(cachedImage);
+            const result = globalThis.mainGallery?.fillNextCompareExternal?.(payload);
+            if (result?.ok && result.slot === 'A') {
+                compareButton.textContent = LANG.image_tagger_compare_added_a || 'Set as A';
+                syncCompareSlotStyle('A');
+            } else if (result?.ok && result.slot === 'B') {
+                compareButton.textContent = LANG.image_tagger_compare_added_b || 'Set as B';
+                syncCompareSlotStyle('B');
+                globalThis.imageUploadOverlay?.hideOverlay?.();
+                return;
+            } else if (result?.reason === 'full') {
+                compareButton.textContent = LANG.image_tagger_compare_full || 'Exit compare first';
+                compareButton.classList.remove('is-slot-a', 'is-slot-b');
+                compareButton.classList.add('is-disabled-compare');
+            } else {
+                compareButton.textContent = LANG.image_tagger_compare_error || 'Error';
+            }
+        } catch (err) {
+            console.error('Add A|B compare failed:', err);
+            compareButton.textContent = LANG.image_tagger_compare_error || 'Error';
+        }
+        setTimeout(() => {
+            compareButton.style.cursor = 'pointer';
+            compareButton.disabled = false;
+            syncCompareSlotStyle();
+        }, 2000);
+    });
+
     plateRow.appendChild(plateButton);
+    plateRow.appendChild(compareButton);
     metadataContainer.appendChild(plateRow);
+}
+
+function parseSeedFromOtherParams(otherParams) {
+    if (!otherParams) return '-1';
+    const lines = String(otherParams).split('\n');
+    const seedLine = lines.find((line) => line.trim().startsWith('Seed:'));
+    if (!seedLine) return '-1';
+    const match = seedLine.match(/Seed:\s*(-?\d+)/);
+    return match?.[1] ?? '-1';
+}
+
+function buildInfoFromMetadata(meta) {
+    if (!meta) return '';
+    const parts = [];
+    if (meta.positivePrompt) parts.push(`Positive:\n${meta.positivePrompt}`);
+    if (meta.negativePrompt) parts.push(`Negative:\n${meta.negativePrompt}`);
+    if (meta.otherParams) parts.push(meta.otherParams);
+    if (!parts.length && meta.nodes) {
+        try {
+            return JSON.stringify(meta.nodes, null, 2);
+        } catch {
+            return String(meta.nodes);
+        }
+    }
+    if (!parts.length && meta.fileName) {
+        parts.push(`File: ${meta.fileName}`);
+        if (meta.fileType) parts.push(`Type: ${meta.fileType}`);
+        if (meta.fileSize) parts.push(`Size: ${meta.fileSize}`);
+    }
+    return parts.join('\n\n');
+}
+
+async function buildComparePayloadFromImageInfo(cachedImage) {
+    const src = await fileToBase64(cachedImage);
+    const meta = globalThis.currentImageMetadata || {};
+    return {
+        image: src,
+        seed: parseSeedFromOtherParams(meta.otherParams),
+        tags: meta.positivePrompt || '',
+        info: buildInfoFromMetadata(meta),
+        label: meta.fileName || cachedImage?.name || '',
+        source: 'imageInfo'
+    };
 }
 

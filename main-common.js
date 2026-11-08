@@ -65,7 +65,7 @@ function makeBackendLockKey(kind, addr) {
   const raw = String(addr || '').trim();
   const withoutProtocol = raw.replace(/^[a-zA-Z][a-zA-Z0-9+.-]*:\/\//, '');
   const hostPort = withoutProtocol.split('/')[0] || '';
-  const ipv4 = hostPort.match(/^(\d{1,3}(?:\.\d{1,3}){3})(?::(\d+))?$/);
+  const ipv4 = /^(\d{1,3}(?:\.\d{1,3}){3})(?::(\d+))?$/.exec(hostPort);
   let host = hostPort;
   let port = '';
   if (ipv4) {
@@ -103,7 +103,7 @@ async function releaseBackendBusy(kind, addr, ownerUuid = 'none') {
   const release = await mutex.acquire();
   try {
     const current = busySlots.get(key);
-    if (current && current.owner === owner) {
+    if (current?.owner === owner) {
       busySlots.delete(key);
     }
     return { success: true, key };

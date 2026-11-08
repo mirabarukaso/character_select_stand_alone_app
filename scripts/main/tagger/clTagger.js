@@ -1,7 +1,6 @@
-import * as ort from 'onnxruntime-node';
 import * as fs from 'node:fs';
 import sharp from 'sharp';
-import * as os from 'node:os';
+import { createTaggerSession } from './taggerSession.js';
 
 const CAT = '[CLTagger] ';
 
@@ -88,33 +87,29 @@ function shouldIncludeTag(entry, i, probs, allowedCats, gen_threshold, char_thre
 }
 
 async function runClTagger(modelPath, inputTensor, gen_threshold=0.55, char_threshold=0.6, 
-  cat = ['General', 'Character', 'Artist', 'Copyright', 'Meta', 'Model', 'Rating', 'Quality']) {
+  cat = ['General', 'Character', 'Artist', 'Copyright', 'Meta', 'Model', 'Rating', 'Quality'],
+  preferGpu = true) {
   // Sigmoid function with clamping to avoid overflow
   function sigmoid(x) {
     return 1 / (1 + Math.exp(-Math.max(-30, Math.min(30, x))));
   }
 
-  const session = await ort.InferenceSession.create(modelPath, { 
-    executionProviders: ['dml', 'cpu'],
-    
-    intraOpNumThreads: Math.max(1, os.cpus().length - 1),
-    interOpNumThreads: 1,
-    
-    graphOptimizationLevel: 'all',  // 'disabled' | 'basic' | 'extended' | 'all'
-    enableCpuMemArena: true,
-    enableMemPattern: true,
-    executionMode: 'sequential',      // 'sequential' | 'parallel'
+  const session = await createTaggerSession(modelPath, {
+    preferGpu,
+    freeDimensionOverrides: { batch: 1, height: 448, width: 448 },
   });
 
   const inputName = session.inputNames[0];
   const outputName = session.outputNames[0];
 
+  const inferStart = Date.now();
   const results = await session.run({ [inputName]: inputTensor });
+  const inferMs = Date.now() - inferStart;
   const logits = results[outputName].data;
 
   const probs = logits.map(sigmoid);
 
-  console.log(CAT, 'Model run complete. Mapping tags...');
+  console.log(CAT, `Model run complete in ${inferMs} ms. Mapping tags...`);
   // Load tag mapping
   const mappingPath = modelPath.replace(/\.onnx$/, "_tag_mapping.json");
   if (!fs.existsSync(mappingPath)) throw new Error(`${CAT}Missing tag mapping file.`);

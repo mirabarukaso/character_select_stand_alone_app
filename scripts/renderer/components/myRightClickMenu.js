@@ -26,12 +26,15 @@ export function addSpellCheckSuggestions(suggestions, word) {
     }
 
     const spellCheckFragment = document.createDocumentFragment();
-    let maxWidth = Number.parseInt(menuBox.style.width, 10) - 24 || 200;
+    // Item padding 12px*2 + menu box padding 10px*2
+    const widthPadding = 44;
+    let maxWidth = Number.parseInt(menuBox.style.width, 10) - widthPadding || 200;
 
     const tempDiv = document.createElement('div');
     tempDiv.style.position = 'absolute';
     tempDiv.style.visibility = 'hidden';
     tempDiv.style.whiteSpace = 'nowrap';
+    tempDiv.style.fontSize = '14px';
     document.body.appendChild(tempDiv);
 
     if (suggestions.length > 0) {
@@ -115,7 +118,7 @@ export function addSpellCheckSuggestions(suggestions, word) {
     }
 
     // update the menu width
-    menuBox.style.width = `${Math.min(maxWidth + 24, 300)}px`;
+    menuBox.style.width = `${Math.min(maxWidth + widthPadding, 360)}px`;
     updateMenuPosition(currentMenuX, currentMenuY);
 }
 
@@ -276,11 +279,14 @@ export function setupRightClickMenu() {
     // eslint-disable-next-line sonarjs/cognitive-complexity
     async function renderMenu(x, y, targetElement) {
         const fragment = document.createDocumentFragment();
+        // Item padding 12px*2 + menu box padding 10px*2
+        const widthPadding = 44;
         let maxWidth = 0;
         const tempDiv = document.createElement('div');
         tempDiv.style.position = 'absolute';
         tempDiv.style.visibility = 'hidden';
         tempDiv.style.whiteSpace = 'nowrap';
+        tempDiv.style.fontSize = '14px';
         document.body.appendChild(tempDiv);
 
         const spellCheckClasses = [
@@ -374,7 +380,7 @@ export function setupRightClickMenu() {
 
         menuBox.innerHTML = '';
         menuBox.appendChild(fragment);
-        menuBox.style.width = `${Math.min(maxWidth + 24, 300)}px`;
+        menuBox.style.width = `${Math.min(maxWidth + widthPadding, 360)}px`;
         updateMenuPosition(x, y);
         menuBox.style.display = 'block';
     }
@@ -444,13 +450,28 @@ function updateRightClickMenu(){
 
     globalThis.rightClick.setTitle('lora_common_to_slot', LANG.right_menu_send_lora_to_slot);
     globalThis.rightClick.setTitle('lora_positive_to_slot', LANG.right_menu_send_lora_to_slot);
-    globalThis.rightClick.setTitle('test_ai_generate', LANG.right_menu_test_ai_generate);
+
+    globalThis.rightClick.setTitle('compare_set_a_split', LANG.right_menu_compare_set_a);
+    globalThis.rightClick.setTitle('compare_set_b_split', LANG.right_menu_compare_set_b);
+    globalThis.rightClick.setTitle('compare_set_a_grid', LANG.right_menu_compare_set_a);
+    globalThis.rightClick.setTitle('compare_set_b_grid', LANG.right_menu_compare_set_b);
+    globalThis.rightClick.setTitle('compare_set_a_focus', LANG.right_menu_compare_set_a);
+    globalThis.rightClick.setTitle('compare_set_b_focus', LANG.right_menu_compare_set_b);
+    globalThis.rightClick.setTitle('compare_set_a_fullscreen', LANG.right_menu_compare_set_a);
+    globalThis.rightClick.setTitle('compare_set_b_fullscreen', LANG.right_menu_compare_set_b);
+    globalThis.rightClick.setTitle('compare_exit', LANG.right_menu_compare_exit);
 }
 
 function registerDefaultMenuItems() {
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
+
+    function menuSetCompare(slot, element) {
+        const index = globalThis.mainGallery.resolveCompareIndexFromElement?.(element);
+        if (index == null || index < 0) return;
+        globalThis.mainGallery.setCompareImage?.(slot, index);
+    }
 
     //Dynamic menu
     // split mode
@@ -461,6 +482,14 @@ function registerDefaultMenuItems() {
     globalThis.rightClick.append('copy_image_metadata', LANG.right_menu_copy_image_metadata, {
         selector: '.cg-main-image-container',
         func: async (element) => await menu_copyImageMetadata(element)
+    });
+    globalThis.rightClick.append('compare_set_a_split', LANG.right_menu_compare_set_a, {
+        selector: '.cg-main-image-container',
+        func: (element) => menuSetCompare('A', element)
+    });
+    globalThis.rightClick.append('compare_set_b_split', LANG.right_menu_compare_set_b, {
+        selector: '.cg-main-image-container',
+        func: (element) => menuSetCompare('B', element)
     });
     // line-------------------
     globalThis.rightClick.append('separator_split_mode', null, {
@@ -479,6 +508,14 @@ function registerDefaultMenuItems() {
     globalThis.rightClick.append('copy_image_metadata_grid', LANG.right_menu_copy_image_metadata, {
         selector: '.cg-gallery-item',
         func: async (element) => await menu_copyImageMetadata(element)
+    });
+    globalThis.rightClick.append('compare_set_a_grid', LANG.right_menu_compare_set_a, {
+        selector: '.cg-gallery-item',
+        func: (element) => menuSetCompare('A', element)
+    });
+    globalThis.rightClick.append('compare_set_b_grid', LANG.right_menu_compare_set_b, {
+        selector: '.cg-gallery-item',
+        func: (element) => menuSetCompare('B', element)
     });
     // line-------------------
     globalThis.rightClick.append('separator_grid_mode', null, {
@@ -501,6 +538,14 @@ function registerDefaultMenuItems() {
         selector: '.cg-fullscreen-overlay',
         func: async (element) => await menu_copyImageMetadata(element)
     });
+    globalThis.rightClick.append('compare_set_a_fullscreen', LANG.right_menu_compare_set_a, {
+        selector: '.cg-fullscreen-overlay',
+        func: (element) => menuSetCompare('A', element)
+    });
+    globalThis.rightClick.append('compare_set_b_fullscreen', LANG.right_menu_compare_set_b, {
+        selector: '.cg-fullscreen-overlay',
+        func: (element) => menuSetCompare('B', element)
+    });
 
     // in-gallery maximize (grid focus)
     globalThis.rightClick.append('copy_image_gallery_focus', LANG.right_menu_copy_image, {
@@ -510,6 +555,14 @@ function registerDefaultMenuItems() {
     globalThis.rightClick.append('copy_image_metadata_gallery_focus', LANG.right_menu_copy_image_metadata, {
         selector: '.cg-gallery-focus-overlay',
         func: async (element) => await menu_copyImageMetadata(element)
+    });
+    globalThis.rightClick.append('compare_set_a_focus', LANG.right_menu_compare_set_a, {
+        selector: '.cg-gallery-focus-overlay',
+        func: (element) => menuSetCompare('A', element)
+    });
+    globalThis.rightClick.append('compare_set_b_focus', LANG.right_menu_compare_set_b, {
+        selector: '.cg-gallery-focus-overlay',
+        func: (element) => menuSetCompare('B', element)
     });
     globalThis.rightClick.append('separator_gallery_focus', null, {
         selector: '.cg-gallery-focus-overlay'
@@ -522,6 +575,11 @@ function registerDefaultMenuItems() {
         }
     });
 
+    // compare overlay: exit only (no copy/remove — ambiguous with two images)
+    globalThis.rightClick.append('compare_exit', LANG.right_menu_compare_exit, {
+        selector: '.cg-compare-overlay',
+        func: () => { globalThis.mainGallery.exitCompareMode?.(); }
+    });
 
     // Copy thumb preview image
     globalThis.rightClick.append('copy_image_preview', LANG.right_menu_copy_image, {
