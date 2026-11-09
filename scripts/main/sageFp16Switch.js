@@ -32,6 +32,17 @@ const MIRA_VAE_CLASS = {
   VAEDecode_MiraSubPack: true,
 };
 
+// Impact FaceDetailer encodes/decodes inside Python (stock nodes.VAEEncode / vae.decode).
+// Graph rewrites never see those calls; route the VAE socket through Mira's SafeVAE proxy.
+const VAE_SAFE_PASSTHROUGH = {
+  class_type: 'VAESafePassthrough_MiraSubPack',
+  title: 'VAE Safe Passthrough (Mira SubPack)',
+};
+
+const INTERNAL_VAE_CONSUMERS = {
+  FaceDetailer: true,
+};
+
 export function isFp16CastDtype(dtype) {
   return Object.hasOwn(FP16_CAST, dtype);
 }
@@ -245,6 +256,49 @@ function miraVaeNeedsDefaults(node) {
     || !('temporal_overlap' in inputs);
 }
 
+function nextWorkflowNodeId(workflow) {
+  let max = 0;
+  for (const id of Object.keys(workflow)) {
+    const n = Number(id);
+    if (Number.isFinite(n) && n > max) max = n;
+  }
+  return String(max + 1);
+}
+
+function applyInternalVaeSafePassthrough(workflow, requestedMode) {
+  const gates = new Map();
+  const tiled = requestedMode === 'tiled';
+
+  for (const node of Object.values(workflow)) {
+    if (!INTERNAL_VAE_CONSUMERS[node?.class_type] || !node.inputs) continue;
+
+    // Mode only controls Impact's existing tiled flags; safety comes from SafeVAE.
+    node.inputs.tiled_encode = tiled;
+    node.inputs.tiled_decode = tiled;
+
+    const vae = node.inputs.vae;
+    if (!Array.isArray(vae) || vae.length < 2) continue;
+
+    const srcId = String(vae[0]);
+    const srcSlot = Number(vae[1]);
+    const srcNode = workflow[srcId];
+    if (srcNode?.class_type === VAE_SAFE_PASSTHROUGH.class_type) continue;
+
+    const key = `${srcId}:${srcSlot}`;
+    let gateId = gates.get(key);
+    if (!gateId) {
+      gateId = nextWorkflowNodeId(workflow);
+      workflow[gateId] = {
+        inputs: { vae: [srcId, srcSlot] },
+        class_type: VAE_SAFE_PASSTHROUGH.class_type,
+        _meta: { title: VAE_SAFE_PASSTHROUGH.title },
+      };
+      gates.set(key, gateId);
+    }
+    node.inputs.vae = [gateId, 0];
+  }
+}
+
 export function applyOverrideVae(workflow, forgeDtype = null) {
   if (!workflow || typeof workflow !== 'object') return workflow;
   const source = forgeDtype && typeof forgeDtype === 'object' ? forgeDtype : {};
@@ -266,5 +320,7 @@ export function applyOverrideVae(workflow, forgeDtype = null) {
       workflow[nodeId] = patchMiraVaeMode(node, requestedMode);
     }
   }
+
+  applyInternalVaeSafePassthrough(workflow, requestedMode);
   return workflow;
 }

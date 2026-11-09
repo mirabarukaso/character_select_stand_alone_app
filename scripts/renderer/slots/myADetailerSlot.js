@@ -19,6 +19,10 @@ let adetailerModels = [];
 let adetailerModelsComfyUISams = [];
 let instanceADetailerSlotManager = null;
 
+function syncHiresAdGalleryButton() {
+    globalThis.generate?.generate_hires?.syncFromGallery?.();
+}
+
 function createADetailerSlotsFromValues(slotManager, slotValues, options = {}) {
     const { validateADetailer = true, clearSlots = true } = options;
 
@@ -56,7 +60,7 @@ function createADetailerSlotsFromValues(slotManager, slotValues, options = {}) {
                 slot.itemClasses.ad_model,
                 LANG.api_adetailer_model,
                 adetailerModels,
-                null,
+                () => syncHiresAdGalleryButton(),
                 10,
                 true,
                 false
@@ -93,7 +97,7 @@ function createADetailerSlotsFromValues(slotManager, slotValues, options = {}) {
                 slot.itemClasses.slot_enable,
                 LANG.api_adetailer_slot_enable,
                 (apiInterface==='WebUI')?['Area', 'Confidence', 'Off']:[...adetailerModelsComfyUISams, 'Off'],
-                null,
+                () => syncHiresAdGalleryButton(),
                 3,
                 false,
                 false
@@ -175,6 +179,7 @@ function createADetailerSlotsFromValues(slotManager, slotValues, options = {}) {
             );
             slot.items.set(slot.itemClasses.ad_denoise, () => adDenoiseComponent);
             slotManager.componentInstances.set(`${className}-${slot.itemClasses.ad_denoise}`, adDenoiseComponent);
+            syncHiresAdGalleryButton();
         });
     }
 }
@@ -267,7 +272,7 @@ class ADetailerSlotManager {
                 slot.itemClasses.ad_model,
                 LANG.api_adetailer_model,
                 adetailerModels,
-                null,
+                () => syncHiresAdGalleryButton(),
                 10,
                 true,
                 false
@@ -303,7 +308,7 @@ class ADetailerSlotManager {
                 slot.itemClasses.slot_enable,
                 LANG.api_adetailer_slot_enable,
                 (apiInterface==='WebUI')?['Area', 'Confidence', 'Off']:[...adetailerModelsComfyUISams],
-                null,
+                () => syncHiresAdGalleryButton(),
                 3,
                 false,
                 false
@@ -385,6 +390,7 @@ class ADetailerSlotManager {
             );
             slot.items.set(slot.itemClasses.ad_denoise, () => adDenoiseComponent);
             this.componentInstances.set(`${className}-${slot.itemClasses.ad_denoise}`, adDenoiseComponent);
+            syncHiresAdGalleryButton();
         });
     }
 
@@ -534,6 +540,7 @@ class ADetailerSlotManager {
                 rowElement.remove();
             }
             this.slotIndex.delete(className);
+            syncHiresAdGalleryButton();
         }
     }
 
@@ -542,6 +549,7 @@ class ADetailerSlotManager {
         for (const slotClass of slots) {
             this.delSlot(slotClass);
         }
+        syncHiresAdGalleryButton();
     }
 
     getSlots() {

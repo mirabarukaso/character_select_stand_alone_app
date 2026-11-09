@@ -386,6 +386,9 @@ Also support check LoRA info by click the 'i' button in LoRA Slot. And, if there
 Put your `ADetailer` models in `ComfyUI\\models\\ultralytics\\bbox`      
 Put your `SAM` models in `ComfyUI\\models\\sams`      
 
+Gallery standalone AD (ComfyUI only): with AD enabled and at least one active slot, the gallery `Hires Fix` button becomes a split control; open the menu and pick `ADetailer` to run FaceDetailer on the current gallery image. Slot prompts are enough (they may be empty); the original full prompt is not required. Uses the current Model panel Checkpoint / Diffusion loader, and follows `FP16 Compute` / `Sage Attention` / `Override VAE`.      
+ 
+
 *For Forge Neo*      
 `ADetailer` requires [ADetailer Neo](https://github.com/Haoming02/ADetailer-Neo) [latest](https://github.com/Haoming02/ADetailer-Neo/commits/main/)
 `Upscaler`, `Control Processor`, `ADetailer`  lists have to be read from the API.       
@@ -536,11 +539,12 @@ Turing cards (RTX 20 series) cannot run bf16. `FP16 Compute` / `Sage Attention` 
 
 `FP16 Compute` casts the loaded UNet compute to fp16. Weight storage stays as it is.      
 `Sage Attention` casts attention q/k/v to fp16 and casts them back. It does not turn compute fp16 on by itself. SageAttention 1.0.6 or 2.2 still has to be installed for that path.      
-`Override VAE` (ComfyUI, under FP16 switches) swaps stock VAEEncode/VAEDecode for MiraSubPack so the fused Flux2 VAE path is avoided. Turn it on for Moss / Flux2 Klein (or other Flux2-VAE models) that die at VAEDecode with CUTLASS / CUDA 719. SDXL / Anima / Qwen Image usually do not need it.
+`Override VAE` (ComfyUI, under FP16 switches) swaps stock VAEEncode/VAEDecode for MiraSubPack so the fused Flux2 VAE path is avoided. Turn it on for Moss / Flux2 Klein (or other Flux2-VAE models) that die at VAEDecode with CUTLASS / CUDA 719. SDXL / Anima / Qwen Image usually do not need it. FaceDetailer keeps the VAE socket and encodes/decodes inside Impact Pack, so Override VAE also inserts MiraSubPack `VAESafePassthrough` on that socket (mode `tiled` still only flips Impact tiled flags for VRAM).
 
-The FP16 Compute / Sage Attention switches are independent. Turning either one on keeps UNet storage at `Automatic`.      
+These switches apply to normal generate and to ComfyUI gallery Hires / AD one-shots. The FP16 Compute / Sage Attention switches are independent. Turning either one on keeps UNet storage at `Automatic`.      
+ 
 
-*ComfyUI* inserts the FP16 switch with [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack). Override VAE also needs that pack.      
+*ComfyUI* inserts the FP16 switch with [ComfyUI_MiraSubPack](https://github.com/mirabarukaso/ComfyUI_MiraSubPack). Override VAE (including FaceDetailer passthrough) also needs that pack — restart ComfyUI after updating MiraSubPack.      
 *Forge Neo* sends `forge_compute_fp16` and `forge_sage_fp16_cast` with [forge-turing-fp16](https://github.com/mirabarukaso/forge-turing-fp16). Before the next txt2img, SAA unloads the resident UNet, text encoder, and VAE when either switch turns off, or when the checkpoint or additional modules change. That frees the previous weights. A later float32 load can still offload part of a large UNet.      
 
 ------
@@ -614,6 +618,8 @@ Makesure all upscaler models located in `upscale_models` folder.
 
 Notes for ComfyUI:        
 Comfyui needs to download upscale models by yourself. Select `Manager`->`Model Manager` and filter with `upscale`, then download them.   
+
+Gallery Hires (ComfyUI only): the gallery `Hires Fix` button runs a one-shot i2i upscale on the current gallery image with the **current** Model panel Checkpoint / Diffusion settings (independent of the model that produced the image). This does not change toggle-on Hires during normal generate. When ADetailer is enabled with active slots, the same button becomes a split control with a gallery `ADetailer` action. Both gallery paths follow `FP16 Compute`, `Sage Attention`, and `Override VAE`.   
 
 Upscaler notes for WebUI(Forge Neo/A1111):        
 WebUI uses a name-based upscaler model list. The `static upscaler list` should work, and will update to API list after the first generate.             

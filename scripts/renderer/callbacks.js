@@ -330,6 +330,7 @@ export async function callback_api_interface(index, selectedValue){
     globalThis.hifix.model.setValue(LANG.api_hf_upscaler_selected, globalThis.cachedFiles.upscalerList);
 
     syncDiffusionDtypeMenu(globalThis.globalSettings.api_model_type);
+    globalThis.generate.generate_hires?.syncFromGallery?.();
 }
 
 export async function callback_myCharacterList_updateThumb(){
@@ -397,7 +398,8 @@ export async function callback_generate_start(runType='normal', dataPack=null){
     globalThis.generate.generate_cancel.setClickable(true);
 
     if (runType === 'normal') {
-        if(globalThis.globalSettings.regional_condition) {
+        // Gallery one-shot pipelines use the displayed image; skip regional dual-prompt path.
+        if(globalThis.globalSettings.regional_condition && !dataPack?.hiresFromImage && !dataPack?.adFromImage) {
             await generateRegionalImage(dataPack);
         } else {
             await generateImage(dataPack);
@@ -550,20 +552,21 @@ export function callback_controlnet(trigger)  {
     globalThis.custom_message.controlnet = true;
 }
 
-export function callback_adetailer(trigger)  {                
+export function callback_adetailer(trigger)  {
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
     const apiInterface = globalThis.generate.api_interface.getValue();
 
-    globalThis.globalSettings.api_adetailer_enable = trigger; 
+    globalThis.globalSettings.api_adetailer_enable = trigger;
+    globalThis.generate.generate_hires?.syncFromGallery?.();
 
     if(globalThis.custom_message.adetailer)
         return;
 
-    if(trigger && apiInterface === 'ComfyUI') {        
+    if(trigger && apiInterface === 'ComfyUI') {
         globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_comfyui, LANG.message_adetailer_comfyui_link);
-    }    
+    }
     if(trigger && apiInterface === 'WebUI') {
         globalThis.overlay.custom.createErrorOverlay(LANG.message_adetailer_webui , LANG.message_adetailer_webui_link);
     }

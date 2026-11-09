@@ -228,6 +228,9 @@ export function setupSplitButton(containerId, buttonText = 'Button', options = {
 
     function openMenu() {
         if (!clickable) return;
+        if (typeof options.onBeforeOpenMenu === 'function') {
+            options.onBeforeOpenMenu();
+        }
         closeSplitMenu();
 
         const menu = document.createElement('div');
@@ -319,6 +322,14 @@ export function setupSplitButton(containerId, buttonText = 'Button', options = {
             if (!items[index]) return;
             items[index].clickable = isClickable;
         },
+        setMenuTooltip: (index, text) => {
+            if (!items[index]) return;
+            items[index].title = text || '';
+        },
+        setChevronVisibility: (isVisible) => {
+            chevron.style.display = isVisible ? '' : 'none';
+            if (!isVisible) closeSplitMenu();
+        },
         clickMenu: (index) => {
             const item = items[index];
             if (item?.clickable && item.callback) {
@@ -332,7 +343,7 @@ function menuFacade(split, index) {
     return {
         click: () => split.clickMenu(index),
         setTitle: (text) => split.setMenuTitle(index, text),
-        setTooltip: () => {},
+        setTooltip: (text) => split.setMenuTooltip?.(index, text),
         setColors: () => {},
         getDefaultColor: split.getDefaultColor,
         getHoverColor: split.getHoverColor,

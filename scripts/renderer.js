@@ -28,7 +28,7 @@ import { sendWebSocketMessage } from './webserver/front/wsRequest.js';
 import { setupImageUploadOverlay } from './renderer/imageInfo.js';
 import { setupThemeToggle } from './renderer/theme.js';
 import { setupRightClickMenu, addSpellCheckSuggestions } from './renderer/components/myRightClickMenu.js';
-import { extractHostPort, hashHiresSubmit, rememberHiresSubmit } from './renderer/generate.js';
+import { extractHostPort, hashHiresSubmit, rememberHiresSubmit, hasActiveAdSlots } from './renderer/generate.js';
 import { CLIP_TYPE, CLIP_DEVICE, DIFFUSION_DTYPE, FORGE_UNET_STORAGE_AUTOMATIC, SAMPLER_COMFYUI, SCHEDULER_COMFYUI, SAMPLER_WEBUI, SCHEDULER_WEBUI } from './types.js';
 import { normalizeDiffusionDtype, normalizeForgeStorageDtype, normalizeOverrideVaeMode, OVERRIDE_VAE_MODES } from './main/sageFp16Switch.js';
 import { flushSlots } from './renderer/slots/slotsManager.js';
@@ -277,7 +277,7 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                     await callback_generate_start('normal', {loops:globalThis.generate.batch.getValue(), runSame:true});
                 }
             }]),
-        generate_hires: setupButtons('generate-button-hires', LANG.run_hires_button, {
+        generate_hires: setupSplitButton('generate-button-hires', LANG.run_hires_button, {
                 defaultColor: 'rgb(52, 112, 186)',
                 hoverColor: 'rgb(37, 90, 155)',
                 disabledColor: 'rgb(120, 138, 168)',
@@ -285,14 +285,52 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
                 height: '100%',
                 hidden: false,
                 clickable: false,
-                title: LANG.run_hires_button_empty
+                title: LANG.run_hires_button_empty,
+                onBeforeOpenMenu: () => {
+                    globalThis.generate.generate_hires?.syncFromGallery?.();
+                }
             }, async () =>{
                 const seed = globalThis.mainGallery?.getHiresTargetSeed?.();
                 if (seed === null || seed === undefined) return;
                 const hash = hashHiresSubmit(seed);
                 if (!rememberHiresSubmit(hash)) return;
+                const apiInterface = globalThis.generate?.api_interface?.getValue?.();
+                if (apiInterface === 'ComfyUI') {
+                    const imageData = globalThis.mainGallery?.getDisplayedImage?.();
+                    if (!imageData) return;
+                    await callback_generate_start('normal', {
+                        loops: 1,
+                        runSame: false,
+                        hiresFromImage: true,
+                        seedOverride: seed,
+                        imageData,
+                    });
+                    return;
+                }
                 await callback_generate_start('normal', {loops:1, runSame:false, hiresOneShot:true, seedOverride: seed});
-            }),
+            }, [{
+                text: LANG.run_adetailer_button || 'ADetailer',
+                title: LANG.run_adetailer_button_tip || '',
+                clickable: false,
+                callback: async () => {
+                    const seed = globalThis.mainGallery?.getHiresTargetSeed?.();
+                    if (seed === null || seed === undefined) return;
+                    const apiInterface = globalThis.generate?.api_interface?.getValue?.();
+                    if (apiInterface !== 'ComfyUI') return;
+                    if (!hasActiveAdSlots()) return;
+                    const imageData = globalThis.mainGallery?.getDisplayedImage?.();
+                    if (!imageData) return;
+                    const hash = hashHiresSubmit(`ad:${seed}`);
+                    if (!rememberHiresSubmit(hash)) return;
+                    await callback_generate_start('normal', {
+                        loops: 1,
+                        runSame: false,
+                        adFromImage: true,
+                        seedOverride: seed,
+                        imageData,
+                    });
+                }
+            }]),
         generate_skip_current: setupSplitButton('generate-button-skip-current', LANG.run_skip_current_button, {
                 defaultColor: 'rgb(82,82,91)',
                 hoverColor: 'rgb(63,63,70)',
@@ -441,14 +479,27 @@ export async function createGenerate(SETTINGS, FILES, LANG) {
     globalThis.generate.generate_same = createSplitMenuApi(globalThis.generate.generate_batch, 0);
     globalThis.generate.generate_cancel = createSplitMenuApi(globalThis.generate.generate_skip_current, 0);
     globalThis.generate.generate_skip = createSplitMenuApi(globalThis.generate.generate_skip_current, 1);
+    globalThis.generate.generate_adetailer = createSplitMenuApi(globalThis.generate.generate_hires, 0);
 
     globalThis.generate.generate_hires.syncFromGallery = function () {
         const seed = globalThis.mainGallery?.getHiresTargetSeed?.();
         const hasImage = seed !== null && seed !== undefined;
         const files = globalThis.cachedFiles;
         const lang = files?.language?.[globalThis.globalSettings.language] || LANG;
+        const apiInterface = globalThis.generate?.api_interface?.getValue?.() || globalThis.globalSettings.api_interface;
+        const adReady = apiInterface === 'ComfyUI' && hasActiveAdSlots();
         globalThis.generate.generate_hires.setClickable(hasImage);
         globalThis.generate.generate_hires.setTooltip(hasImage ? lang.run_hires_button_tip : lang.run_hires_button_empty);
+        globalThis.generate.generate_hires.setChevronVisibility?.(adReady);
+        globalThis.generate.generate_adetailer?.setTitle?.(lang.run_adetailer_button || 'ADetailer');
+        globalThis.generate.generate_adetailer?.setClickable?.(adReady && hasImage);
+        let adTooltip = lang.run_adetailer_button_empty;
+        if (!adReady) {
+            adTooltip = lang.run_adetailer_button_unavailable || '';
+        } else if (hasImage) {
+            adTooltip = lang.run_adetailer_button_tip;
+        }
+        globalThis.generate.generate_adetailer?.setTooltip?.(adTooltip);
     };
     globalThis.generate.generate_hires.syncFromGallery();
 

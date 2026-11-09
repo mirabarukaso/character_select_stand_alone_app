@@ -151,6 +151,7 @@ export function updateLanguage(skipLoRA = false, skipRightClick = false) {
     globalThis.generate.generate_batch.setTooltip?.(LANG.run_random_button);
     globalThis.generate.generate_same.setTitle(LANG.run_same_button);
     globalThis.generate.generate_hires.setTitle(LANG.run_hires_button);
+    globalThis.generate.generate_adetailer?.setTitle?.(LANG.run_adetailer_button);
     globalThis.generate.generate_hires.syncFromGallery?.();
     globalThis.generate.generate_cancel.setTitle(LANG.run_cancel_button);
     globalThis.generate.generate_skip.setTitle(LANG.run_skip_button);
@@ -396,6 +397,10 @@ export function updateSettings() {
     globalThis.hifix.randomSeed.setValue(SETTINGS.api_hf_random_seed);
     globalThis.hifix.steps.setValue(SETTINGS.api_hf_steps);    
     globalThis.hifix.model.setOptions(globalThis.cachedFiles.upscalerList, null, LANG.api_hf_upscaler_selected, SETTINGS.api_hf_upscaler_selected);
+
+    globalThis.generate.controlnet?.setValue(SETTINGS.api_controlnet_enable === true);
+    globalThis.generate.adetailer?.setValue(SETTINGS.api_adetailer_enable === true);
+    globalThis.generate.generate_hires?.syncFromGallery?.();
 
     globalThis.generate.refiner.setValue(SETTINGS.api_refiner_enable);
     globalThis.generate.refiner_dummy.setValue(SETTINGS.api_refiner_enable);

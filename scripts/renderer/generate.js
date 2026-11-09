@@ -942,10 +942,29 @@ function appendBoundingOutputs(generateData, plainPositive) {
     appendBoundingInfo(`${generateData.positive}\n`);
 }
 
-export function formatQueueJobSeed(seed, hifixEnabled, lang) {
-    if (!hifixEnabled) return `${seed}`;
-    const mark = lang?.generate_hires_mark || 'Hires';
-    return `${seed} ${mark}`;
+export function formatQueueJobSeed(seed, hifixEnabled, lang, adEnabled = false) {
+    let label = `${seed}`;
+    if (hifixEnabled) {
+        label = `${label} ${lang?.generate_hires_mark || 'Hires'}`;
+    }
+    if (adEnabled) {
+        label = `${label} ${lang?.generate_adetailer_mark || 'AD'}`;
+    }
+    return label;
+}
+
+export function hasActiveAdSlots() {
+    if (!globalThis.globalSettings?.api_adetailer_enable) return false;
+    if (!globalThis.aDetailer?.getValues) return false;
+    const list = globalThis.aDetailer.getValues() || [];
+    for (const row of list) {
+        if (!Array.isArray(row) || row.length < 4) continue;
+        const ad_model = row[0];
+        const slot_enable = row[3];
+        if (slot_enable === 'Off' || String(ad_model || '').toLowerCase() === 'none') continue;
+        return true;
+    }
+    return false;
 }
 
 export function createHiFix(randomSeed, apiInterface, brownColor, forceEnable = false){
@@ -1036,6 +1055,36 @@ export function convertBase64ImageToUint8Array(image) {
         console.error('Error converting base64 to image object:', error);
         return null;
     }
+}
+
+export function dataUrlToUint8Array(image) {
+    if (typeof image !== 'string' || !image.startsWith('data:image/')) {
+        return null;
+    }
+    const comma = image.indexOf(',');
+    if (comma < 0) return null;
+    try {
+        const binaryString = atob(image.slice(comma + 1));
+        const bytes = new Uint8Array(binaryString.length);
+        for (let i = 0; i < binaryString.length; i++) {
+            bytes[i] = binaryString.codePointAt(i);
+        }
+        return bytes;
+    } catch (error) {
+        console.error('Error converting data URL to bytes:', error);
+        return null;
+    }
+}
+
+async function compressImageDataUrlForComfy(imageDataUrl) {
+    const bytes = dataUrlToUint8Array(imageDataUrl);
+    if (!bytes) {
+        throw new Error('Invalid gallery image data for hires');
+    }
+    if (globalThis.inBrowser) {
+        return sendWebSocketMessage({ type: 'API', method: 'compressGzip', params: [Array.from(bytes)] });
+    }
+    return globalThis.api.compressGzip(bytes);
 }
 
 // eslint-disable-next-line sonarjs/cognitive-complexity
@@ -1294,7 +1343,16 @@ export function getImageSavePrefix(apiInterface, character_prefix) {
 export async function generateImage(dataPack){
     await requestTaggerOffload();
 
-    const {loops, runSame, hiresOneShot = false, seedOverride = null} = dataPack;
+    const {
+        loops,
+        runSame,
+        hiresOneShot = false,
+        seedOverride = null,
+        hiresFromImage = false,
+        adFromImage = false,
+        imageData: galleryImageData = null,
+    } = dataPack;
+    const forceHires = hiresOneShot || hiresFromImage;
     const SETTINGS = globalThis.globalSettings;
     const FILES = globalThis.cachedFiles;
     const LANG = FILES.language[SETTINGS.language];
@@ -1303,6 +1361,24 @@ export async function generateImage(dataPack){
     const apiAddress = extractHostPort(globalThis.generate.api_address.getValue());
     const apiAuth = extractAPISecure(apiInterface);
     const browserUUID = (globalThis.inBrowser)?globalThis.clientUUID:'none';
+
+    let comfyGalleryImageData = null;
+    if ((hiresFromImage || adFromImage) && apiInterface === 'ComfyUI') {
+        if (!galleryImageData) {
+            console.error('[generateImage] gallery image missing for one-shot pipeline');
+            return;
+        }
+        if (adFromImage && !hasActiveAdSlots()) {
+            console.error('[generateImage] adFromImage requires active ADetailer slots');
+            return;
+        }
+        try {
+            comfyGalleryImageData = await compressImageDataUrlForComfy(galleryImageData);
+        } catch (err) {
+            console.error('[generateImage] Failed to prepare gallery image:', err);
+            return;
+        }
+    }
             
     const negativeColor = (globalThis.globalSettings.css_style==='dark')?'red':'Crimson';
     const brownColor = (globalThis.globalSettings.css_style==='dark')?'BurlyWood':'Brown';    
@@ -1331,12 +1407,16 @@ export async function generateImage(dataPack){
 
         // One job at a time: each pass reads the live UI, and cancel/skip must be able to stop the batch.
         // eslint-disable-next-line no-await-in-loop
-        const createPromptResult = await createPrompt(runSame, '', apiInterface, (loops > 1)?loop:-1, seedOverride, hiresOneShot); // NOSONAR
+        const createPromptResult = await createPrompt(runSame, '', apiInterface, (loops > 1)?loop:-1, seedOverride, forceHires); // NOSONAR
         const landscape = globalThis.generate.landscape.getValue();
         const width = landscape?globalThis.generate.height.getValue():globalThis.generate.width.getValue();
         const height = landscape?globalThis.generate.width.getValue():globalThis.generate.height.getValue();
         
-        const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor, hiresOneShot);
+        const hifix = createHiFix(createPromptResult.randomSeed, apiInterface,brownColor, forceHires);
+        if (adFromImage) {
+            hifix.enable = false;
+            hifix.info = '';
+        }
         const refiner = createRefiner();
 
         const vae = globalThis.dropdownList.vae_sdxl.getValue();
@@ -1382,15 +1462,16 @@ export async function generateImage(dataPack){
             sampler: globalThis.generate.sampler.getValue(),
             scheduler: globalThis.generate.scheduler.getValue(),
             hifix: hifix,
-            adetailer: createADetailer(apiInterface),
+            adetailer: (hiresFromImage && !adFromImage) ? [] : createADetailer(apiInterface),
             vae: {vae_override: vae_override, vae: vae},
             skip_layer: readSkipLayer(),
             forge_dtype: readForgeDtypeSettings(SETTINGS),
             ...(SETTINGS.api_model_type === 'Checkpoint' ? {
                 model: globalThis.dropdownList.model.getValue(),
                 vpred: checkVpred(),                
-                refiner: refiner,
-                controlnet: createControlNet(),                                
+                refiner: adFromImage ? { enable: false, info: '' } : refiner,
+                // Gallery one-shot pipelines skip CN overlays; normal generate keeps them.
+                controlnet: (hiresFromImage || adFromImage) ? [] : createControlNet(),                                
             } : {
                 unet: {
                     enable: true,
@@ -1405,7 +1486,15 @@ export async function generateImage(dataPack){
                 },
             }),
 
-            img_prefix: getImageSavePrefix(apiInterface, createPromptResult.img_prefix)
+            img_prefix: getImageSavePrefix(apiInterface, createPromptResult.img_prefix),
+            ...(hiresFromImage && apiInterface === 'ComfyUI' ? {
+                hiresFromImage: true,
+                imageData: comfyGalleryImageData,
+            } : {}),
+            ...(adFromImage && apiInterface === 'ComfyUI' ? {
+                adFromImage: true,
+                imageData: comfyGalleryImageData,
+            } : {}),
         };        
 
         let finalInfo = `${createPromptResult.finalInfo}\n`;
@@ -1423,7 +1512,7 @@ export async function generateImage(dataPack){
         generateData.queueManager.finalInfo = finalInfo;
         
         const nameList = generateData.queueManager.id.replaceAll('\n', ' | ');
-        const seedLabel = formatQueueJobSeed(createPromptResult.randomSeed, hifix.enable, LANG);
+        const seedLabel = formatQueueJobSeed(createPromptResult.randomSeed, hifix.enable, LANG, adFromImage);
         globalThis.queueManager.attach(
             [   (nameList === '') ? LANG.generate_normal.replace('{0}', `${seedLabel} | ${createPromptResult.positivePrompt}`) : 
                 LANG.generate_normal.replace('{0}', `${seedLabel} | ${nameList}`), 

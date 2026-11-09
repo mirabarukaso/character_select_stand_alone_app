@@ -2,9 +2,9 @@ import { ipcMain, BrowserWindow, net } from 'electron';
 import { WebSocket } from 'ws';
 import * as wsService from '../webserver/back/wsService.js';
 import { makeBackendLockKey, tryAcquireBackendBusy, releaseBackendBusy, forceReleaseBackendBusy } from '../../main-common.js';
-import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET, 
-  WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_REIONAL_UNET, 
-  WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, VAE_LOADER} from './comfyui_workflow.js';
+import { WORKFLOW, WORKFLOW_REGIONAL, WORKFLOW_CONTROLNET,
+  WORKFLOW_MIRA_ITU, WORKFLOW_UNET, WORKFLOW_REIONAL_UNET,
+  WORKFLOW_MIRA_ITU_UNET, WORKFLOW_MIRA_ITU_UNET_PREBAKE, WORKFLOW_HIRES_I2I, VAE_LOADER} from './comfyui_workflow.js';
 import { applySageFp16Switch, applyOverrideVae, diffusionLoaderDtype } from './sageFp16Switch.js';
 
 const CAT = '[ComfyUI]';
@@ -531,10 +531,11 @@ function applyControlnet(workflow, controlnet, workflowInfo){
 }
 
 function applyADetailer(workflow, adetailers, workflowInfo) {
-  const {startIndex, refiner, hiresfix} = workflowInfo;
+  const {startIndex, refiner, hiresFix, imageNode, vaeNode} = workflowInfo;
   let index =startIndex + 1;
   const modelUSE = refiner?43:45; // 45: default   43: refiner
-  let imageVAED = hiresfix?28:6;
+  let imageVAED = imageNode ?? (hiresFix?28:6);
+  const vaeLink = vaeNode ? [`${vaeNode}`, 0] : [`${modelUSE}`, 2];
   const randomSeed = globalThis.crypto.getRandomValues(new Uint32Array(1))[0]; // 4294967296 = 2^32
 
   for(const adetailer of adetailers) {
@@ -632,10 +633,7 @@ function applyADetailer(workflow, adetailers, workflowInfo) {
           `${modelUSE}`,
           1
         ],
-        "vae": [
-          `${modelUSE}`,
-          2
-        ],
+        "vae": vaeLink,
         "positive": [
           `${index + 2}`,
           0
@@ -671,9 +669,9 @@ function applyADetailer(workflow, adetailers, workflowInfo) {
 }
 
 function applyADetailerUnet(workflow, adetailers, workflowInfo) {
-  const {startIndex, model, clip, vae, hiresfix, colorTransfer=28, normalVae=6} = workflowInfo;
+  const {startIndex, model, clip, vae, hiresFix, colorTransfer=28, normalVae=6, imageNode} = workflowInfo;
   let index = startIndex + 1;
-  let imageVAED = hiresfix?colorTransfer:normalVae; 
+  let imageVAED = imageNode ?? (hiresFix?colorTransfer:normalVae); 
   const randomSeed = globalThis.crypto.getRandomValues(new Uint32Array(1))[0]; // 4294967296 = 2^32
 
   for(const adetailer of adetailers) {
@@ -2003,6 +2001,316 @@ class ComfyUI {
     return workflow;
   }
 
+  // eslint-disable-next-line sonarjs/cognitive-complexity
+  createWorkflowHiresFromImage(generateData) {
+    const {addr, auth, uuid, refresh, positive, negative,
+      width, height, cfg, step, seed, sampler, scheduler,
+      model, vpred, unet, hifix, vae, img_prefix, imageData} = generateData;
+
+    this.addr = addr;
+    this.refresh = refresh;
+    this.auth = auth;
+    this.uuid = uuid;
+
+    const workflow = structuredClone(WORKFLOW_HIRES_I2I);
+    const useUnet = Boolean(unet?.enable);
+    const skipColorTransfer = hifix.colorTransfer === 'None';
+    const useLatentUpscale = Boolean(hifix?.model?.includes('Latent'));
+    const outW = Math.max(1, Math.round(Number(width) * Number(hifix.scale || 1)));
+    const outH = Math.max(1, Math.round(Number(height) * Number(hifix.scale || 1)));
+
+    workflow['1'].inputs.base64text = imageData;
+    workflow['32'].inputs.text = positive;
+    workflow['33'].inputs.text = negative;
+
+    workflow['29'].inputs.seed_value = seed;
+    workflow['29'].inputs.steps = step;
+    workflow['29'].inputs.cfg = cfg;
+    workflow['29'].inputs.sampler_name = sampler;
+    workflow['29'].inputs.scheduler = scheduler;
+    workflow['29'].inputs.path = img_prefix;
+    workflow['29'].inputs.width = outW;
+    workflow['29'].inputs.height = outH;
+    workflow['29'].inputs.denoise = hifix.denoise;
+
+    workflow['20'].inputs.seed = hifix.seed;
+    workflow['20'].inputs.steps = hifix.steps;
+    workflow['20'].inputs.cfg = cfg;
+    workflow['20'].inputs.sampler_name = sampler;
+    workflow['20'].inputs.scheduler = scheduler;
+    workflow['20'].inputs.denoise = hifix.denoise;
+
+    if (useUnet) {
+      delete workflow['35'];
+      delete workflow['45'];
+
+      if (unet.model.endsWith('.gguf')) {
+        workflow['51'] = {
+          inputs: { gguf_name: unet.model },
+          class_type: 'LoaderGGUF',
+          _meta: { title: 'GGUF Loader' }
+        };
+      } else {
+        workflow['51'] = {
+          inputs: {
+            unet_name: unet.model,
+            weight_dtype: diffusionLoaderDtype(unet.dtype)
+          },
+          class_type: 'UNETLoader',
+          _meta: { title: 'Load Diffusion Model' }
+        };
+      }
+
+      if (unet.clip_model.endsWith('.gguf')) {
+        workflow['50'] = {
+          inputs: {
+            clip_name: unet.clip_model,
+            type: unet.clip_type,
+            device: unet.clip_device
+          },
+          class_type: 'ClipLoaderGGUF',
+          _meta: { title: 'GGUF CLIP Loader' }
+        };
+      } else {
+        workflow['50'] = {
+          inputs: {
+            clip_name: unet.clip_model,
+            type: unet.clip_type,
+            device: unet.clip_device
+          },
+          class_type: 'CLIPLoader',
+          _meta: { title: 'Load CLIP' }
+        };
+      }
+
+      workflow['52'] = {
+        inputs: { vae_name: unet.vae_model },
+        class_type: 'VAELoader',
+        _meta: { title: 'Load VAE' }
+      };
+
+      workflow['34'].inputs.model = ['51', 0];
+      workflow['34'].inputs.clip = ['50', 0];
+      workflow['18'].inputs.vae = ['52', 0];
+      workflow['19'].inputs.vae = ['52', 0];
+      workflow['29'].inputs.modelname = unet.model;
+
+      if (unet.clip_type == 'moss_image') {
+        // Avoid 1 (image in) and 4 (Sage FP16 switch id).
+        applyMossSkipLayer(workflow, '51', '34', generateData.skip_layer, '7');
+      }
+      applySageFp16Switch(workflow, '51', generateData?.forge_dtype);
+    } else {
+      if (model && model !== 'Default') {
+        workflow['45'].inputs.ckpt_name = model;
+        workflow['29'].inputs.modelname = model;
+      }
+
+      if ((vpred === 0 && (model?.includes('vPred') || model?.includes('VPR'))) || vpred === 1 || vpred === 2) {
+        workflow['35'].inputs.sampling = 'v_prediction';
+        if (vpred === 2) {
+          workflow['35'].inputs.zsnr = true;
+        }
+      }
+
+      if (vae?.vae_override && vae.vae !== 'None') {
+        workflow['47'] = structuredClone(VAE_LOADER);
+        workflow['47'].inputs.vae_name = vae.vae;
+        workflow['18'].inputs.vae = ['47', 0];
+        workflow['19'].inputs.vae = ['47', 0];
+      }
+      // Same Turing FP16 path as Diffusion: wrap checkpoint MODEL output.
+      applySageFp16Switch(workflow, '45', generateData?.forge_dtype);
+    }
+
+    if (useLatentUpscale) {
+      const match = hifix.model.match(/\(([^)]+)\)/); // NOSONAR S8786
+      const latentMethod = match ? match[1].trim() : 'nearest-exact';
+      workflow['19'].inputs.pixels = ['1', 0];
+      workflow['46'].inputs.upscale_method = latentMethod;
+      workflow['46'].inputs.scale_by = hifix.scale;
+      workflow['20'].inputs.latent_image = ['46', 0];
+      pruneWorkflowNodes(workflow, [25, 27]);
+    } else {
+      workflow['25'].inputs.resize_scale = hifix.scale;
+      workflow['27'].inputs.model_name = `${hifix.model}`;
+      pruneWorkflowNodes(workflow, [46]);
+    }
+
+    if (skipColorTransfer) {
+      workflow['29'].inputs.images = ['18', 0];
+      pruneWorkflowNodes(workflow, [28]);
+    } else {
+      workflow['28'].inputs.method = hifix.colorTransfer;
+    }
+
+    return workflow;
+  }
+
+  // eslint-disable-next-line sonarjs/cognitive-complexity
+  createWorkflowAdetailerFromImage(generateData) {
+    const {addr, auth, uuid, refresh, positive, negative,
+      width, height, cfg, step, seed, sampler, scheduler,
+      model, unet, adetailer, vae, img_prefix, imageData} = generateData;
+
+    this.addr = addr;
+    this.refresh = refresh;
+    this.auth = auth;
+    this.uuid = uuid;
+
+    const useUnet = Boolean(unet?.enable);
+    let modelName = 'model.safetensors';
+    if (useUnet) {
+      modelName = unet.model;
+    } else if (model && model !== 'Default') {
+      modelName = model;
+    }
+
+    let workflow = {
+      '1': {
+        inputs: { base64text: imageData },
+        class_type: 'GzippedBase64ToImage',
+        _meta: { title: 'Gzipped Base64 To Image' }
+      },
+      '29': {
+        inputs: {
+          filename: '%time_%seed',
+          path: img_prefix || '%date',
+          extension: 'png',
+          steps: step,
+          cfg,
+          modelname: modelName,
+          sampler_name: sampler,
+          scheduler,
+          positive: ['32', 0],
+          negative: ['33', 0],
+          seed_value: seed,
+          width,
+          height,
+          lossless_webp: true,
+          quality_jpeg_or_webp: 100,
+          optimize_png: false,
+          counter: 0,
+          denoise: 1,
+          clip_skip: -2,
+          time_format: '%Y-%m-%d-%H%M%S',
+          save_workflow_as_json: false,
+          embed_workflow: true,
+          additional_hashes: '',
+          images: ['1', 0]
+        },
+        class_type: 'ImageSaverMira',
+        _meta: { title: 'Image Saver' }
+      },
+      '32': {
+        inputs: { text: positive || '' },
+        class_type: 'TextBoxMira',
+        _meta: { title: 'Text Box' }
+      },
+      '33': {
+        inputs: { text: negative || '' },
+        class_type: 'TextBoxMira',
+        _meta: { title: 'Text Box' }
+      }
+    };
+
+    if (useUnet) {
+      if (unet.model.endsWith('.gguf')) {
+        workflow['51'] = {
+          inputs: { gguf_name: unet.model },
+          class_type: 'LoaderGGUF',
+          _meta: { title: 'GGUF Loader' }
+        };
+      } else {
+        workflow['51'] = {
+          inputs: {
+            unet_name: unet.model,
+            weight_dtype: diffusionLoaderDtype(unet.dtype)
+          },
+          class_type: 'UNETLoader',
+          _meta: { title: 'Load Diffusion Model' }
+        };
+      }
+
+      if (unet.clip_model.endsWith('.gguf')) {
+        workflow['50'] = {
+          inputs: {
+            clip_name: unet.clip_model,
+            type: unet.clip_type,
+            device: unet.clip_device
+          },
+          class_type: 'ClipLoaderGGUF',
+          _meta: { title: 'GGUF CLIP Loader' }
+        };
+      } else {
+        workflow['50'] = {
+          inputs: {
+            clip_name: unet.clip_model,
+            type: unet.clip_type,
+            device: unet.clip_device
+          },
+          class_type: 'CLIPLoader',
+          _meta: { title: 'Load CLIP' }
+        };
+      }
+
+      workflow['52'] = {
+        inputs: { vae_name: unet.vae_model },
+        class_type: 'VAELoader',
+        _meta: { title: 'Load VAE' }
+      };
+
+      // Stub LoRAfromText so moss skip / sage can retarget a model consumer.
+      workflow['34'] = {
+        inputs: {
+          text: ['32', 0],
+          model: ['51', 0],
+          clip: ['50', 0]
+        },
+        class_type: 'LoRAfromText',
+        _meta: { title: 'LoRA Loader from Text' }
+      };
+
+      if (unet.clip_type == 'moss_image') {
+        applyMossSkipLayer(workflow, '51', '34', generateData.skip_layer, '7');
+      }
+      applySageFp16Switch(workflow, '51', generateData?.forge_dtype);
+
+      workflow = applyADetailerUnet(workflow, adetailer, {
+        startIndex: 60,
+        model: '34',
+        clip: 50,
+        vae: 52,
+        hiresFix: false,
+        imageNode: '1'
+      });
+    } else {
+      workflow['45'] = {
+        inputs: { ckpt_name: modelName },
+        class_type: 'CheckpointLoaderSimple',
+        _meta: { title: 'Load Checkpoint' }
+      };
+
+      let vaeNode = null;
+      if (vae?.vae_override && vae.vae !== 'None') {
+        workflow['47'] = structuredClone(VAE_LOADER);
+        workflow['47'].inputs.vae_name = vae.vae;
+        vaeNode = '47';
+      }
+
+      workflow = applyADetailer(workflow, adetailer, {
+        startIndex: 60,
+        refiner: false,
+        hiresFix: false,
+        imageNode: '1',
+        vaeNode
+      });
+      applySageFp16Switch(workflow, '45', generateData?.forge_dtype);
+    }
+
+    return workflow;
+  }
+
   createWorkflowControlnet(generateData){
     const {addr, auth, uuid, imageData, controlNet, outputResolution} = generateData;
     this.addr = addr;
@@ -2714,7 +3022,13 @@ async function runComfyUI(generateData) {
   const backend = started.backend;
 
   let workflow;
-  if (generateData.unet?.enable){
+  if (generateData.adFromImage) {
+    workflow = backend.createWorkflowAdetailerFromImage(generateData);
+    backend.timeout = generateData.unet?.enable ? 15000 : TIMEOUT;
+  } else if (generateData.hiresFromImage) {
+    workflow = backend.createWorkflowHiresFromImage(generateData);
+    backend.timeout = generateData.unet?.enable ? 15000 : TIMEOUT;
+  } else if (generateData.unet?.enable){
     workflow = backend.createWorkflowUNet(generateData);
     backend.timeout = 15000;
   } else {

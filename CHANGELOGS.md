@@ -1,3 +1,12 @@
+2026.11.10 v2.12.2      
+Add, ComfyUI gallery `Hires Fix` as a one-shot i2i pass (uses the gallery image + current UI model; leaves toggle-on Hires during normal generate unchanged)      
+Add, ComfyUI gallery `ADetailer` via the Hires split menu when AD is enabled and slots are active      
+Change, gallery Hires / AD follow `FP16 Compute`, `Sage Attention`, and `Override VAE`      
+Fix, Override VAE for FaceDetailer: insert MiraSubPack `VAESafePassthrough` on the AD VAE socket (Impact encodes/decodes in-process; graph VAE rewrites cannot see them)      
+Fix, switching settings restores ControlNet / ADetailer enable switches (and refreshes the Hires AD menu)      
+Docs, ComfyUI gallery Hires / AD and FaceDetailer Override VAE notes in README      
+
+
 2026.11.09 v2.12.1      
 Add, Gallery `A|B Compare` — pin two images (gallery or Image Info externals), slider wipe (left/right or top/bottom), same-spot toggle, shared pan/zoom, embedded or in-app fullscreen      
 Add, gallery chrome `+A` / `+B` / `✕A|B`, dual Seed/Tags/Info, `<>` switches wipe vs toggle, toolbar `↔`/`↕` switches wipe axis; Hires Fix disabled in compare; new gens still enqueue without stealing the view      
