@@ -24,9 +24,6 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(W
 | MiraITU | Yes | No |
 
 > [!IMPORTANT]
-> `Regional Condition / Couple` and `ADetailer` on `Forge Neo` supports `SDXL and Anima`
-> on `ComfyUI` should support all SAA supports `diffusion models` need to verify          
->
 > *ComfyUI Desktop not support SAA*       
 > *Removed A1111 from support list due to a lack of maintenance, A1111 still working with SAA, but will not test on it*        
 > 
