@@ -296,6 +296,25 @@ function forgeSkipLayerFor(isForge, unet, skipLayer) {
     return { slg_enable: false };
 }
 
+// forge-turing-fp16 registers these in /sdapi/v1/options. Missing keys mean the extension is absent.
+function forgeFp16OverridePayload(backendOptions, forgeDtype, { warn = false } = {}) {
+    const fp16 = forgeOverrideSettings(forgeDtype);
+    const base = optionBase(backendOptions);
+    const payload = { forge_unet_storage_dtype: fp16.forge_unet_storage_dtype };
+    const supportedCompute = hasOption(base, 'forge_compute_fp16');
+    const supportedSage = hasOption(base, 'forge_sage_fp16_cast');
+    if (supportedCompute) payload.forge_compute_fp16 = fp16.forge_compute_fp16;
+    if (supportedSage) payload.forge_sage_fp16_cast = fp16.forge_sage_fp16_cast;
+    if (warn && ((fp16.forge_compute_fp16 && !supportedCompute) || (fp16.forge_sage_fp16_cast && !supportedSage))) {
+        console.warn(CAT, 'FP16 switches skipped: forge-turing-fp16 options not present in backend settings');
+    }
+    return {
+        payload,
+        compute: supportedCompute && fp16.forge_compute_fp16 === true,
+        sage: supportedSage && fp16.forge_sage_fp16_cast === true,
+    };
+}
+
 function buildWebUIOptionPayload(current, isForge, model, vae, unet, img_prefix, skipLayer, force = false) {    //NOSONAR
     const base = optionBase(current);
     const payload = {};
@@ -491,17 +510,18 @@ class WebUI {
     }
 
     create_override_settings_Forge(model, unet, vae, img_prefix = '[date]', skipLayer = null, forgeDtype = null) {
-        const fp16 = forgeOverrideSettings(forgeDtype);
         if (!this.isForge) {
             this.forgeSkipLayer = null;
-            if (fp16.forge_compute_fp16 || fp16.forge_sage_fp16_cast) {
+            const requested = forgeOverrideSettings(forgeDtype);
+            if (requested.forge_compute_fp16 || requested.forge_sage_fp16_cast) {
                 console.warn(CAT, 'FP16 switches skipped: backend is not Forge');
             }
             return {};
         }
+        const fp16 = forgeFp16OverridePayload(this.backendOptions, forgeDtype, { warn: true });
         const built = buildWebUIOptionPayload(this.backendOptions, true, model, vae, unet, img_prefix, skipLayer);
         this.forgeSkipLayer = built.forgeSkipLayer;
-        return { ...built.options, ...built.forgeSkipLayer, ...fp16 };
+        return { ...built.options, ...built.forgeSkipLayer, ...fp16.payload };
     }
 
     async run (generateData) {
@@ -1120,10 +1140,10 @@ class WebUI {
     async releaseForgeResidentWeights(generateData) {
         if (this.isForge !== true) return;
 
-        const fp16 = forgeOverrideSettings(generateData?.forge_dtype);
+        const fp16 = forgeFp16OverridePayload(this.backendOptions, generateData?.forge_dtype);
         const next = {
-            compute: fp16.forge_compute_fp16 === true,
-            sage: fp16.forge_sage_fp16_cast === true,
+            compute: fp16.compute,
+            sage: fp16.sage,
             checkpoint: residentCheckpoint(this.backendOptions, generateData?.model, generateData?.unet),
             modules: residentModules(this.backendOptions, generateData?.unet, generateData?.vae),
         };
