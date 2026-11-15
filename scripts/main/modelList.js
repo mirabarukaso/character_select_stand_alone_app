@@ -111,7 +111,7 @@ function updateADetailerList(model_path_comfyui, model_path_webui, search_subfol
     // --- WebUI ---
     const webPaths = resolveCustomPaths(['a1111', 'forge'], 'adetailer');
     if (webPaths.length > 0) {
-        ADETAILER_WEBUI = scanMultipleDirectories(webPaths, search_subfolder);
+        ADETAILER_WEBUI = scanMultipleDirectories(webPaths, search_subfolder, '.pt');
     } else {
         const adPatchWebUI = path.join(path.dirname(model_path_webui), 'adetailer');
         if (fs.existsSync(adPatchWebUI)) {
@@ -234,14 +234,14 @@ function updateControlNetList(model_path_comfyui, model_path_webui, search_subfo
     // --- ComfyUI ---
     const cnPaths = resolveCustomPaths(['comfyui'], 'controlnet');
     if (cnPaths.length > 0) {
-        CONTROLNET_COMFYUI = scanMultipleDirectories(cnPaths, search_subfolder);       
+        CONTROLNET_COMFYUI = scanMultipleDirectories(cnPaths, search_subfolder, '.safetensors');
         // Check Clip Vision & IPAdapter
         const cvPaths = resolveCustomPaths(['comfyui'], 'clip_vision');
         const ipaPaths = resolveCustomPaths(['comfyui'], 'ipadapter');
         
         if (cvPaths.length > 0 && ipaPaths.length > 0) {
-            let clipList = scanMultipleDirectories(cvPaths, search_subfolder);
-            let ipaList = scanMultipleDirectories(ipaPaths, search_subfolder);
+            let clipList = scanMultipleDirectories(cvPaths, search_subfolder, '.safetensors');
+            let ipaList = scanMultipleDirectories(ipaPaths, search_subfolder, '.safetensors');
             
             let clipVisionListWithPrefix = clipList.map(item => 'CV->' + item);
             let ipaListWithPrefix = ipaList.map(item => 'IPA->' + item);
@@ -275,7 +275,7 @@ function updateControlNetList(model_path_comfyui, model_path_webui, search_subfo
     // --- WebUI ---
     const webCnPaths = resolveCustomPaths(['a1111', 'forge'], 'controlnet');
     if (webCnPaths.length > 0) {
-        CONTROLNET_WEBUI = scanMultipleDirectories(webCnPaths, search_subfolder);
+        CONTROLNET_WEBUI = scanMultipleDirectories(webCnPaths, search_subfolder, '.safetensors');
     } else {
         const cnPathWebUI_A1111 = path.join(path.dirname(model_path_webui), '..', 'extensions', 'sd-webui-controlnet', 'models');
         const cnPathWebUI_Forge = path.join(path.dirname(model_path_webui), 'ControlNet');
@@ -342,7 +342,7 @@ function updateModelList(model_path_comfyui, model_path_webui, model_filter, ena
     const customComfyPaths = resolveCustomPaths(['comfyui'], 'model'); // yaml key is 'model'
     
     if (customComfyPaths.length > 0) {
-        MODELLIST_ALL_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+        MODELLIST_ALL_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder, '.safetensors');
     } else if (fs.existsSync(model_path_comfyui)) {
         MODELLIST_ALL_COMFYUI = readDirectory(model_path_comfyui, '', search_subfolder);
     } else {
@@ -357,7 +357,10 @@ function updateModelList(model_path_comfyui, model_path_webui, model_filter, ena
     // --- WebUI ---
     const customWebUIPaths = resolveCustomPaths(['a1111', 'forge'], 'model');
     if (customWebUIPaths.length > 0) {
-        MODELLIST_ALL_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder);
+        MODELLIST_ALL_WEBUI = [
+            ...scanMultipleDirectories(customWebUIPaths, search_subfolder, '.safetensors'),
+            ...scanMultipleDirectories(customWebUIPaths, search_subfolder, '.gguf')
+        ];
     } else if (fs.existsSync(model_path_webui)) {
         MODELLIST_ALL_WEBUI = [
             ...readDirectory(model_path_webui, '', search_subfolder, Infinity, 0, '.safetensors'),
@@ -395,7 +398,7 @@ function updateVAEList(model_path_comfyui, model_path_webui, search_subfolder) {
     const customComfyPaths = resolveCustomPaths(['comfyui'], 'vae'); // yaml key is 'vae'
     
     if (customComfyPaths.length > 0) {
-        VAE_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+        VAE_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder, '.safetensors');
     } else if (fs.existsSync(model_path_comfyui)) {
         const vaePathComfyUI = path.join(path.dirname(model_path_comfyui), 'vae');
         VAE_COMFYUI = readDirectory(vaePathComfyUI, '', search_subfolder);
@@ -406,7 +409,7 @@ function updateVAEList(model_path_comfyui, model_path_webui, search_subfolder) {
     // --- WebUI ---
     const customWebUIPaths = resolveCustomPaths(['a1111', 'forge'], 'vae');
     if (customWebUIPaths.length > 0) {
-        VAE_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder);
+        VAE_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder, '.safetensors');
     } else if (fs.existsSync(model_path_webui)) {
         const vaePathWebUI = path.join(path.dirname(model_path_webui), 'VAE');
         VAE_WEBUI = readDirectory(vaePathWebUI, '', search_subfolder);
@@ -428,7 +431,10 @@ function updateDiffusionModelList(model_path_comfyui, search_subfolder, model_fi
     const customComfyPaths = resolveCustomPaths(['comfyui'], 'diffusion_models'); 
     
     if (customComfyPaths.length > 0) {
-        DIFFUSION_MODELS_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+        DIFFUSION_MODELS_COMFYUI = [
+            ...scanMultipleDirectories(customComfyPaths, search_subfolder, '.safetensors'),
+            ...scanMultipleDirectories(customComfyPaths, search_subfolder, '.gguf')
+        ];
     } else if (fs.existsSync(model_path_comfyui)) {
         const diffusionModelsPath = path.join(path.dirname(model_path_comfyui), 'diffusion_models');
         const unetPath = path.join(path.dirname(model_path_comfyui), 'unet');
@@ -458,7 +464,10 @@ function updateTextEncoderList(model_path_comfyui, model_path_webui, search_subf
     const customComfyPaths = resolveCustomPaths(['comfyui'], 'text_encoders'); // yaml key is 'text_encoders'
     
     if (customComfyPaths.length > 0) {
-        TEXT_ENCODERS_COMFYUI = scanMultipleDirectories(customComfyPaths, search_subfolder);
+        TEXT_ENCODERS_COMFYUI = [
+            ...scanMultipleDirectories(customComfyPaths, search_subfolder, '.safetensors'),
+            ...scanMultipleDirectories(customComfyPaths, search_subfolder, '.gguf')
+        ];
     } else if (fs.existsSync(model_path_comfyui)) {
         const textEncodersPath = path.join(path.dirname(model_path_comfyui), 'text_encoders');
         TEXT_ENCODERS_COMFYUI = [...readDirectory(textEncodersPath, '', search_subfolder, Infinity, 0, '.safetensors'),
@@ -474,7 +483,10 @@ function updateTextEncoderList(model_path_comfyui, model_path_webui, search_subf
     // --- WebUI ---
     const customWebUIPaths = resolveCustomPaths(['forge'], 'text_encoder');
     if (customWebUIPaths.length > 0) {
-        TEXT_ENCODERS_WEBUI = scanMultipleDirectories(customWebUIPaths, search_subfolder);
+        TEXT_ENCODERS_WEBUI = [
+            ...scanMultipleDirectories(customWebUIPaths, search_subfolder, '.safetensors'),
+            ...scanMultipleDirectories(customWebUIPaths, search_subfolder, '.gguf')
+        ];
     } else if (fs.existsSync(model_path_webui)) {
         // orinal A1111 does not have text encoder folder, only forge neo has, so we check folder exist first before reading
         const textEncodersPathWebUI = path.join(path.dirname(model_path_webui), 'text_encoder');
