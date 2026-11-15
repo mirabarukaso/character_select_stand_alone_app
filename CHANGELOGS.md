@@ -1,3 +1,8 @@
+2026.11.16 v2.12.3      
+Add `Send Tags` in `Image Info` now supports Moss Image bounding JSON import to `Bounding`       
+Bugs fix #107 #108       
+
+
 2026.11.10 v2.12.2      
 Add, ComfyUI gallery `Hires Fix` as a one-shot i2i pass (uses the gallery image + current UI model; leaves toggle-on Hires during normal generate unchanged)      
 Add, ComfyUI gallery `ADetailer` via the Hires split menu when AD is enabled and slots are active      

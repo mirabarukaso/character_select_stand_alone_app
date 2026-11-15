@@ -3,6 +3,12 @@ import { createImageTagger } from './components/imageInfoTagger.js';
 import { handlePastedJsonOrCsvFile, handlePastedPlainTextItem, isJsonListDataFile, resolveJsonListFileType } from './components/imageInfoDataFiles.js';
 import { extractImageMetadata, parseGenerationParameters } from './components/imageInfoMetadata.js';
 import { createMiraITUWindow } from './components/imageInfoMiraITU.js';
+import {
+    boxesFromBoundingItems,
+    logicalSize,
+    parseBoundingPrompt
+} from './bounding.js';
+import { callback_regional_condition } from './callbacks.js';
 import { fileToBase64, requestTaggerOffload } from './generate.js';
 import { hiresCalculate } from './tools/hiresCalculation.js';
 
@@ -482,10 +488,11 @@ export function setupImageUploadOverlay() {
         
         sendButton.addEventListener('click', () => {
             const parsedMetadata = globalThis.currentImageMetadata;
-            
-            sendPrompt(parsedMetadata);
-            globalThis.generate.landscape.setValue(false);
-            globalThis.generate.aspectLock?.unlock?.();
+            const usedBounding = sendPrompt(parsedMetadata);
+            if (!usedBounding) {
+                globalThis.generate.landscape.setValue(false);
+                globalThis.generate.aspectLock?.unlock?.();
+            }
             hiresCalculate();
             
             sendButton.textContent = LANG.image_info_send_tags_sent;
@@ -520,9 +527,12 @@ export function setupImageUploadOverlay() {
     function sendPrompt(parsedMetadata) {
         const defaultPositivePrompt = "masterpiece, best quality, amazing quality";
         const defaultNegativePrompt = "bad quality, worst quality, worst detail, sketch";
-        
+        const boundingPayload = parseBoundingPrompt(parsedMetadata?.positivePrompt);
+
         const extractedData = {
-            positivePrompt: parsedMetadata.positivePrompt || defaultPositivePrompt,
+            positivePrompt: boundingPayload
+                ? boundingPayload.caption
+                : (parsedMetadata.positivePrompt || defaultPositivePrompt),
             negativePrompt: parsedMetadata.negativePrompt || defaultNegativePrompt,
             steps: '30',
             cfgScale: "7.0",
@@ -567,9 +577,30 @@ export function setupImageUploadOverlay() {
         globalThis.generate.seed.setValue(extractedData.seed);
         globalThis.generate.cfg.setValue(extractedData.cfgScale);
         globalThis.generate.step.setValue(extractedData.steps);
+
+        if (boundingPayload) {
+            const current = logicalSize();
+            // Convert with current canvas; fromCentralYxyx clamps overflow to edges.
+            const boxes = boxesFromBoundingItems(boundingPayload.items, current.width, current.height);
+
+            if (globalThis.globalSettings?.regional_condition) {
+                globalThis.generate.regionalCondition?.setValue(false);
+                callback_regional_condition(false, false);
+            }
+            if (globalThis.globalSettings) {
+                globalThis.globalSettings.bounding_enable = true;
+            }
+            globalThis.generate.boundingEnable?.setValue(true);
+            globalThis.bounding?.setBoxes?.(boxes);
+            globalThis.bounding?.syncCanvas?.();
+            globalThis.bounding?.invalidatePreview?.();
+            return true;
+        }
+
         globalThis.generate.aspectLock?.unlock?.();
         globalThis.generate.width.setValue(extractedData.width);
-        globalThis.generate.height.setValue(extractedData.height);    
+        globalThis.generate.height.setValue(extractedData.height);
+        return false;
     }    
 
     // eslint-disable-next-line sonarjs/cognitive-complexity

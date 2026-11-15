@@ -314,6 +314,91 @@ export function toCentralYxyx(box, width, height) {
     ];
 }
 
+export function fromCentralYxyx(bbox, width, height) {
+    const canvasW = Math.max(1, Math.round(Number(width) || 0));
+    const canvasH = Math.max(1, Math.round(Number(height) || 0));
+    if (!Array.isArray(bbox) || bbox.length < 4) return null;
+    const yMin = Number(bbox[0]);
+    const xMin = Number(bbox[1]);
+    const yMax = Number(bbox[2]);
+    const xMax = Number(bbox[3]);
+    if (![yMin, xMin, yMax, xMax].every(Number.isFinite)) return null;
+    const cx = canvasW / 2;
+    const cy = canvasH / 2;
+    let left = Math.round(xMin + cx);
+    let right = Math.round(xMax + cx);
+    let top = Math.round(yMin + cy);
+    let bottom = Math.round(yMax + cy);
+    if (right < left) [left, right] = [right, left];
+    if (bottom < top) [top, bottom] = [bottom, top];
+    // Truncate to current canvas; drop boxes with no overlap.
+    if (right <= 0 || left >= canvasW || bottom <= 0 || top >= canvasH) return null;
+    left = clamp(left, 0, canvasW);
+    right = clamp(right, 0, canvasW);
+    top = clamp(top, 0, canvasH);
+    bottom = clamp(bottom, 0, canvasH);
+    if (right <= left || bottom <= top) return null;
+    const nx = left / canvasW;
+    const ny = top / canvasH;
+    const nw = (right - left) / canvasW;
+    const nh = (bottom - top) / canvasH;
+    if (nw <= 0 || nh <= 0) return null;
+    return { nx, ny, nw, nh };
+}
+
+export function parseBoundingPrompt(text) {
+    const raw = String(text ?? '').trim();
+    if (!raw.startsWith('{')) return null;
+    let parsed;
+    try {
+        parsed = JSON.parse(raw);
+    } catch {
+        return null;
+    }
+    if (!parsed || typeof parsed !== 'object' || Array.isArray(parsed)) return null;
+    if (parsed.bbox_coord_space !== 'abs_centralized') return null;
+    if (parsed.bbox_format !== 'yxyx') return null;
+    if (!parsed.summary || typeof parsed.summary !== 'object' || Array.isArray(parsed.summary)) return null;
+    if (!Array.isArray(parsed.items)) return null;
+    return {
+        caption: String(parsed.summary.caption ?? ''),
+        items: parsed.items
+    };
+}
+
+export function boxesFromBoundingItems(items, width, height) {
+    if (!Array.isArray(items)) return [];
+    const boxes = [];
+    const limit = Math.min(items.length, MAX_BOXES);
+    for (let index = 0; index < limit; index += 1) {
+        const item = items[index];
+        if (!item || typeof item !== 'object') continue;
+        const rect = fromCentralYxyx(item.bbox, width, height);
+        if (!rect) continue;
+        const id = index + 1;
+        const number = String(id).padStart(2, '0');
+        const label = String(item.label ?? 'object').toLowerCase();
+        if (label === 'text') {
+            boxes.push({
+                id,
+                ...rect,
+                mode: 'text',
+                text: typeof item.text === 'string' ? item.text : ''
+            });
+            continue;
+        }
+        const caption = String(item.caption ?? '').trim();
+        const text = caption && caption !== number ? caption : '';
+        boxes.push({
+            id,
+            ...rect,
+            mode: 'object',
+            text
+        });
+    }
+    return normalizeBoundingBoxes(boxes);
+}
+
 function buildItem(box, width, height) {
     const number = String(box.id).padStart(2, '0');
     const bbox = toCentralYxyx(box, width, height);
@@ -383,7 +468,7 @@ export function finalizePositivePrompt(generateData) {
     return generateData.positive;
 }
 
-function logicalSize() {
+export function logicalSize() {
     const settings = globalThis.globalSettings || {};
     const generate = globalThis.generate;
     const widthValue = Number(generate?.width?.getValue?.() ?? settings.width ?? 1024);
