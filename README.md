@@ -7,14 +7,17 @@ A Stand Alone App with AI prompt, Semi-auto Tag Complete and ComfyUI/Forge Neo(W
 > The default thumbList is based on `waiIllustriousSDXL_v160`. There are two alternative thumbList: `waiANIMA_v10Base10` and `waiNSFWIllustrious_v120`. Will download automatically from `HuggingFace` once you have selected it. 
 > Create your own thumbList with [SAA Thumb Generator](https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/scripts/python/thumb-generator/README.md)
 
+> [!IMPORTANT]
+> CumfyUI broke Flux2 VAE since `0.43`, for 10/20 series use [Override VAE are for Turing/Pascal GPUs](https://github.com/Comfy-Org/ComfyUI/issues/17612).         
+
 > [!TIP]
-> FP16 Compute, Sage Attention, and [Override VAE are for Turing/Pascal GPUs](https://github.com/Comfy-Org/ComfyUI/issues/17612). Newer cards can leave them off. See [Turing FP16](#turing-fp16-rtx-20-series).       
+> FP16 Compute, Sage Attention. Newer cards can leave them off. See [Turing FP16](#turing-fp16-rtx-20-series).       
 
 <img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall01.png" width=45%><img src="https://github.com/mirabarukaso/character_select_stand_alone_app/blob/main/examples/overall03.png" width=45%>
 
 | Verified | [ComfyUI](https://github.com/comfyanonymous/ComfyUI)  | [Forge Neo](https://github.com/Haoming02/sd-webui-forge-classic/tree/neo) |
 | --- | --- | --- | 
-| Release | 0.44.0 | 2.31.0 |
+| Release | 0.45.3 | 2.31.0 |
 | Refiner (SDXL) | Yes | Yes |
 | Image Color Transfer (ALL) | Yes | No |
 | Regional Condition / Couple (SDXL/Anima) | Yes | Yes |
